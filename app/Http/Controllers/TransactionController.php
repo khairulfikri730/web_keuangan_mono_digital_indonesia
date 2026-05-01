@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Models\Cashflow;
+use App\Models\StockMutation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class TransactionController extends Controller
@@ -95,5 +98,25 @@ class TransactionController extends Controller
         ]);
 
         return back()->with('success', 'Transaksi berhasil dibatalkan dan stok dikembalikan!');
+    }
+
+    public function destroy(Transaction $transaction)
+    {
+        if ($transaction->status !== 'cancelled') {
+            return back()->with('error', 'Hanya transaksi batal yang dapat dihapus permanen.');
+        }
+
+        DB::beginTransaction();
+        try {
+            Cashflow::where('reference', $transaction->invoice_number)->delete();
+            StockMutation::where('reference', $transaction->invoice_number)->delete();
+            $transaction->delete();
+
+            DB::commit();
+            return back()->with('success', 'Transaksi ' . $transaction->invoice_number . ' berhasil dihapus permanen!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menghapus transaksi: ' . $e->getMessage());
+        }
     }
 }

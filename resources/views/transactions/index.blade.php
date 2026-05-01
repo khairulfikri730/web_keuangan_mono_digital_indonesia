@@ -129,6 +129,14 @@
                                     </button>
                                 </form>
                                 @endif
+                                @if($t->status === 'cancelled' && auth()->user()->isOwner())
+                                <form action="{{ route('transactions.destroy', $t) }}" method="POST" class="inline" onsubmit="return confirm('Hapus permanen transaksi {{ $t->invoice_number }}?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="w-8 h-8 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 inline-flex items-center justify-center transition-colors" title="Hapus Permanen">
+                                        <i class="fas fa-trash text-xs"></i>
+                                    </button>
+                                </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

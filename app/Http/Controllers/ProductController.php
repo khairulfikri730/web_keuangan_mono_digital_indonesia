@@ -234,7 +234,6 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        $type = $product->product_type;
         if ($product->image) Storage::disk('public')->delete($product->image);
         $product->delete();
         return back()->with('success', 'Produk berhasil dihapus!');

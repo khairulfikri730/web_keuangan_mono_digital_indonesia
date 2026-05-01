@@ -153,13 +153,18 @@
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col min-h-[350px] shrink-0">
             <div class="p-4 border-b border-slate-100">
                 <div class="flex p-1 bg-slate-100 rounded-xl">
-                    <button class="flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-slate-800 transition-all">Pesanan Saat Ini</button>
-                    <button class="flex-1 py-2 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Riwayat</button>
+                    <button @click="cartView = 'active'"
+                        :class="cartView === 'active' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 py-2 text-sm font-bold rounded-lg transition-all">Pesanan Saat Ini</button>
+                    <button @click="cartView = 'history'"
+                        :class="cartView === 'history' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 py-2 text-sm font-bold rounded-lg transition-all">Riwayat</button>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-4 scrollbar-hide relative">
-                <div x-show="activeWorksheet.cart.length === 0" x-transition class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+            {{-- TAB: PESANAN SAAT INI --}}
+            <div x-show="cartView === 'active'" class="flex-1 overflow-y-auto p-4 scrollbar-hide relative">
+                <div x-show="activeWorksheet.cart.length === 0" x-transition.opacity class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
                     <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-4"><i class="fas fa-shopping-basket text-4xl text-slate-300"></i></div>
                     <p class="text-sm font-bold text-slate-500">Keranjang masih kosong</p>
                     <p class="text-xs mt-1">Pilih produk di sebelah kiri</p>
@@ -167,7 +172,7 @@
 
                 <div class="space-y-3">
                     <template x-for="(item, index) in activeWorksheet.cart" :key="item.product_id + '-' + index">
-                        <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform translate-x-8" x-transition:enter-end="opacity-100 transform translate-x-0" 
+                        <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform translate-x-8" x-transition:enter-end="opacity-100 transform translate-x-0"
                              class="flex gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm relative group hover:border-emerald-300 transition-colors">
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-black text-slate-800 truncate" x-text="item.name"></p>
@@ -185,7 +190,15 @@
                         </div>
                     </template>
                 </div>
-            </template>
+            </div>
+
+            {{-- TAB: RIWAYAT --}}
+            <div x-show="cartView === 'history'" x-transition.opacity class="flex-1 overflow-y-auto p-4 scrollbar-hide relative">
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                    <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-4"><i class="fas fa-clock-rotate-left text-4xl text-slate-300"></i></div>
+                    <p class="text-sm font-bold text-slate-500">Belum ada riwayat</p>
+                    <p class="text-xs mt-1">Riwayat transaksi akan muncul di sini</p>
+                </div>
             </div>
         </div>
 
@@ -519,6 +532,7 @@ function posApp() {
         searchQuery: '',
         activeCategory: '',
         viewMode: 'grid',
+        cartView: 'active',
         showGroupManagerModal: false,
         posGroups: @json($posGroups),
         // Drag & Drop Layout Editor States

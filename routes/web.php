@@ -101,6 +101,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Batalkan transaksi
         Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->name('transactions.cancel');
+        Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
 
         // Manajemen Tim
         Route::prefix('team')->name('team.')->group(function () {
