@@ -182,19 +182,26 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
             @else<span class="badge" style="background:rgba(71,85,105,.3);color:#94a3b8;">Tanpa Kategori</span>@endif
           </td>
           <td class="px-4 py-3">
-            <span class="badge" style="background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.25);">{{ $p->getKindLabel() }}</span>
+            <span class="badge" style="background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.25);">{{ $p->kind_label }}</span>
           </td>
           <td class="px-4 py-3">
             <p class="font-bold text-emerald-400">Rp {{ number_format($p->price,0,',','.') }}</p>
             <p class="text-xs text-slate-500">Modal: Rp {{ number_format($p->cost_price,0,',','.') }}</p>
           </td>
           <td class="px-4 py-3 text-center">
+            @if($p->isStockless())
+            <span class="text-lg font-black text-blue-400">∞</span>
+            <p class="text-xs text-slate-500 uppercase">Unlimited</p>
+            @else
             <span class="text-lg font-black {{ $p->stock<=0?'text-red-400':($p->stock<=$p->min_stock?'text-yellow-400':'text-slate-200') }}">{{ $p->stock }}</span>
             <p class="text-xs text-slate-500 uppercase">{{ $p->unit }}</p>
+            @endif
           </td>
           <td class="px-4 py-3 text-center">
             @if(!$p->is_active)
             <span class="badge" style="background:rgba(71,85,105,.3);color:#94a3b8;border:1px solid rgba(71,85,105,.4);">Nonaktif</span>
+            @elseif($p->isStockless())
+            <span class="badge" style="background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.25);"><i class="fas fa-infinity"></i> Unlimited</span>
             @elseif($p->stock<=0)
             <span class="badge" style="background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25);"><i class="fas fa-xmark"></i> Habis</span>
             @elseif($p->stock<=$p->min_stock)

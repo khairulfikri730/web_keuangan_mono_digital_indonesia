@@ -36,6 +36,29 @@
         <div class="lg:col-span-8 space-y-6">
             <form x-ref="mainForm" action="{{ route('products.update', $product) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf @method('PUT')
+                <input type="hidden" name="product_kind" :value="form.kind">
+                <input type="hidden" name="product_type" value="{{ $product->product_type }}">
+
+                {{-- CARD: JENIS PRODUK --}}
+                <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700/80 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2"><i class="fas fa-tag text-indigo-400"></i> Jenis Produk</h3>
+                    <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                        <template x-for="k in kinds" :key="k.id">
+                            <button type="button" @click="form.kind = k.id"
+                                :class="form.kind === k.id ? 'ring-2 ring-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-slate-600 text-slate-400 hover:border-indigo-400/50'"
+                                class="p-2 rounded-xl border flex flex-col items-center gap-1.5 font-semibold text-[11px] transition-all">
+                                <i :class="k.icon" class="text-lg mb-0.5"></i>
+                                <span x-text="k.label"></span>
+                            </button>
+                        </template>
+                    </div>
+                    {{-- Info Banner --}}
+                    <div class="mt-4 px-4 py-3 rounded-xl text-xs font-medium border flex items-start gap-3" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);color:#a5b4fc;">
+                        <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                        <span x-html="currentKindInfo"></span>
+                    </div>
+                </div>
                 
                 {{-- CARD: INFO DASAR --}}
                 <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700/80 shadow-sm relative overflow-hidden">
@@ -109,14 +132,22 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4 pt-2">
+                        <div class="grid grid-cols-2 gap-4 pt-2" x-show="isStockBased">
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2 block">Minimum Stok (Peringatan)</label>
-                                <input type="number" name="min_stock" value="{{ old('min_stock', $product->min_stock) }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" required min="0">
+                                <input type="number" name="min_stock" value="{{ old('min_stock', $product->min_stock) }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-500 transition-colors shadow-inner" min="0">
                             </div>
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2 block">Satuan Unit <span class="text-red-400">*</span></label>
                                 <input type="text" name="unit" x-model="form.unit" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-blue-500 transition-colors shadow-inner" required placeholder="Pcs / Cup / Box">
+                            </div>
+                        </div>
+                        {{-- Keterangan Unlimited/Jasa --}}
+                        <div x-show="!isStockBased" class="flex items-center gap-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4">
+                            <i class="fas fa-infinity text-2xl text-indigo-400"></i>
+                            <div>
+                                <p class="text-sm font-black text-indigo-300">Tanpa Batasan Stok</p>
+                                <p class="text-xs text-indigo-400/70 mt-0.5">Produk jenis <span class="font-bold" x-text="kinds.find(k=>k.id===form.kind)?.label"></span> tidak memerlukan manajemen stok fisik.</p>
                             </div>
                         </div>
 
@@ -265,7 +296,26 @@ function productEditApp() {
             costPrice: {{ old('cost_price', (int)$product->cost_price) }},
             unit: '{{ old('unit', $product->unit) }}',
             isActive: {{ old('is_active', $product->is_active) ? 'true' : 'false' }},
+            kind: '{{ old('product_kind', $product->product_kind ?? 'regular') }}',
             imagePreviewUrl: null
+        },
+
+        kinds: [
+            { id:'regular',   label:'Biasa',     icon:'fas fa-cube',         info:'<strong>Produk Biasa:</strong> Stok berkurang otomatis per 1 unit saat ada transaksi.' },
+            { id:'weight',    label:'Timbangan', icon:'fas fa-weight-hanging', info:'<strong>Timbangan:</strong> Harga dan stok berdasarkan berat (kg/gram).' },
+            { id:'unlimited', label:'Unlimited', icon:'fas fa-infinity',      info:'<strong>Unlimited:</strong> Produk digital atau lisensi tanpa batasan stok fisik. Dapat dijual tanpa batas.' },
+            { id:'service',   label:'Jasa',      icon:'fas fa-wrench',        info:'<strong>Jasa:</strong> Layanan tanpa stok fisik (contoh: Pemasangan, Perbaikan).' },
+            { id:'bundle',    label:'Bundle',    icon:'fas fa-layer-group',   info:'<strong>Bundle / Paket:</strong> HPP bergantung pada komponen produk di dalamnya.' },
+            { id:'formula',   label:'Formula',   icon:'fas fa-flask',         info:'<strong>Formula:</strong> Harga dinamis dihitung saat transaksi.' }
+        ],
+
+        get isStockBased() {
+            return ['regular', 'weight'].includes(this.form.kind);
+        },
+
+        get currentKindInfo() {
+            const k = this.kinds.find(x => x.id === this.form.kind);
+            return k ? k.info : '';
         },
         activeCategoryColor: '#cbd5e1',
         activeCategoryName: '',

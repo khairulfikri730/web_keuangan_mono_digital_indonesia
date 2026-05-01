@@ -33,6 +33,11 @@ class Product extends Model
         'meta' => 'array',
     ];
 
+    protected $appends = [
+        'kind_label',
+        'is_stockless',
+    ];
+
     public static function typeLabels(): array
     {
         return [
@@ -91,9 +96,19 @@ class Product extends Model
         return self::typeLabels()[$this->product_type] ?? $this->product_type;
     }
 
-    public function getKindLabel(): string
+    public function getKindLabelAttribute(): string
     {
-        return self::kindLabels()[$this->product_kind] ?? $this->product_kind;
+        return self::kindLabels()[$this->product_kind] ?? 'Biasa';
+    }
+
+    public function isStockless(): bool
+    {
+        return in_array($this->product_kind, [self::KIND_UNLIMITED, self::KIND_SERVICE]);
+    }
+
+    public function getIsStocklessAttribute(): bool
+    {
+        return $this->isStockless();
     }
 
     public function getImageUrlAttribute(): string

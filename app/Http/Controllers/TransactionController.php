@@ -57,7 +57,7 @@ class TransactionController extends Controller
         // Kembalikan stok
         foreach ($transaction->items as $item) {
             $product = $item->product;
-            if ($product) {
+            if ($product && !$product->isStockless()) {
                 $stockBefore = $product->stock;
                 $product->increment('stock', $item->quantity);
                 \App\Models\StockMutation::create([

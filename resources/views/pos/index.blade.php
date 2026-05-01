@@ -677,16 +677,18 @@ function posApp() {
             
             let w = this.activeWorksheet;
             let exist = w.cart.find(i => i.product_id === product.id);
-            let isUnlimited = ['unlimited','service'].includes(product.product_kind);
+            // Gunakan !! untuk konversi ke boolean (handles integer 1 dari JSON)
+            let isUnlimited = !!(product.is_stockless);
             
             if(exist) {
                 if(isUnlimited || exist.quantity < product.stock) {
                     exist.quantity++;
                 } else {
-                    alert('Stok tidak mencukupi!');
+                    alert('Stok tidak mencukupi! Sisa stok: ' + product.stock);
                 }
             } else {
-                if(product.stock > 0 || isUnlimited) {
+                // Produk unlimited SELALU bisa ditambah, tidak perlu cek stok
+                if(isUnlimited || product.stock > 0) {
                     w.cart.push({
                         product_id: product.id,
                         name: product.name,
@@ -694,10 +696,10 @@ function posApp() {
                         quantity: 1,
                         stock: product.stock,
                         discount: 0,
-                        kind: product.product_kind
+                        is_stockless: isUnlimited
                     });
                 } else {
-                    alert('Stok habis!');
+                    alert('Stok produk ini sudah habis!');
                 }
             }
 
@@ -705,19 +707,19 @@ function posApp() {
             this.lastAddedId = product.id;
             setTimeout(() => {
                 if(this.lastAddedId === product.id) this.lastAddedId = null;
-            }, 500);
+            }, 600);
         },
 
         changeQty(index, delta) {
             let item = this.activeWorksheet.cart[index];
             let newQty = item.quantity + delta;
-            let isUnlimited = ['unlimited','service'].includes(item.kind);
+            let isUnlimited = !!(item.is_stockless);
 
             if(newQty > 0) {
                 if(isUnlimited || newQty <= item.stock) {
                     item.quantity = newQty;
                 } else {
-                    alert('Stok tidak mencukupi!');
+                    alert('Stok tidak mencukupi! Sisa stok: ' + item.stock);
                 }
             }
         },

@@ -71,7 +71,9 @@ class PosController extends Controller
             foreach ($request->items as $item) {
                 $product = Product::lockForUpdate()->findOrFail($item['product_id']);
 
-                if ($product->stock < $item['quantity']) {
+                $isStockless = $product->isStockless();
+
+                if (!$isStockless && $product->stock < $item['quantity']) {
                     DB::rollBack();
                     return response()->json([
                         'error' => "Stok {$product->name} tidak cukup! Stok tersisa: {$product->stock}"
@@ -81,18 +83,20 @@ class PosController extends Controller
                 $itemSubtotal = ($item['price'] * $item['quantity']) - ($item['discount'] ?? 0);
                 $subtotal += $itemSubtotal;
 
-                $stockBefore = $product->stock;
-                $product->decrement('stock', $item['quantity']);
+                if (!$isStockless) {
+                    $stockBefore = $product->stock;
+                    $product->decrement('stock', $item['quantity']);
 
-                StockMutation::create([
-                    'product_id' => $product->id,
-                    'user_id' => auth()->id(),
-                    'type' => 'out',
-                    'quantity' => $item['quantity'],
-                    'stock_before' => $stockBefore,
-                    'stock_after' => $product->stock,
-                    'notes' => 'Terjual via POS',
-                ]);
+                    StockMutation::create([
+                        'product_id' => $product->id,
+                        'user_id' => auth()->id(),
+                        'type' => 'out',
+                        'quantity' => $item['quantity'],
+                        'stock_before' => $stockBefore,
+                        'stock_after' => $product->stock,
+                        'notes' => 'Terjual via POS',
+                    ]);
+                }
 
                 $itemsData[] = [
                     'product_id' => $product->id,
