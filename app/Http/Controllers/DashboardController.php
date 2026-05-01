@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Cashflow;
+use App\Models\Product;
+use App\Models\Shift;
+use App\Models\Transaction;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+
+class DashboardController extends Controller
+{
+    public function index()
+    {
+        $today = Carbon::today();
+        $activeShift = Shift::activeShift();
+
+        // Stats hari ini
+        $todaySales = Transaction::completed()
+            ->whereDate('created_at', $today)->sum('total');
+        $todayTransactions = Transaction::completed()
+            ->whereDate('created_at', $today)->count();
+        $todayExpenses = Cashflow::expense()
+            ->whereDate('transaction_date', $today)->sum('amount');
+
+        // Stats bulan ini
+        $monthSales = Transaction::completed()
+            ->whereMonth('created_at', $today->month)
+            ->whereYear('created_at', $today->year)
+            ->sum('total');
+
+        // Produk stok rendah
+        $lowStockProducts = Product::active()->lowStock()->with('category')->take(5)->get();
+
+        // 7 hari penjualan untuk chart
+        $chartData = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::today()->subDays($i);
+            $chartData[] = [
+                'date' => $date->format('d M'),
+                'total' => Transaction::completed()->whereDate('created_at', $date)->sum('total'),
+            ];
+        }
+
+        // Transaksi terbaru
+        $recentTransactions = Transaction::with(['user', 'items'])
+            ->latest()->take(5)->get();
+
+        // Top produk
+        $topProducts = \App\Models\TransactionItem::selectRaw('product_id, product_name, SUM(quantity) as total_qty, SUM(subtotal) as total_revenue')
+            ->groupBy('product_id', 'product_name')
+            ->orderByDesc('total_qty')
+            ->take(5)->get();
+
+        return view('dashboard', compact(
+            'activeShift', 'todaySales', 'todayTransactions',
+            'todayExpenses', 'monthSales', 'lowStockProducts',
+            'chartData', 'recentTransactions', 'topProducts'
+        ));
+    }
+}
