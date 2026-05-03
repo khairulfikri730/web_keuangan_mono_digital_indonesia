@@ -59,9 +59,10 @@ resources/views/     25 file blade (dark UI)
 | **stock_mutations** | `product_id` FK, `user_id` FK, `type` (in/out/adjustment), `quantity`, `stock_before`, `stock_after`, `reference`, `notes` | Log historis stok (double-entry) |
 | **transactions** | `invoice_number` (uniq, format `INV-YYYYmmdd-XXXX`), `shift_id` FK, `user_id` FK, `subtotal`, `discount`, `tax`, `total`, `paid_amount`, `change_amount`, `payment_method` (cash/transfer/qris/debit), `status` (completed/cancelled/refunded), `customer_name`, `customer_phone`, `discount_type` (nominal/percentage), `notes` | 1:M ke transaction_items |
 | **transaction_items** | `transaction_id` FK, `product_id` FK (nullable, SET NULL on delete), `product_name` (snapshot), `price`, `cost_price`, `quantity`, `discount`, `subtotal` | Item dalam transaksi |
-| **cashflows** | `user_id` FK, `shift_id` FK, `type` (income/expense), `category`, `description`, `amount`, `source` (manual/pos_cash/pos_bank/transfer/pos), `reference`, `reference_id` FK, `transaction_date` | Pemasukan & pengeluaran |
+| **cashflows** | `user_id` FK, `worksheet_id` FK, `shift_id` FK, `type` (income/expense), `category`, `description`, `amount`, `source` (manual/pos_cash/pos_bank/transfer/pos), `reference`, `reference_id` FK, `transaction_date` | Pemasukan & pengeluaran |
 | **settings** | `key` (uniq), `value` | Key-value store (Setting::get('key')) |
-| **pos_groups** | `name`, `color`, `position` | M:M ke products via `pos_group_product` (pivot: `position`) |
+| **pos_groups** | `worksheet_id` FK, `name`, `color`, `position` | M:M ke products via `pos_group_product` (pivot: `position`) |
+| **worksheets** | `name`, `initial_balance`, `description` | Unit bisnis/cabang untuk partisi data |
 
 ### 3.2 Foreign Key Strategy
 
@@ -280,10 +281,11 @@ resources/views/
 | Ekspor Penjualan/Transaksi | Belum ada |
 | Listener `TransactionCreated` untuk auto-cashflow | Event sudah dibuat, listener belum |
 | Notifikasi stok menipis | Belum ada |
-| Multi-toko / multi-cabang | Belum ada |
 | Integrasi payment gateway | Belum ada |
 | Queue/Job processing | Konfigurasi ada (database driver), tapi belum digunakan |
 | Print struk via printer thermal | Hanya tampilan HTML |
+| Multi-Worksheet (Cabang/Bisnis) | ✅ Partisi data via `worksheet_id` |
+| Modal Usaha (Initial Balance) | ✅ Dashboard Arus Kas |
 
 ---
 
@@ -400,6 +402,10 @@ php artisan serve
 
 | Tanggal | Perubahan |
 |---------|-----------|
+| 2026-05-03 | **Feature:** Sistem **Multi-Worksheet (Cabang/Bisnis)** — Seluruh data (Produk, Transaksi, Arus Kas) kini dipartisi berdasarkan Worksheet aktif. Mendukung pengelolaan banyak cabang dalam satu akun. |
+| 2026-05-03 | **Feature:** **Modal Usaha** di Arus Kas — Menampilkan Saldo Awal per worksheet sebagai modal bisnis di dashboard Cashflow. |
+| 2026-05-03 | **UX:** Logika **Buka Shift Pintar** — Tombol dan banner Buka Shift otomatis disembunyikan jika worksheet belum memiliki produk untuk mencegah error operasional. |
+| 2026-05-03 | **Migration:** Migrasi data lama otomatis ke worksheet default **"MONOFRAME STUDIO 1"** agar riwayat transaksi tidak hilang setelah upgrade ke sistem multi-worksheet. |
 | 2026-05-02 | **Fix:** Produk `unlimited`/`service` tidak bisa ditambah ke cart (bug `is_stockless` tidak dikonversi ke boolean). Diperbaiki dengan `!!product.is_stockless` |
 | 2026-05-02 | **Feature:** Selector **Jenis Produk** (Biasa/Timbangan/Unlimited/Jasa/Bundle/Formula) ditambahkan ke halaman **Edit Produk** — sebelumnya hanya ada di halaman Tambah Produk |
 | 2026-05-02 | **UI:** Kartu produk POS dirancang ulang — produk `unlimited` kini tampil dengan tema indigo/ungu berbeda dari produk biasa; badge gradient `∞ UNLIMITED`, shimmer hover, ikon ∞ pada placeholder |
