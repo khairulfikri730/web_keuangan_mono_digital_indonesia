@@ -87,7 +87,7 @@ class SalesController extends Controller
             ->limit(3)->get();
 
         $transactions = $query->latest()->paginate(15)->withQueryString();
-        $kasirUsers = User::whereIn('role', ['owner', 'operator'])->get();
+        $kasirUsers = User::whereIn('role', ['owner', 'kasir'])->get();
 
         return view('sales.index', compact(
             'transactions', 'dateFrom', 'dateTo', 'kasirUsers',

@@ -15,6 +15,17 @@
                     @csrf
                     <div class="space-y-5">
                         <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Kasir <span class="text-slate-500">(opsional, default: Anda)</span></label>
+                            <select name="user_id" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-all">
+                                <option value="">— Saya Sendiri —</option>
+                                @foreach($users as $u)
+                                    @if($u->id !== auth()->id())
+                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role }})</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Uang Kas Awal (Rp) <span class="text-red-400">*</span></label>
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
@@ -55,21 +66,37 @@
                     </div>
                 </div>
                 
-                <form action="{{ route('shifts.close', $activeShift) }}" method="POST">
+                <form action="{{ route('shifts.close', $activeShift) }}" method="POST" x-data="shiftClose()">
                     @csrf
                     <div class="space-y-5">
+                        {{-- Live Summary --}}
+                        <div class="bg-slate-900/40 rounded-xl p-4 border border-slate-700/30 space-y-2 text-sm">
+                            <div class="flex justify-between"><span class="text-slate-400">Penjualan Tunai:</span><span class="text-emerald-400 font-bold" x-text="fmtRp(summary.cash_sales)">...</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Penjualan Bank/QRIS:</span><span class="text-blue-400 font-bold" x-text="fmtRp(summary.bank_sales)">...</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Total Penjualan:</span><span class="text-white font-black" x-text="fmtRp(summary.total_sales)">...</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Pengeluaran:</span><span class="text-red-400 font-bold" x-text="fmtRp(summary.cash_expenses)">...</span></div>
+                            <div class="flex justify-between border-t border-slate-700/50 pt-2 mt-2"><span class="text-slate-400">Expected Cash:</span><span class="text-yellow-400 font-black" x-text="fmtRp(summary.expected_cash)">...</span></div>
+                        </div>
+
                         <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Uang Fisik di Laci (Rp) <span class="text-red-400">*</span></label>
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                                <input type="number" name="closing_cash" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-inner" required min="0" placeholder="Hitung uang fisik">
+                                <input type="number" name="closing_cash" x-model="closingCash" @input="calcDiff()" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-inner" required min="0" placeholder="Hitung uang fisik">
                             </div>
                         </div>
+
+                        {{-- Live Discrepancy --}}
+                        <div class="text-center py-3 rounded-xl border font-bold text-lg"
+                             :class="diff === 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (diff > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20')">
+                            Selisih: <span x-text="(diff >= 0 ? '+' : '') + fmtRp(diff)"></span>
+                        </div>
+
                         <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Catatan Penutupan</label>
                             <textarea name="notes" rows="3" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-inner"></textarea>
                         </div>
-                        <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 flex items-center justify-center gap-2" onclick="return confirm('Yakin ingin menutup shift? Kasir tidak akan bisa digunakan sampai shift baru dibuka.')"><i class="fas fa-stop"></i> TUTUP SHIFT SEKARANG</button>
+                        <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 flex items-center justify-center gap-2" onclick="return confirm('Yakin ingin menutup shift?')"><i class="fas fa-stop"></i> TUTUP SHIFT SEKARANG</button>
                     </div>
                 </form>
             @endif
@@ -117,13 +144,63 @@
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse"><i class="fas fa-circle text-[8px] mr-1.5"></i>Aktif</span>
                                 @else
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-slate-800 text-slate-400 border border-slate-700"><i class="fas fa-check mr-1.5"></i>Selesai</span>
+                                    @if($s->discrepancy !== null)
+                                        <p class="text-[10px] font-bold mt-1 {{ $s->discrepancy == 0 ? 'text-emerald-400' : ($s->discrepancy > 0 ? 'text-blue-400' : 'text-red-400') }}">Selisih: {{ $s->discrepancy >= 0 ? '+' : '' }}Rp {{ number_format($s->discrepancy, 0, ',', '.') }}</p>
+                                    @endif
                                 @endif
                             </td>
                             <td class="p-4 text-right">
-                                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+                                <div class="opacity-100 flex justify-end gap-2" x-data="{ showEdit: false, opening: {{ $s->opening_cash }}, closing: {{ $s->closing_cash ?? 0 }} }">
                                     <a href="{{ route('shifts.show', $s) }}" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition-colors shadow-sm" title="Detail Shift">
                                         <i class="fas fa-eye text-xs"></i>
                                     </a>
+                                    @if(auth()->user()->isOwner())
+                                    <button @click="showEdit = true" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
+                                        <i class="fas fa-edit text-xs"></i>
+                                    </button>
+                                    
+                                    {{-- Inline Edit Modal --}}
+                                    <div x-show="showEdit" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 text-left">
+                                        <div @click.away="showEdit = false" class="bg-[#1e293b] rounded-3xl w-full max-w-sm shadow-2xl border border-slate-700 p-6">
+                                            <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2"><i class="fas fa-edit text-blue-400"></i> Edit Shift</h3>
+                                            <form action="{{ route('shifts.update', $s->id) }}" method="POST">
+                                                @csrf @method('PUT')
+                                                <div class="space-y-4">
+                                                    <div>
+                                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Awal (Rp)</label>
+                                                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                                                            <input type="number" name="opening_cash" x-model="opening" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                                        </div>
+                                                    </div>
+                                                    @if($s->status === 'closed')
+                                                    <div>
+                                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Laci Akhir (Rp)</label>
+                                                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                                                            <input type="number" name="closing_cash" x-model="closing" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                                        </div>
+                                                    </div>
+                                                    @endif
+                                                    <div>
+                                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Catatan</label>
+                                                        <textarea name="notes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">{{ $s->notes }}</textarea>
+                                                    </div>
+                                                    <div class="flex gap-2 pt-2">
+                                                        <button type="button" @click="showEdit = false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm transition-colors active:scale-95">Batal</button>
+                                                        <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 transition-all active:scale-95"><i class="fas fa-save mr-1"></i>Simpan Perubahan</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <form action="{{ route('shifts.destroy', $s->id) }}" method="POST" class="m-0" id="delete-shift-{{ $s->id }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="button" onclick="confirmDelete('{{ $s->id }}')" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Hapus Shift">
+                                            <i class="fas fa-trash text-xs"></i>
+                                        </button>
+                                    </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -148,4 +225,53 @@
         </div>
     </div>
 </div>
+
+@if($activeShift)
+@push('scripts')
+<script>
+function shiftClose() {
+    return {
+        summary: { cash_sales: 0, bank_sales: 0, total_sales: 0, cash_expenses: 0, expected_cash: 0 },
+        closingCash: 0,
+        diff: 0,
+        init() {
+            fetch('{{ route("shifts.summary", $activeShift) }}')
+                .then(r => r.json())
+                .then(d => { this.summary = d; this.calcDiff(); });
+        },
+        calcDiff() {
+            this.diff = (parseFloat(this.closingCash) || 0) - this.summary.expected_cash;
+        },
+        fmtRp(v) {
+            return 'Rp ' + Math.abs(Math.round(v)).toLocaleString('id-ID');
+        }
+    };
+}
+
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Hapus Shift?',
+        text: 'Data shift beserta semua transaksi dan pengeluaran di dalamnya akan dihapus permanen!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#334155',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal',
+        background: '#1e293b',
+        color: '#f8fafc',
+        customClass: {
+            popup: 'rounded-3xl border border-slate-700',
+            confirmButton: 'rounded-xl font-bold px-6 py-2.5',
+            cancelButton: 'rounded-xl font-bold px-6 py-2.5'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('delete-shift-' + id).submit();
+        }
+    });
+}
+</script>
+@endpush
+@endif
 @endsection

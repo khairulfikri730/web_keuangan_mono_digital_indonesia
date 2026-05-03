@@ -140,6 +140,38 @@
                         @endforeach
                     </div>
                 </div>
+
+                {{-- Bank & QRIS Info --}}
+                <div class="border-t border-slate-700/50 pt-8">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-4"><i class="fas fa-building-columns mr-1"></i> Info Rekening Transfer</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Bank</label>
+                            <input type="text" name="bank_name" value="{{ $settings['bank_name'] ?? '' }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-inner transition-all" placeholder="BRI">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">No. Rekening</label>
+                            <input type="text" name="bank_account" value="{{ $settings['bank_account'] ?? '' }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-inner transition-all" placeholder="1234567890">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Atas Nama</label>
+                            <input type="text" name="bank_holder" value="{{ $settings['bank_holder'] ?? '' }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-inner transition-all" placeholder="NAMA PEMILIK">
+                        </div>
+                    </div>
+
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-4"><i class="fas fa-qrcode mr-1"></i> Gambar QRIS</label>
+                    <div class="flex items-center gap-6">
+                        @if(!empty($settings['qris_image']))
+                        <div class="relative group">
+                            <img src="{{ asset('storage/' . $settings['qris_image']) }}" class="h-28 w-28 object-contain rounded-2xl bg-white p-2 shadow-lg border border-slate-600 transition-transform group-hover:scale-105">
+                        </div>
+                        @endif
+                        <div class="flex-1">
+                            <input type="file" name="qris_image" accept="image/*" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-400 text-sm file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-purple-600 file:text-white hover:file:bg-purple-500 file:transition-all cursor-pointer">
+                            <p class="text-[10px] text-slate-500 mt-2 italic font-medium uppercase tracking-widest">Upload gambar QR Code QRIS Anda (Max 2MB)</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -150,5 +182,6 @@
             </button>
         </div>
     </form>
+
 </div>
 @endsection

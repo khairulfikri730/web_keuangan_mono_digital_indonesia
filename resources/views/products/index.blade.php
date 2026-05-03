@@ -25,7 +25,7 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
 <div x-data="prodPage()" class="space-y-5">
 
 {{-- STATS --}}
-<div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
   <div class="stat-card">
     <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:rgba(59,130,246,.15)"><i class="fas fa-box text-blue-400"></i></div>
     <div><p class="text-xs text-slate-400 mb-0.5">Total Produk</p><p class="text-2xl font-black text-white">{{ $stats['total'] }}</p></div>
@@ -34,15 +34,19 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
     <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:rgba(16,185,129,.15)"><i class="fas fa-cubes text-emerald-400"></i></div>
     <div><p class="text-xs text-slate-400 mb-0.5">Total Stok</p><p class="text-2xl font-black text-white">{{ number_format($stats['total_stock']) }}</p></div>
   </div>
+  <a href="{{ route('products.index', array_merge(request()->except(['stock_status','page']), ['stock_status'=>'low'])) }}" class="stat-card cursor-pointer group hover:bg-slate-800/80">
+    <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-colors group-hover:bg-amber-500/20" style="background:rgba(234,179,8,.15)"><i class="fas fa-triangle-exclamation text-yellow-400"></i></div>
+    <div><p class="text-xs text-slate-400 mb-0.5 group-hover:text-yellow-400 transition-colors">Stok Rendah <i class="fas fa-chevron-right text-[10px] ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity"></i></p><p class="text-2xl font-black text-yellow-400">{{ $stats['low_stock'] }}</p></div>
+  </a>
+  <a href="{{ route('products.index', array_merge(request()->except(['stock_status','page']), ['stock_status'=>'empty'])) }}" class="stat-card cursor-pointer group hover:bg-slate-800/80">
+    <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-colors group-hover:bg-red-500/20" style="background:rgba(239,68,68,.15)"><i class="fas fa-ban text-red-400"></i></div>
+    <div><p class="text-xs text-slate-400 mb-0.5 group-hover:text-red-400 transition-colors">Produk Habis <i class="fas fa-chevron-right text-[10px] ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity"></i></p><p class="text-2xl font-black text-red-400">{{ $stats['out_stock'] }}</p></div>
+  </a>
+  <a href="{{ route('products.index', array_merge(request()->except(['stock_status','page']), ['stock_status'=>'unlimited'])) }}" class="stat-card cursor-pointer group hover:bg-slate-800/80">
+    <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-colors group-hover:bg-cyan-500/20" style="background:rgba(6,182,212,.15)"><i class="fas fa-infinity text-cyan-400"></i></div>
+    <div><p class="text-xs text-slate-400 mb-0.5 group-hover:text-cyan-400 transition-colors">Unlimited <i class="fas fa-chevron-right text-[10px] ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity"></i></p><p class="text-2xl font-black text-cyan-400">{{ $stats['unlimited'] }}</p></div>
+  </a>
   <div class="stat-card">
-    <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:rgba(234,179,8,.15)"><i class="fas fa-triangle-exclamation text-yellow-400"></i></div>
-    <div><p class="text-xs text-slate-400 mb-0.5">Stok Rendah</p><p class="text-2xl font-black text-yellow-400">{{ $stats['low_stock'] }}</p></div>
-  </div>
-  <div class="stat-card">
-    <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:rgba(239,68,68,.15)"><i class="fas fa-ban text-red-400"></i></div>
-    <div><p class="text-xs text-slate-400 mb-0.5">Produk Habis</p><p class="text-2xl font-black text-red-400">{{ $stats['out_stock'] }}</p></div>
-  </div>
-  <div class="stat-card lg:col-span-1 col-span-2">
     <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:rgba(139,92,246,.15)"><i class="fas fa-coins text-violet-400"></i></div>
     <div><p class="text-xs text-slate-400 mb-0.5">Nilai Stok</p><p class="text-base font-black text-white">Rp {{ number_format($stats['stock_value'],0,',','.') }}</p></div>
   </div>
@@ -94,11 +98,12 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
     {{-- Status --}}
     <select name="stock_status" onchange="this.form.submit()"
             class="py-1.5 px-3 text-sm rounded-xl text-white outline-none cursor-pointer appearance-none flex-shrink-0"
-            style="background:rgba(15,23,42,.7);border:1px solid rgba(71,85,105,.5);width:125px;">
+            style="background:rgba(15,23,42,.7);border:1px solid rgba(71,85,105,.5);width:130px;">
       <option value="">Semua Status</option>
-      <option value="safe"  {{ request('stock_status')=='safe' ?'selected':'' }}>✅ Aman</option>
-      <option value="low"   {{ request('stock_status')=='low'  ?'selected':'' }}>⚠️ Rendah</option>
-      <option value="empty" {{ request('stock_status')=='empty'?'selected':'' }}>🚫 Habis</option>
+      <option value="safe"      {{ request('stock_status')=='safe'      ?'selected':'' }}>✅ Aman</option>
+      <option value="low"       {{ request('stock_status')=='low'       ?'selected':'' }}>⚠️ Rendah</option>
+      <option value="empty"     {{ request('stock_status')=='empty'     ?'selected':'' }}>🚫 Habis</option>
+      <option value="unlimited" {{ request('stock_status')=='unlimited' ?'selected':'' }}>♾️ Unlimited</option>
     </select>
 
     {{-- Sort --}}
@@ -212,6 +217,9 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
           </td>
           <td class="px-4 py-3 text-right">
             <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              @if(!$p->isStockless())
+              <a href="{{ route('stock.index', ['action' => 'restock', 'product_id' => $p->id]) }}" class="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400 hover:text-emerald-300 transition-all hover:scale-110" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);" title="Restock / Sesuaikan Stok"><i class="fas fa-plus text-xs"></i></a>
+              @endif
               <a href="{{ route('products.edit',$p) }}" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition-all hover:scale-110" style="background:rgba(71,85,105,.5);border:1px solid rgba(71,85,105,.5);" title="Edit"><i class="fas fa-pen text-xs"></i></a>
               <form action="{{ route('products.destroy',$p) }}" method="POST" onsubmit="return confirm('Hapus produk {{ addslashes($p->name) }}?')">
                 @csrf @method('DELETE')
@@ -222,9 +230,13 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
         </tr>
         @empty
         <tr><td colspan="7" class="py-16 text-center">
-          <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3" style="background:rgba(30,41,59,.8);border:1px solid rgba(71,85,105,.4);"><i class="fas fa-box-open text-2xl text-slate-600"></i></div>
-          <p class="text-slate-400 font-medium">Tidak ada produk ditemukan</p>
-          <p class="text-slate-600 text-sm mt-1">Coba ubah filter atau tambah produk baru</p>
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-700/50" style="background:rgba(30,41,59,.8);"><i class="fas fa-box-open text-2xl text-slate-500"></i></div>
+          <p class="text-slate-300 font-bold uppercase tracking-wider mb-1">Katalog Produk Kosong</p>
+          <p class="text-slate-500 text-sm mb-6">Worksheet ini belum memiliki data produk. Silakan tambahkan produk pertama Anda.</p>
+          <a href="{{ route('products.create') }}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-105 active:scale-95"
+             style="background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 4px 15px rgba(37,99,235,.35);">
+            <i class="fas fa-plus text-xs"></i> Tambah Produk Baru
+          </a>
         </td></tr>
         @endforelse
       </tbody>

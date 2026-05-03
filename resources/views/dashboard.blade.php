@@ -8,26 +8,26 @@
 <div class="space-y-6">
 
     {{-- Shift Alert --}}
-    @if(!$activeShift)
-    <div class="flex items-center gap-3 bg-red-500/15 border border-red-500/30 text-red-400 px-5 py-4 rounded-2xl">
-        <i class="fas fa-triangle-exclamation text-xl"></i>
-        <div>
-            <p class="font-semibold">Shift Belum Dibuka!</p>
-            <p class="text-sm text-red-300/70">Buka shift terlebih dahulu agar kasir bisa beroperasi.</p>
+    @if($activeShift)
+        <div class="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-5 py-4 rounded-2xl">
+            <div class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse"></div>
+            <div>
+                <p class="font-semibold">Shift Aktif — Dibuka oleh {{ $activeShift->opener->name }}</p>
+                <p class="text-sm text-emerald-300/70">Dibuka pada {{ $activeShift->opened_at->format('d M Y, H:i') }}</p>
+            </div>
+            <a href="{{ route('pos.index') }}" class="ml-auto btn-success whitespace-nowrap"><i class="fas fa-cash-register mr-1"></i> Buka POS</a>
         </div>
-        @if(auth()->user()->isOwner())
-        <a href="{{ route('shifts.index') }}" class="ml-auto btn-primary whitespace-nowrap">Buka Shift</a>
-        @endif
-    </div>
-    @else
-    <div class="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-5 py-4 rounded-2xl">
-        <div class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse"></div>
-        <div>
-            <p class="font-semibold">Shift Aktif — Dibuka oleh {{ $activeShift->opener->name }}</p>
-            <p class="text-sm text-emerald-300/70">Dibuka pada {{ $activeShift->opened_at->format('d M Y, H:i') }}</p>
+    @elseif($productCount > 0)
+        <div class="flex items-center gap-3 bg-red-500/15 border border-red-500/30 text-red-400 px-5 py-4 rounded-2xl">
+            <i class="fas fa-triangle-exclamation text-xl"></i>
+            <div>
+                <p class="font-semibold">Shift Belum Dibuka!</p>
+                <p class="text-sm text-red-300/70">Buka shift terlebih dahulu agar kasir bisa beroperasi.</p>
+            </div>
+            @if(auth()->user()->isOwner())
+            <a href="{{ route('shifts.index') }}" class="ml-auto btn-primary whitespace-nowrap">Buka Shift</a>
+            @endif
         </div>
-        <a href="{{ route('pos.index') }}" class="ml-auto btn-success whitespace-nowrap"><i class="fas fa-cash-register mr-1"></i> Buka POS</a>
-    </div>
     @endif
 
     {{-- Stats Cards --}}

@@ -47,6 +47,9 @@ class DashboardController extends Controller
         $recentTransactions = Transaction::with(['user', 'items'])
             ->latest()->take(5)->get();
 
+        // Total produk
+        $productCount = Product::count();
+
         // Top produk
         $topProducts = \App\Models\TransactionItem::selectRaw('product_id, product_name, SUM(quantity) as total_qty, SUM(subtotal) as total_revenue')
             ->groupBy('product_id', 'product_name')
@@ -56,7 +59,7 @@ class DashboardController extends Controller
         return view('dashboard', compact(
             'activeShift', 'todaySales', 'todayTransactions',
             'todayExpenses', 'monthSales', 'lowStockProducts',
-            'chartData', 'recentTransactions', 'topProducts'
+            'chartData', 'recentTransactions', 'topProducts', 'productCount'
         ));
     }
 }

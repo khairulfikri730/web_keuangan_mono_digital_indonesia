@@ -11,7 +11,7 @@ class CashflowController extends Controller
 {
     private function baseQuery($filter, $source, $start = null, $end = null)
     {
-        $query = Cashflow::with('user');
+        $query = Cashflow::with(['user', 'worksheet']);
 
         switch ($filter) {
             case 'today':
@@ -86,11 +86,21 @@ class CashflowController extends Controller
 
         $trend = $this->calculateTrend($filter, $source, $start, $end);
 
+        // Saldo calculations (all time)
+        $saldoLaciIncome = Cashflow::where('source', 'pos_cash')->where('type', 'income')->sum('amount');
+        $saldoLaciExpense = Cashflow::where('source', 'pos_cash')->where('type', 'expense')->sum('amount');
+        $saldoLaci = $saldoLaciIncome - $saldoLaciExpense;
+
+        $saldoBankIncome = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('type', 'income')->sum('amount');
+        $saldoBankExpense = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('type', 'expense')->sum('amount');
+        $saldoBank = $saldoBankIncome - $saldoBankExpense;
+
         return view('cashflow.index', compact(
             'cashflows', 'totalIncome', 'totalExpense', 'netProfit',
             'filter', 'start', 'end', 'source', 'incomeByCategory', 'expenseByCategory',
             'chartDates', 'chartIncome', 'chartExpense',
-            'biggestExpense', 'avgIncome', 'trend'
+            'biggestExpense', 'avgIncome', 'trend',
+            'saldoLaci', 'saldoBank'
         ));
     }
 
@@ -335,5 +345,73 @@ class CashflowController extends Controller
         $cashflow->delete();
 
         return back()->with('success', 'Data cashflow dihapus!');
+    }
+
+    /**
+     * Transfer between Laci and Bank
+     */
+    public function transfer(Request $request)
+    {
+        $request->validate([
+            'direction' => 'required|in:laci_to_bank,bank_to_laci',
+            'amount' => 'required|numeric|min:1',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        $ref = 'TRF-' . now()->format('YmdHis');
+
+        if ($request->direction === 'laci_to_bank') {
+            // Expense from laci
+            Cashflow::create([
+                'user_id' => auth()->id(),
+                'type' => 'expense',
+                'category' => 'Transfer Internal',
+                'description' => 'Transfer Laci → Bank',
+                'amount' => $request->amount,
+                'source' => 'pos_cash',
+                'reference' => $ref,
+                'transaction_date' => today(),
+                'notes' => $request->notes,
+            ]);
+            // Income to bank
+            Cashflow::create([
+                'user_id' => auth()->id(),
+                'type' => 'income',
+                'category' => 'Transfer Internal',
+                'description' => 'Transfer Laci → Bank',
+                'amount' => $request->amount,
+                'source' => 'transfer',
+                'reference' => $ref,
+                'transaction_date' => today(),
+                'notes' => $request->notes,
+            ]);
+        } else {
+            // Expense from bank
+            Cashflow::create([
+                'user_id' => auth()->id(),
+                'type' => 'expense',
+                'category' => 'Transfer Internal',
+                'description' => 'Transfer Bank → Laci',
+                'amount' => $request->amount,
+                'source' => 'transfer',
+                'reference' => $ref,
+                'transaction_date' => today(),
+                'notes' => $request->notes,
+            ]);
+            // Income to laci
+            Cashflow::create([
+                'user_id' => auth()->id(),
+                'type' => 'income',
+                'category' => 'Transfer Internal',
+                'description' => 'Transfer Bank → Laci',
+                'amount' => $request->amount,
+                'source' => 'pos_cash',
+                'reference' => $ref,
+                'transaction_date' => today(),
+                'notes' => $request->notes,
+            ]);
+        }
+
+        return back()->with('success', 'Transfer berhasil dicatat!');
     }
 }

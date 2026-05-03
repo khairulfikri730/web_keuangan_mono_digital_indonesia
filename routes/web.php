@@ -13,6 +13,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\WorksheetController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes
@@ -32,13 +33,20 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard - semua role
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // POS - semua role (operator & owner), tapi harus ada shift aktif
-    Route::prefix('pos')->name('pos.')->group(function () {
+    // Worksheets
+    Route::post('/worksheets/switch', [WorksheetController::class, 'switch'])->name('worksheets.switch');
+    Route::post('/worksheets', [WorksheetController::class, 'store'])->name('worksheets.store');
+    Route::put('/worksheets/{worksheet}', [WorksheetController::class, 'update'])->name('worksheets.update');
+    Route::delete('/worksheets/{worksheet}', [WorksheetController::class, 'destroy'])->name('worksheets.destroy');
+
+    // POS - permission based
+    Route::middleware('permission:pos')->prefix('pos')->name('pos.')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
         Route::get('/products', [PosController::class, 'getProducts'])->name('products');
         Route::post('/checkout', [PosController::class, 'checkout'])->name('checkout');
         Route::get('/receipt/{transaction}', [PosController::class, 'receipt'])->name('receipt');
-        
+        Route::post('/expense', [PosController::class, 'storeExpense'])->name('expense');
+
         // POS Groups
         Route::post('/groups/sync-all', [PosController::class, 'syncAllGroups'])->name('groups.syncAll');
         Route::post('/groups', [PosController::class, 'storeGroup'])->name('groups.store');
@@ -47,64 +55,70 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/groups/{group}/sync', [PosController::class, 'syncGroupProducts'])->name('groups.sync');
     });
 
-    // Transaksi - semua role bisa lihat (operator lihat miliknya via shift)
-    Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
-    Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
+    // Transaksi - permission based
+    Route::middleware('permission:transactions')->group(function () {
+        Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+        Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
+    });
+
+    // Shift Management - permission based
+    Route::middleware('permission:shifts')->prefix('shifts')->name('shifts.')->group(function () {
+        Route::get('/', [ShiftController::class, 'index'])->name('index');
+        Route::post('/open', [ShiftController::class, 'open'])->name('open');
+        Route::post('/{shift}/close', [ShiftController::class, 'close'])->name('close');
+        Route::put('/{shift}', [ShiftController::class, 'update'])->name('update');
+        Route::delete('/{shift}', [ShiftController::class, 'destroy'])->name('destroy');
+        Route::get('/{shift}', [ShiftController::class, 'show'])->name('show');
+        Route::get('/{shift}/summary', [ShiftController::class, 'getSummary'])->name('summary');
+    });
+
+    // Produk - permission based
+    Route::middleware('permission:products')->group(function () {
+        Route::resource('products', ProductController::class)->except(['show']);
+        Route::get('/products/export/{format}', [ProductController::class, 'export'])->name('products.export');
+    });
+
+    // Kategori - permission based
+    Route::middleware('permission:categories')->prefix('categories')->name('categories.')->group(function () {
+        Route::get('/', [CategoryController::class, 'index'])->name('index');
+        Route::post('/', [CategoryController::class, 'store'])->name('store');
+        Route::put('/{category}', [CategoryController::class, 'update'])->name('update');
+        Route::delete('/{category}', [CategoryController::class, 'destroy'])->name('destroy');
+    });
+
+    // Stok - permission based
+    Route::middleware('permission:stock')->prefix('stock')->name('stock.')->group(function () {
+        Route::get('/', [StockController::class, 'index'])->name('index');
+        Route::post('/adjust', [StockController::class, 'adjust'])->name('adjust');
+        Route::delete('/mutation/{mutation}', [StockController::class, 'destroy'])->name('destroy');
+    });
+
+    // Cashflow - permission based
+    Route::middleware('permission:cashflow')->prefix('cashflow')->name('cashflow.')->group(function () {
+        Route::get('/', [CashflowController::class, 'index'])->name('index');
+        Route::get('/data', [CashflowController::class, 'getData'])->name('data');
+        Route::get('/export', [CashflowController::class, 'export'])->name('export');
+        Route::post('/', [CashflowController::class, 'store'])->name('store');
+        Route::post('/transfer', [CashflowController::class, 'transfer'])->name('transfer');
+        Route::delete('/{cashflow}', [CashflowController::class, 'destroy'])->name('destroy');
+    });
+
+    // Laporan - permission based
+    Route::middleware('permission:sales')->get('/reports/sales', [ReportController::class, 'sales'])->name('sales.index');
+    Route::middleware('permission:reports_financial')->get('/reports/financial', [ReportController::class, 'financial'])->name('reports.financial');
+    Route::middleware('permission:reports_shifts')->get('/reports/shifts', [ReportController::class, 'shifts'])->name('reports.shifts');
 
     // Owner-only routes
     Route::middleware(['role:owner'])->group(function () {
-
-        // Manajemen Shift
-        Route::prefix('shifts')->name('shifts.')->group(function () {
-            Route::get('/', [ShiftController::class, 'index'])->name('index');
-            Route::post('/open', [ShiftController::class, 'open'])->name('open');
-            Route::post('/{shift}/close', [ShiftController::class, 'close'])->name('close');
-            Route::get('/{shift}', [ShiftController::class, 'show'])->name('show');
-        });
-
-        // Produk
-        Route::resource('products', ProductController::class)->except(['show']);
-        Route::get('/products/export/{format}', [ProductController::class, 'export'])->name('products.export');
-
-        // Kategori
-        Route::prefix('categories')->name('categories.')->group(function () {
-            Route::get('/', [CategoryController::class, 'index'])->name('index');
-            Route::post('/', [CategoryController::class, 'store'])->name('store');
-            Route::put('/{category}', [CategoryController::class, 'update'])->name('update');
-            Route::delete('/{category}', [CategoryController::class, 'destroy'])->name('destroy');
-        });
-
-        // Manajemen Stok
-        Route::prefix('stock')->name('stock.')->group(function () {
-            Route::get('/', [StockController::class, 'index'])->name('index');
-            Route::post('/adjust', [StockController::class, 'adjust'])->name('adjust');
-        });
-
-        // Cashflow
-        Route::prefix('cashflow')->name('cashflow.')->group(function () {
-            Route::get('/', [CashflowController::class, 'index'])->name('index');
-            Route::get('/data', [CashflowController::class, 'getData'])->name('data');
-            Route::get('/export', [CashflowController::class, 'export'])->name('export');
-            Route::post('/', [CashflowController::class, 'store'])->name('store');
-            Route::delete('/{cashflow}', [CashflowController::class, 'destroy'])->name('destroy');
-        });
-
-        // Laporan
-        Route::prefix('reports')->name('reports.')->group(function () {
-            Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
-            Route::get('/financial', [ReportController::class, 'financial'])->name('financial');
-            Route::get('/shifts', [ReportController::class, 'shifts'])->name('shifts');
-        });
-
-        // Rekap Penjualan & Margin
-        Route::get('/sales-report', [SalesController::class, 'index'])->name('sales.index');
-
-        // Batalkan transaksi
+        // Batalkan / hapus transaksi
         Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->name('transactions.cancel');
         Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
 
+        // Bayar piutang
+        Route::post('/transactions/{transaction}/pay', [TransactionController::class, 'payPiutang'])->name('transactions.pay');
+
         // Manajemen Tim
-        Route::prefix('team')->name('team.')->group(function () {
+        Route::middleware('permission:team')->prefix('team')->name('team.')->group(function () {
             Route::get('/', [TeamController::class, 'index'])->name('index');
             Route::post('/', [TeamController::class, 'store'])->name('store');
             Route::put('/{user}', [TeamController::class, 'update'])->name('update');
@@ -113,7 +127,9 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Pengaturan
-        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-        Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+        Route::middleware('permission:settings')->group(function () {
+            Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+            Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+        });
     });
 });

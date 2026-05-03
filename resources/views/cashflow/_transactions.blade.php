@@ -40,6 +40,9 @@
                                 $badgeColor = $sourceColors[$c->source] ?? 'bg-slate-500/10 text-slate-400';
                             @endphp
                             <span class="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider {{ $badgeColor }}">{{ $sourceBadge }}</span>
+                            @if($c->worksheet)
+                                <span class="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-amber-500/10 text-amber-400" title="Cabang / Worksheet"><i class="fas fa-store-alt mr-1"></i>{{ $c->worksheet->name }}</span>
+                            @endif
                             @if($c->reference)
                                 <span class="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-blue-500/10 text-blue-400">POS</span>
                             @endif

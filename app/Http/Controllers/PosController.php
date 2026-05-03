@@ -22,7 +22,7 @@ class PosController extends Controller
         $categories = Category::where('is_active', true)->get();
         $products = Product::active()->with('category')->orderBy('name')->get();
         $posGroups = PosGroup::with('products.category')->orderBy('position')->get();
-        $settings = \App\Models\Setting::getMultiple(['tax_rate', 'active_payment_methods']);
+        $settings = \App\Models\Setting::getMultiple(['tax_rate', 'active_payment_methods', 'bank_name', 'bank_account', 'bank_holder', 'qris_image']);
         return view('pos.index', compact('activeShift', 'categories', 'products', 'posGroups', 'settings'));
     }
 
@@ -49,7 +49,7 @@ class PosController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:cash,transfer,qris,debit',
+            'payment_method' => 'required|in:cash,transfer,qris,debit,piutang',
             'paid_amount' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:nominal,percentage',
@@ -119,19 +119,23 @@ class PosController extends Controller
             $total = $subtotal - $discount + $tax;
             $change = $request->paid_amount - $total;
 
+            $isPiutang = $request->payment_method === 'piutang';
+            $dpAmount = $isPiutang ? max(0, $request->paid_amount) : 0;
+
             $transaction = Transaction::create([
                 'invoice_number' => Transaction::generateInvoiceNumber(),
                 'shift_id' => $activeShift->id,
                 'user_id' => auth()->id(),
                 'subtotal' => $subtotal,
-                'discount' => $discount, // save as nominal value in db
+                'discount' => $discount,
                 'discount_type' => $discountType,
                 'tax' => $tax,
                 'total' => $total,
-                'paid_amount' => $request->paid_amount,
-                'change_amount' => max(0, $change),
+                'paid_amount' => $isPiutang ? $dpAmount : $request->paid_amount,
+                'change_amount' => $isPiutang ? 0 : max(0, $change),
+                'paid_so_far' => $isPiutang ? $dpAmount : $total,
                 'payment_method' => $request->payment_method,
-                'status' => 'completed',
+                'status' => ($isPiutang && $dpAmount < $total) ? 'pending' : 'completed',
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone,
                 'notes' => $request->notes,
@@ -142,8 +146,23 @@ class PosController extends Controller
             }
             TransactionItem::insert($itemsData);
 
-            // Dispatch event to handle Cashflow creation
-            event(new \App\Events\TransactionCreated($transaction));
+            // Dispatch event to handle Cashflow creation (only for non-piutang or piutang with DP)
+            if (!$isPiutang) {
+                event(new \App\Events\TransactionCreated($transaction));
+            } elseif ($dpAmount > 0) {
+                // Record DP as income
+                Cashflow::create([
+                    'user_id' => auth()->id(),
+                    'shift_id' => $activeShift->id,
+                    'type' => 'income',
+                    'category' => 'Uang Muka (DP)',
+                    'description' => 'DP pesanan #' . $transaction->invoice_number,
+                    'amount' => $dpAmount,
+                    'source' => 'pos_cash',
+                    'transaction_date' => today(),
+                    'reference_id' => $transaction->id,
+                ]);
+            }
 
             DB::commit();
 
@@ -262,5 +281,35 @@ class PosController extends Controller
             DB::rollBack();
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * POS Quick Expense — kasir bisa catat pengeluaran dari laci
+     */
+    public function storeExpense(Request $request)
+    {
+        $request->validate([
+            'description' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:1',
+            'category' => 'nullable|string|max:100',
+        ]);
+
+        $activeShift = Shift::activeShift();
+        if (!$activeShift) {
+            return response()->json(['error' => 'Tidak ada shift aktif!'], 422);
+        }
+
+        Cashflow::create([
+            'user_id' => auth()->id(),
+            'shift_id' => $activeShift->id,
+            'type' => 'expense',
+            'category' => $request->category ?? 'Pengeluaran Kasir',
+            'description' => $request->description,
+            'amount' => $request->amount,
+            'source' => 'pos_cash',
+            'transaction_date' => today(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Pengeluaran berhasil dicatat.']);
     }
 }

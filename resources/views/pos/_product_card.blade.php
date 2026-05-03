@@ -33,18 +33,10 @@
         <template x-if="!p.image">
             <div class="w-full h-full flex flex-col items-center justify-center select-none group-hover:scale-110 transition-transform duration-500 relative z-10" 
                  :style="p.is_stockless ? 'background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white;' : `background: linear-gradient(135deg, ${p.category?.color || '#cbd5e1'} 0%, ${adjustBrightness(p.category?.color || '#cbd5e1', -20)} 100%); color: ${getContrastYIQ(p.category?.color || '#cbd5e1')};`">
-                <template x-if="p.is_stockless">
-                    <div class="flex flex-col items-center gap-1">
-                        <i class="fas fa-infinity text-4xl opacity-90 drop-shadow-lg"></i>
-                        <span class="text-xs font-black opacity-70 tracking-widest uppercase">Unlimited</span>
-                    </div>
-                </template>
-                <template x-if="!p.is_stockless">
-                    <div class="flex flex-col items-center">
-                        <i :class="getPlaceholderIcon(p.category?.name)" class="text-3xl mb-1 opacity-50 drop-shadow-md"></i>
-                        <span class="text-2xl font-black opacity-80 tracking-tighter mix-blend-overlay drop-shadow-sm" x-text="getInitials(p.name)"></span>
-                    </div>
-                </template>
+                <div class="flex flex-col items-center">
+                    <i :class="getPlaceholderIcon(p.category?.name)" class="text-3xl mb-1 opacity-50 drop-shadow-md"></i>
+                    <span class="text-2xl font-black opacity-80 tracking-tighter mix-blend-overlay drop-shadow-sm" x-text="getInitials(p.name)"></span>
+                </div>
             </div>
         </template>
 

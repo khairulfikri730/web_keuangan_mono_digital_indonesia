@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToWorksheet;
 
-    protected $fillable = ['name', 'slug', 'color', 'description', 'is_active'];
+    protected $fillable = ['worksheet_id', 'name', 'slug', 'color', 'description', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
 
@@ -26,5 +26,10 @@ class Category extends Model
                 $category->slug = \Illuminate\Support\Str::slug($category->name);
             }
         });
+    }
+
+    public function worksheet()
+    {
+        return $this->belongsTo(Worksheet::class);
     }
 }

@@ -29,19 +29,19 @@ app/
 │   └── Middleware/
 │       └── RoleMiddleware.php  (otentikasi per-role)
 ├── Events/
-│   └── TransactionCreated.php  (event — belum ada listener)
+│   └── TransactionCreated.php  (event — handler via listener)
 └── Providers/
     └── AppServiceProvider.php  (kosong)
 
 database/
-├── migrations/      14 file migrasi
+├── migrations/      15 file migrasi
 └── seeders/
     └── DatabaseSeeder.php  (2 user, 5 kategori, 9 produk, 7 setting)
 
 routes/
-└── web.php          50+ rute (guest, auth, role:owner)
+└── web.php          55+ rute (guest, auth, role:owner)
 
-resources/views/     24 file blade (dark UI)
+resources/views/     25 file blade (dark UI)
 ```
 
 ---
@@ -190,13 +190,13 @@ resources/views/
 ├── auth/login.blade.php       → Halaman login
 ├── dashboard.blade.php         → Dashboard overview (statistik hari ini)
 ├── pos/
-│   ├── index.blade.php         → Layar POS kasir (grid produk, keranjang)
-│   ├── _product_card.blade.php → Partial kartu produk
+│   ├── index.blade.php         → Layar POS kasir (grid produk, keranjang, multi-worksheet, drag-drop editor)
+│   ├── _product_card.blade.php → Partial kartu produk (dengan visual UNLIMITED badge)
 │   └── receipt.blade.php       → Struk cetak
 ├── products/
 │   ├── index.blade.php         → Katalog produk (tab finished/semi/raw)
-│   ├── create.blade.php        → Form tambah (kompleks, per-kind fields)
-│   └── edit.blade.php          → Form edit
+│   ├── create.blade.php        → Form tambah (kompleks, per-kind fields, 6 jenis)
+│   └── edit.blade.php          → Form edit (+ selector Jenis Produk 6 pilihan)
 ├── categories/index.blade.php  → Daftar kategori (modal CRUD)
 ├── stock/index.blade.php       → Log mutasi + form penyesuaian
 ├── transactions/
@@ -287,6 +287,37 @@ resources/views/
 
 ---
 
+## 17a. Fitur POS Kasir (Detail)
+
+### Multi-Worksheet
+- POS mendukung **banyak worksheet sekaligus** (tab paralel)
+- Setiap worksheet menyimpan cart, pelanggan, catatan, dan diskon secara independen
+- Operator bisa berpindah antar worksheet tanpa kehilangan data keranjang
+
+### Drag-and-Drop Layout Editor
+- Tombol **"Groupkan Item"** di header POS membuka modal editor layout
+- Produk dapat diseret antar grup (drag & drop HTML5 native)
+- Grup memiliki nama + warna kustom
+- Menyimpan layout via `POST /pos/groups/sync-all` → memperbarui `pos_groups` & pivot `pos_group_product`
+
+### Visual Kartu Produk (POS Grid)
+| Elemen | Produk Biasa | Produk Unlimited |
+|---|---|---|
+| Background | Putih | Gradient ungu `#f5f3ff → #ede9fe` |
+| Border | Warna kategori / abu | Indigo `#6366f1` |
+| Placeholder gambar | Warna kategori + inisial | Gradient indigo-purple + ikon ∞ |
+| Badge stok (kanan atas) | `Stok: N` (hijau/merah) | Ikon ∞ indigo |
+| Badge jenis (kiri atas) | — | **∞ UNLIMITED** (gradient indigo→ungu) |
+| Teks harga | Hijau emerald | Ungu indigo |
+| Efek hover | Glow kategori | Shimmer kilap |
+
+### Logika Stok Unlimited di Cart
+- `product.is_stockless` di-cast `!!` (boolean) untuk menangani integer `1` dari JSON
+- Produk `unlimited` / `service` **tidak pernah diblokir** oleh pengecekan stok
+- Stok fisik **tidak berkurang** saat checkout untuk produk unlimited
+
+---
+
 ## 14. Cara Menjalankan
 
 ```bash
@@ -369,7 +400,13 @@ php artisan serve
 
 | Tanggal | Perubahan |
 |---------|-----------|
+| 2026-05-02 | **Fix:** Produk `unlimited`/`service` tidak bisa ditambah ke cart (bug `is_stockless` tidak dikonversi ke boolean). Diperbaiki dengan `!!product.is_stockless` |
+| 2026-05-02 | **Feature:** Selector **Jenis Produk** (Biasa/Timbangan/Unlimited/Jasa/Bundle/Formula) ditambahkan ke halaman **Edit Produk** — sebelumnya hanya ada di halaman Tambah Produk |
+| 2026-05-02 | **UI:** Kartu produk POS dirancang ulang — produk `unlimited` kini tampil dengan tema indigo/ungu berbeda dari produk biasa; badge gradient `∞ UNLIMITED`, shimmer hover, ikon ∞ pada placeholder |
+| 2026-05-02 | **Feature:** `PosController@getProducts` mengembalikan `is_stockless` via `Product::$appends` sehingga frontend dapat membedakan produk unlimited |
 | 2026-05-02 | `transaction_items.product_id` FK diubah dari `ON DELETE RESTRICT` → `ON DELETE SET NULL`. Produk yang sudah dipakai transaksi **tetap bisa dihapus**, riwayat transaksi utuh (pakai `product_name` snapshot) |
+| 2026-05-01 | **Feature:** Drag-and-Drop Layout Editor POS — groupkan produk ke dalam grup berwarna via modal editor |
+| 2026-05-01 | **Feature:** Multi-Worksheet POS — setiap tab worksheet punya cart independen |
 | 2026-05-01 | Migrasi tambahan: `pos_groups` (grup produk POS), `source` + `reference_id` di `cashflows` |
 | 2026-04-30 | Migrasi tambahan: `customer_phone`, `discount_type` di `transactions`; `product_type`, `product_kind`, `meta` di `products` |
 | 2026-04-30 | Migrasi dasar: users, shifts, categories, products, stock_mutations, transactions, transaction_items, cashflows, settings |

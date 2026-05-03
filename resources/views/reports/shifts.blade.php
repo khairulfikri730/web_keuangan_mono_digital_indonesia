@@ -162,12 +162,9 @@
                     <a href="{{ route('pos.index') }}" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors shadow-sm text-xs flex items-center justify-center gap-2">
                         <i class="fas fa-cash-register"></i> Ke POS
                     </a>
-                    <form action="{{ route('shifts.close', $activeShift) }}" method="POST" class="flex-1" onsubmit="return confirm('Tutup shift ini sekarang?')">
-                        @csrf
-                        <button type="submit" class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20 text-xs flex items-center justify-center gap-2">
-                            <i class="fas fa-lock"></i> Tutup Shift
-                        </button>
-                    </form>
+                    <button @click="showCloseModal = true" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20 text-xs flex items-center justify-center gap-2">
+                        <i class="fas fa-lock"></i> Tutup Shift
+                    </button>
                 </div>
             </div>
             @else
@@ -177,13 +174,9 @@
                 </div>
                 <h3 class="font-black text-white mb-1">Tidak Ada Shift Aktif</h3>
                 <p class="text-xs text-slate-400 mb-6">Belum ada kasir yang membuka shift saat ini.</p>
-                <form action="{{ route('shifts.open') }}" method="POST" class="w-full max-w-[200px]">
-                    @csrf
-                    <input type="hidden" name="opening_cash" value="0">
-                    <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 text-xs flex items-center justify-center gap-2">
-                        <i class="fas fa-key"></i> Buka Shift Baru
-                    </button>
-                </form>
+                <button @click="showOpenModal = true" class="py-2.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 text-xs flex items-center justify-center gap-2">
+                    <i class="fas fa-key"></i> Buka Shift Baru
+                </button>
             </div>
             @endif
 
@@ -296,7 +289,18 @@
                                     <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider animate-pulse">Menunggu shift ditutup</p>
                                 </div>
                             @endif
-                            <i class="fas fa-chevron-right text-slate-600 group-hover:text-white transition-colors ml-2 hidden md:block"></i>
+                            <div class="flex items-center gap-2 ml-4 md:ml-6">
+                                <button @click.stop="openEditModalFor({{ $s->id }})" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <form action="{{ route('shifts.destroy', $s->id) }}" method="POST" class="m-0" id="delete-shift-{{ $s->id }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="button" @click.stop="confirmDelete('{{ $s->id }}')" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Hapus Shift">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
 
                     </div>
@@ -318,31 +322,265 @@
         </div>
     </div>
 
-    {{-- MODAL DETAIL SHIFT (SIMULATED) --}}
+    {{-- MODAL DETAIL SHIFT --}}
     <div x-show="isModalOpen" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div @click.away="closeModal()" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-4" x-transition:enter-end="opacity-100 scale-100 translate-y-0" class="bg-[#1e293b] rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-700 transform overflow-hidden flex flex-col max-h-[90vh]">
-            
-            <div class="p-6 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50 relative overflow-hidden shrink-0">
-                <div class="absolute inset-0 opacity-20 pointer-events-none" style="background: radial-gradient(circle at top right, #3b82f6, transparent 70%);"></div>
-                <div>
-                    <h3 class="text-xl font-black text-white relative z-10 flex items-center gap-2"><i class="fas fa-file-invoice text-blue-400"></i> Detail Laporan Shift</h3>
-                    <p class="text-xs font-bold text-slate-400 mt-1">Sistem sedang memuat detail transaksi...</p>
-                </div>
-                <button @click="closeModal()" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-slate-400 hover:text-white transition-colors flex items-center justify-center relative z-10"><i class="fas fa-times"></i></button>
+        <div @click.away="closeModal()" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-[#1e293b] rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50 shrink-0">
+                <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fas fa-file-invoice text-blue-400"></i> Detail Shift</h3>
+                <button @click="closeModal()" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-slate-400 hover:text-white transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
             </div>
+            <div class="p-6 overflow-y-auto">
+                <template x-if="detailLoading"><div class="flex flex-col items-center py-12"><i class="fas fa-spinner fa-spin text-2xl text-blue-400 mb-3"></i><p class="text-slate-400 text-sm">Memuat...</p></div></template>
+                <template x-if="!detailLoading && detailData">
+                    <div class="space-y-6">
+                        {{-- Alert Info --}}
+                        <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-start gap-2 text-emerald-400">
+                            <i class="fas fa-check-circle mt-0.5"></i>
+                            <p class="text-xs font-medium">Nominal penjualan diambil dari Rekap Penjualan (shifts).</p>
+                        </div>
 
-            <div class="p-8 overflow-y-auto flex flex-col items-center justify-center min-h-[300px]">
-                <div class="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
-                    <i class="fas fa-spinner fa-spin text-2xl text-blue-400"></i>
-                </div>
-                <p class="text-slate-300 font-bold mb-2">Memuat Histori Transaksi</p>
-                <p class="text-xs text-slate-500 max-w-sm text-center">Fitur detail per-shift ini dapat dihubungkan via AJAX endpoint di masa mendatang.</p>
-                <div class="mt-8 pt-6 border-t border-slate-700/50 w-full flex justify-center">
-                    <a href="{{ route('reports.sales') }}" class="py-2.5 px-6 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors shadow-sm text-sm flex items-center justify-center gap-2">
-                        Lihat Rekap Penjualan
-                    </a>
-                </div>
+                        {{-- General Info --}}
+                        <div class="bg-slate-800 rounded-xl border border-slate-700/50 p-4 space-y-3">
+                            <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                <span class="text-xs font-medium text-slate-400">Kasir</span>
+                                <span class="text-sm font-bold text-white" x-text="detailData.opener"></span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                <span class="text-xs font-medium text-slate-400">Status</span>
+                                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider border" :class="detailData.status=='open'?'bg-blue-500/20 text-blue-400 border-blue-500/30':'bg-slate-700 text-slate-400 border-slate-600'" x-text="detailData.status=='open'?'Aktif':'Selesai'"></span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                <span class="text-xs font-medium text-slate-400">Shift Dibuka</span>
+                                <span class="text-xs font-bold text-white" x-text="detailData.opened_at"></span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                <span class="text-xs font-medium text-slate-400">Shift Ditutup</span>
+                                <span class="text-xs font-bold text-white" x-text="detailData.closed_at"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-slate-400">Durasi</span>
+                                <span class="text-xs font-bold text-white" x-text="detailData.duration"></span>
+                            </div>
+                        </div>
+
+                        {{-- Penjualan Section --}}
+                        <div>
+                            <h4 class="text-xs font-black text-emerald-400 uppercase flex items-center gap-2 mb-2 tracking-wider"><i class="fas fa-chart-line"></i> Penjualan</h4>
+                            <div class="bg-slate-800 rounded-xl border border-slate-700/50 p-4 space-y-3">
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">Total Transaksi</span>
+                                    <span class="text-sm font-black text-white" x-text="detailData.total_transactions"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">Total Penjualan</span>
+                                    <span class="text-sm font-black text-white" x-text="'Rp '+Number(detailData.total_sales).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">Cash</span>
+                                    <span class="text-sm font-bold text-emerald-400" x-text="'Rp '+Number(detailData.cash_sales).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-medium text-slate-400">Transfer/QRIS/Debit</span>
+                                    <span class="text-sm font-bold text-emerald-400" x-text="'Rp '+Number(detailData.bank_sales).toLocaleString('id-ID')"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Arus Kas Section --}}
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-xs font-black text-blue-400 uppercase flex items-center gap-2 tracking-wider"><i class="fas fa-money-bill-wave"></i> Arus Kas</h4>
+                                <button @click="openEditModal()" class="text-[10px] font-bold text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-600 border border-blue-500/20 px-2 py-1 rounded-md transition-colors flex items-center gap-1.5"><i class="fas fa-edit"></i> Edit Angka</button>
+                            </div>
+                            <div class="bg-slate-800 rounded-xl border border-slate-700/50 p-4 space-y-3">
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">Modal Awal</span>
+                                    <span class="text-sm font-bold text-white" x-text="'Rp '+Number(detailData.opening_cash).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">+ Penjualan Cash</span>
+                                    <span class="text-sm font-bold text-emerald-400" x-text="'+ Rp '+Number(detailData.cash_sales).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">- Pengeluaran Cash</span>
+                                    <span class="text-sm font-bold text-red-400" x-text="'- Rp '+Number(detailData.cash_expenses).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-black text-slate-300">Expected Cash</span>
+                                    <span class="text-sm font-black text-white" x-text="'Rp '+Number(detailData.expected_cash).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">Uang di Laci</span>
+                                    <span class="text-sm font-bold text-white" x-text="detailData.status=='closed' ? 'Rp '+Number(detailData.closing_cash).toLocaleString('id-ID') : 'Belum ditutup'"></span>
+                                </div>
+                                <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
+                                    <span class="text-xs font-black text-slate-300">Selisih</span>
+                                    <span class="text-sm font-black" :class="(detailData.discrepancy||0)<0?'text-red-400':((detailData.discrepancy||0)>0?'text-emerald-400':'text-slate-400')" x-text="detailData.status=='open' ? '-' : (detailData.discrepancy==0 ? 'Pas (Rp 0)' : ((detailData.discrepancy>0?'+':'') + 'Rp ' + Number(Math.abs(detailData.discrepancy)).toLocaleString('id-ID')))"></span>
+                                </div>
+                                <div class="flex justify-between items-start pt-1">
+                                    <span class="text-[10px] font-medium text-slate-500">Catatan</span>
+                                    <span class="text-[10px] text-slate-400 text-right max-w-[60%]" x-text="detailData.notes || '-'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Danger Zone (Hapus Shift) --}}
+                        <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mt-6">
+                            <h4 class="text-sm font-black text-red-400 flex items-center gap-2 mb-1"><i class="fas fa-exclamation-triangle"></i> Hapus Shift Ini</h4>
+                            <p class="text-xs text-red-400/80 mb-4 font-medium">Aksi ini tidak dapat dibatalkan.</p>
+                            
+                            <div class="bg-red-950/30 rounded-lg p-3 text-[10px] space-y-2 mb-4">
+                                <p class="font-bold text-red-300">Apa yang akan terjadi:</p>
+                                <div class="flex gap-2 text-red-400/80">
+                                    <i class="fas fa-minus-circle mt-0.5 shrink-0"></i>
+                                    <p><strong class="text-red-300">Terhapus:</strong> data shift ini (modal awal, cash out, selisih kas, catatan).</p>
+                                </div>
+                                <div class="flex gap-2 text-emerald-400/80">
+                                    <i class="fas fa-check-circle mt-0.5 shrink-0 text-emerald-400"></i>
+                                    <p><strong class="text-emerald-400">TIDAK terhapus:</strong> data Rekap Penjualan, transaksi, dan cashflow yang sudah tersinkronisasi. Semua data penjualan tetap aman.</p>
+                                </div>
+                            </div>
+
+                            <form :action="'/shifts/' + activeShiftId" method="POST" onsubmit="return confirm('Yakin ingin menghapus shift ini? Peringatan: Shift yang memiliki transaksi terkait mungkin tidak dapat dihapus.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors text-sm shadow-lg shadow-red-500/20 flex items-center justify-center gap-2">
+                                    <i class="fas fa-trash"></i> Hapus Shift
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </template>
             </div>
+        </div>
+    </div>
+
+    {{-- MODAL EDIT SHIFT --}}
+    <div x-show="showEditModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div @click.away="showEditModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6">
+            <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fas fa-edit text-blue-400"></i> Edit Shift</h3>
+            <p class="text-xs text-slate-400 mb-5">Perbarui data kas awal dan akhir shift.</p>
+            <form :action="'/shifts/' + activeShiftId" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Awal (Rp)</label>
+                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                            <input type="number" name="opening_cash" x-model="editOpening" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        </div>
+                    </div>
+                    <template x-if="detailData?.status == 'closed'">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Laci Saat Ditutup (Rp)</label>
+                            <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                                <input type="number" name="closing_cash" x-model="editClosing" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                            </div>
+
+                            {{-- Live Calculator Info --}}
+                            <div class="bg-slate-800 rounded-xl p-4 border border-slate-700/50 space-y-3 mt-4 shadow-inner">
+                                <div class="border-b border-slate-700/50 pb-3 mb-2">
+                                    <h4 class="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-2"><i class="fas fa-calculator mr-1"></i> Kalkulasi Selisih Kas (Live)</h4>
+                                    
+                                    <div class="bg-slate-900/50 rounded-lg p-2 space-y-1.5 border border-slate-700/30">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-[10px] font-medium text-slate-500">Total Penjualan Keseluruhan</span>
+                                            <span class="text-[10px] font-bold text-slate-400" x-text="'Rp '+Number(detailData?.total_sales||0).toLocaleString('id-ID')"></span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-[10px] font-medium text-slate-500">Masuk Rekening (Transfer/QRIS)</span>
+                                            <span class="text-[10px] font-bold text-blue-400/80" x-text="'Rp '+Number(detailData?.bank_sales||0).toLocaleString('id-ID')"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-slate-400">Kas Awal</span>
+                                    <span class="text-sm font-bold text-slate-300" x-text="'Rp '+Number(editOpening || 0).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-slate-400">+ Penjualan Cash</span>
+                                    <span class="text-sm font-bold text-emerald-400" x-text="'+Rp '+Number(detailData?.cash_sales||0).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs text-slate-400">- Pengeluaran Cash</span>
+                                    <span class="text-sm font-bold text-red-400" x-text="'-Rp '+Number(detailData?.cash_expenses||0).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold text-slate-300">Expected Cash</span>
+                                    <span class="text-sm font-black text-white" x-text="'Rp '+Number(editExpected).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center pt-2 border-t border-slate-700/50 mt-1">
+                                    <span class="text-xs font-black text-slate-300">Estimasi Selisih</span>
+                                    <div class="px-2 py-1 rounded-md" :class="editDiscrepancy < 0 ? 'bg-red-500/10 text-red-400' : (editDiscrepancy > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-700 text-slate-300')">
+                                        <span class="text-sm font-black" x-text="editDiscrepancy == 0 ? 'Pas (Rp 0)' : ((editDiscrepancy>0?'+':'') + 'Rp ' + Number(Math.abs(editDiscrepancy)).toLocaleString('id-ID'))"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Catatan</label>
+                        <textarea name="notes" :value="detailData?.notes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" @click="showEditModal=false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm">Batal</button>
+                        <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20"><i class="fas fa-save mr-1"></i>Simpan</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- MODAL TUTUP SHIFT --}}
+    @if($activeShift)
+    <div x-show="showCloseModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div @click.away="showCloseModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6">
+            <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fas fa-lock text-red-400"></i> Tutup Shift</h3>
+            <p class="text-xs text-slate-400 mb-5">Masukkan jumlah uang fisik di laci kasir.</p>
+            <form action="{{ route('shifts.close', $activeShift) }}" method="POST">
+                @csrf
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Uang Fisik di Laci (Rp)</label>
+                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                            <input type="number" name="closing_cash" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20" placeholder="Hitung uang fisik">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Catatan (opsional)</label>
+                        <textarea name="notes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-red-500"></textarea>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" @click="showCloseModal=false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm">Batal</button>
+                        <button type="submit" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-red-500/20"><i class="fas fa-lock mr-1"></i>Tutup Shift</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
+
+    {{-- MODAL BUKA SHIFT --}}
+    <div x-show="showOpenModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div @click.away="showOpenModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6">
+            <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fas fa-door-open text-blue-400"></i> Buka Shift Baru</h3>
+            <p class="text-xs text-slate-400 mb-5">Masukkan jumlah modal kas awal di laci.</p>
+            <form action="{{ route('shifts.open') }}" method="POST">
+                @csrf
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Awal (Rp)</label>
+                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                            <input type="number" name="opening_cash" required min="0" value="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        </div>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" @click="showOpenModal=false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm">Batal</button>
+                        <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20"><i class="fas fa-play mr-1"></i>Buka Shift</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -353,18 +591,92 @@ function shiftDashboardApp() {
     return {
         isModalOpen: false,
         activeShiftId: null,
+        detailLoading: false,
+        detailData: null,
+        showCloseModal: false,
+        showOpenModal: false,
+        showEditModal: false,
+
+        editOpening: 0,
+        editClosing: 0,
+
+        get editExpected() {
+            if (!this.detailData) return 0;
+            return Number(this.editOpening) + Number(this.detailData.cash_sales) - Number(this.detailData.cash_expenses);
+        },
+
+        get editDiscrepancy() {
+            return Number(this.editClosing) - this.editExpected;
+        },
+
+        openEditModal() {
+            if (this.detailData) {
+                this.editOpening = this.detailData.opening_cash || 0;
+                this.editClosing = this.detailData.closing_cash || 0;
+            }
+            this.showEditModal = true;
+        },
+
+        openEditModalFor(id) {
+            this.activeShiftId = id;
+            this.detailLoading = true;
+            this.detailData = null;
+            this.showEditModal = true;
+            fetch('/shifts/' + id + '/summary')
+                .then(r => r.json())
+                .then(d => { 
+                    this.detailData = d; 
+                    this.editOpening = d.opening_cash || 0;
+                    this.editClosing = d.closing_cash || 0;
+                    this.detailLoading = false; 
+                })
+                .catch(() => { this.detailLoading = false; });
+        },
 
         openShiftModal(id) {
             this.activeShiftId = id;
             this.isModalOpen = true;
-            // Di sini nanti bisa panggil fetch() / axios untuk ambil list transaksi shift tersebut
+            this.detailLoading = true;
+            this.detailData = null;
+            fetch('/shifts/' + id + '/summary')
+                .then(r => r.json())
+                .then(d => { 
+                    this.detailData = d; 
+                    this.editOpening = d.opening_cash || 0;
+                    this.editClosing = d.closing_cash || 0;
+                    this.detailLoading = false; 
+                })
+                .catch(() => { this.detailLoading = false; });
         },
-        
         closeModal() {
             this.isModalOpen = false;
-            setTimeout(() => this.activeShiftId = null, 300);
+            setTimeout(() => { this.activeShiftId = null; this.detailData = null; }, 300);
         }
     }
+}
+
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Hapus Shift?',
+        text: 'Data shift beserta semua transaksi dan pengeluaran di dalamnya akan dihapus permanen!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#334155',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal',
+        background: '#1e293b',
+        color: '#f8fafc',
+        customClass: {
+            popup: 'rounded-3xl border border-slate-700',
+            confirmButton: 'rounded-xl font-bold px-6 py-2.5',
+            cancelButton: 'rounded-xl font-bold px-6 py-2.5'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('delete-shift-' + id).submit();
+        }
+    });
 }
 </script>
 @endsection

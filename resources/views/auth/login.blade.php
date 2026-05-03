@@ -71,7 +71,7 @@
                         <i class="fas fa-crown text-yellow-400 mr-1"></i>Owner
                     </button>
                     <button onclick="fillLogin('operator@kasirpro.com')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-user text-blue-400 mr-1"></i>Operator
+                        <i class="fas fa-user text-blue-400 mr-1"></i>Kasir
                     </button>
                 </div>
             </div>

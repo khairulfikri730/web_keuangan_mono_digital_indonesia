@@ -10,7 +10,20 @@ class StockController extends Controller
 {
     public function index(Request $request)
     {
-        $query = StockMutation::with(['product', 'user'])->latest();
+        $stockType = $request->stock_type; // 'habis_pakai', 'unlimited', or null
+
+        $stocklessProductIds = Product::where('product_kind', 'unlimited')
+            ->orWhere('product_kind', 'service')
+            ->pluck('id');
+
+        $query = StockMutation::with(['product.category', 'user'])->latest();
+
+        if ($stockType === 'unlimited') {
+            $query->whereIn('product_id', $stocklessProductIds);
+        } else {
+            // Default & habis_pakai: show only consumable products
+            $query->whereNotIn('product_id', $stocklessProductIds);
+        }
 
         if ($request->product_id) {
             $query->where('product_id', $request->product_id);
@@ -24,12 +37,19 @@ class StockController extends Controller
         if ($request->date_to) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
+        if ($request->category_id) {
+            $query->whereHas('product', fn($q) => $q->where('category_id', $request->category_id));
+        }
+        if ($request->search) {
+            $query->whereHas('product', fn($q) => $q->where('name', 'like', "%{$request->search}%"));
+        }
 
         $mutations = $query->paginate(20)->withQueryString();
         $products = Product::active()->orderBy('name')->get();
         $lowStockProducts = Product::active()->lowStock()->with('category')->get();
+        $categories = \App\Models\Category::where('is_active', true)->orderBy('name')->get();
 
-        return view('stock.index', compact('mutations', 'products', 'lowStockProducts'));
+        return view('stock.index', compact('mutations', 'products', 'lowStockProducts', 'categories'));
     }
 
     public function adjust(Request $request)
@@ -42,6 +62,11 @@ class StockController extends Controller
         ]);
 
         $product = Product::findOrFail($request->product_id);
+
+        if ($product->isStockless()) {
+            return back()->with('error', 'Produk ini bertipe Unlimited/Jasa dan tidak memerlukan penyesuaian stok.');
+        }
+
         $stockBefore = $product->stock;
 
         if ($request->type === 'out' && $product->stock < $request->quantity) {
@@ -67,5 +92,25 @@ class StockController extends Controller
         ]);
 
         return back()->with('success', 'Stok berhasil disesuaikan!');
+    }
+
+    public function destroy(StockMutation $mutation)
+    {
+        $product = $mutation->product;
+
+        // Reverse the stock change if product is not stockless
+        if ($product && !$product->isStockless()) {
+            if ($mutation->type === 'in') {
+                $product->decrement('stock', $mutation->quantity);
+            } elseif ($mutation->type === 'out') {
+                $product->increment('stock', $mutation->quantity);
+            } elseif ($mutation->type === 'adjustment') {
+                $product->update(['stock' => $mutation->stock_before]);
+            }
+        }
+
+        $mutation->delete();
+
+        return back()->with('success', 'Riwayat mutasi berhasil dihapus dan stok dikembalikan.');
     }
 }

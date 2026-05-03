@@ -7,8 +7,9 @@
 @section('content')
 @php
     $totalProducts = count($products);
-    $lowStock = collect($products)->where('stock', '<=', 5)->where('stock', '>', 0)->count();
-    $outOfStock = collect($products)->where('stock', '<=', 0)->count();
+    $stockableProducts = collect($products)->filter(fn($p) => !$p->is_stockless);
+    $lowStock = $stockableProducts->where('stock', '<=', 5)->where('stock', '>', 0)->count();
+    $outOfStock = $stockableProducts->where('stock', '<=', 0)->count();
     $totalMutations = $mutations->total();
 @endphp
 
@@ -48,33 +49,37 @@
             </div>
         </div>
 
-        {{-- Card 2 --}}
-        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 flex items-center gap-4 shadow-sm relative overflow-hidden">
-            <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
-                <i class="fas fa-exclamation-triangle text-amber-400 text-xl"></i>
-            </div>
-            <div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Stok Menipis</p>
-                <h3 class="text-2xl font-black text-white">{{ $lowStock }}</h3>
+        {{-- Card 2 (Stok Menipis) --}}
+        <a href="{{ route('products.index', ['stock_status' => 'low']) }}" class="block bg-slate-800 hover:bg-slate-700/80 hover:border-amber-500/50 rounded-2xl p-4 border border-slate-700/50 shadow-sm relative overflow-hidden transition-all group cursor-pointer">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0 group-hover:bg-amber-500/20 transition-colors">
+                    <i class="fas fa-exclamation-triangle text-amber-400 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5 group-hover:text-amber-300 transition-colors">Stok Menipis <i class="fas fa-chevron-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                    <h3 class="text-2xl font-black text-white">{{ $lowStock }}</h3>
+                </div>
             </div>
             @if($lowStock > 0)
                 <div class="absolute top-0 right-0 w-2 h-full bg-amber-500"></div>
             @endif
-        </div>
+        </a>
 
-        {{-- Card 3 --}}
-        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 flex items-center gap-4 shadow-sm relative overflow-hidden">
-            <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shrink-0">
-                <i class="fas fa-times-circle text-red-400 text-xl"></i>
-            </div>
-            <div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Stok Habis</p>
-                <h3 class="text-2xl font-black text-white">{{ $outOfStock }}</h3>
+        {{-- Card 3 (Stok Habis) --}}
+        <a href="{{ route('products.index', ['stock_status' => 'empty']) }}" class="block bg-slate-800 hover:bg-slate-700/80 hover:border-red-500/50 rounded-2xl p-4 border border-slate-700/50 shadow-sm relative overflow-hidden transition-all group cursor-pointer">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shrink-0 group-hover:bg-red-500/20 transition-colors">
+                    <i class="fas fa-times-circle text-red-400 text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5 group-hover:text-red-300 transition-colors">Stok Habis <i class="fas fa-chevron-right text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                    <h3 class="text-2xl font-black text-white">{{ $outOfStock }}</h3>
+                </div>
             </div>
             @if($outOfStock > 0)
                 <div class="absolute top-0 right-0 w-2 h-full bg-red-500 shadow-[0_0_10px_#ef4444]"></div>
             @endif
-        </div>
+        </a>
 
         {{-- Card 4 --}}
         <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 flex items-center gap-4 shadow-sm relative overflow-hidden">
@@ -89,19 +94,49 @@
     </div>
 
     {{-- FILTER CHIPS --}}
-    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide shrink-0">
-        <a href="{{ route('stock.index') }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ !request('type') ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
-            Semua Data
-        </a>
-        <a href="{{ route('stock.index', ['type' => 'in']) }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ request('type') == 'in' ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
-            <i class="fas fa-arrow-down mr-1"></i> Masuk
-        </a>
-        <a href="{{ route('stock.index', ['type' => 'out']) }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ request('type') == 'out' ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
-            <i class="fas fa-arrow-up mr-1"></i> Keluar
-        </a>
-        <a href="{{ route('stock.index', ['type' => 'adjustment']) }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ request('type') == 'adjustment' ? 'bg-amber-600 text-white border-amber-500 shadow-lg shadow-amber-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
-            <i class="fas fa-sliders-h mr-1"></i> Penyesuaian
-        </a>
+    <div class="space-y-3">
+        {{-- Mutation Type Pills --}}
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('stock.index', request()->except(['type','page'])) }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ !request('type') ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                <i class="fas fa-th-large mr-1"></i> Semua Data
+            </a>
+            <a href="{{ route('stock.index', array_merge(request()->except(['page']), ['type' => 'in'])) }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ request('type') == 'in' ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                <i class="fas fa-arrow-down mr-1"></i> Masuk
+            </a>
+            <a href="{{ route('stock.index', array_merge(request()->except(['page']), ['type' => 'out'])) }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ request('type') == 'out' ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                <i class="fas fa-arrow-up mr-1"></i> Keluar
+            </a>
+            <a href="{{ route('stock.index', array_merge(request()->except(['page']), ['type' => 'adjustment'])) }}" class="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border {{ request('type') == 'adjustment' ? 'bg-amber-600 text-white border-amber-500 shadow-lg shadow-amber-500/30' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                <i class="fas fa-sliders-h mr-1"></i> Penyesuaian
+            </a>
+        </div>
+
+        {{-- Category Pills --}}
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-slate-500 text-sm font-bold mr-1"><i class="fas fa-tags mr-1"></i> Kategori:</span>
+            <a href="{{ route('stock.index', request()->except(['category_id','page'])) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ !request('category_id') ? 'bg-slate-600 text-white' : 'bg-slate-800/40 border border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white' }}">Semua</a>
+            @foreach($categories as $cat)
+            <a href="{{ route('stock.index', array_merge(request()->except(['page']), ['category_id' => $cat->id])) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ request('category_id') == $cat->id ? 'bg-slate-600 text-white' : 'bg-slate-800/40 border border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                @if($cat->color)<span class="inline-block w-2 h-2 rounded-full mr-1" style="background:{{ $cat->color }}"></span>@endif{{ $cat->name }}
+            </a>
+            @endforeach
+        </div>
+
+        {{-- Stock Type Filter Pills --}}
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-slate-500 text-sm font-bold mr-1"><i class="fas fa-cubes mr-1"></i> Tipe Stok:</span>
+            @php $curStockType = request('stock_type'); @endphp
+            <a href="{{ route('stock.index', array_merge(request()->except(['stock_type','page']), ['stock_type' => 'habis_pakai'])) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 {{ $curStockType === 'habis_pakai' || !$curStockType ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800/40 border border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                <i class="fas fa-box text-[10px]"></i> Habis Pakai (Stok Terbatas)
+            </a>
+            <a href="{{ route('stock.index', array_merge(request()->except(['stock_type','page']), ['stock_type' => 'unlimited'])) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 {{ $curStockType === 'unlimited' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-800/40 border border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                <i class="fas fa-infinity text-[10px]"></i> Unlimited (Tidak Terbatas)
+            </a>
+        </div>
     </div>
 
     {{-- LIST ACTIVITY CARDS --}}
@@ -125,14 +160,24 @@
                             <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{{ $m->product->category->name }}</span>
                             <span class="text-slate-600">•</span>
                         @endif
-                        <span class="text-xs font-medium text-slate-400">Stok: <span class="text-slate-300">{{ $m->stock_before }}</span> <i class="fas fa-long-arrow-alt-right text-[10px] mx-0.5 text-slate-500"></i> <span class="text-white font-bold">{{ $m->stock_after }}</span></span>
+                        @if($m->product && $m->product->is_stockless)
+                            <span class="text-xs font-medium text-blue-400"><i class="fas fa-infinity text-[10px] mr-1"></i> Unlimited</span>
+                        @else
+                            <span class="text-xs font-medium text-slate-400">Stok: <span class="text-slate-300">{{ $m->stock_before }}</span> <i class="fas fa-long-arrow-alt-right text-[10px] mx-0.5 text-slate-500"></i> <span class="text-white font-bold">{{ $m->stock_after }}</span></span>
+                        @endif
                     </div>
                 </div>
             </div>
 
             {{-- Bagian Tengah: Perubahan Besar --}}
             <div class="flex-shrink-0 flex justify-start md:justify-center w-full md:w-32">
-                @if($m->type === 'in')
+                @if($m->product && $m->product->is_stockless)
+                    {{-- Unlimited product: show quantity sold/used, no stock impact --}}
+                    <div class="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center gap-2 shadow-inner">
+                        <div class="w-6 h-6 rounded-md bg-blue-500/20 flex items-center justify-center"><i class="fas fa-infinity text-xs"></i></div>
+                        <span class="font-black text-xl tracking-tight">{{ $m->quantity }}</span>
+                    </div>
+                @elseif($m->type === 'in')
                     <div class="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-2 shadow-inner">
                         <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center"><i class="fas fa-plus text-xs"></i></div>
                         <span class="font-black text-xl tracking-tight">{{ $m->quantity }}</span>
@@ -160,11 +205,26 @@
                 </div>
             </div>
 
-            {{-- Quick Hover Action Icon --}}
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity hidden lg:block bg-slate-800 shadow-[-10px_0_10px_#1e293b]">
-                <button class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors shadow-lg">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+            {{-- Action Buttons --}}
+            <div class="flex items-center gap-1.5 bg-slate-900/50 p-1 rounded-xl border border-slate-700/50 shrink-0">
+                {{-- Restock --}}
+                @if($m->product && !$m->product->isStockless())
+                <a href="{{ route('stock.index', ['action' => 'restock', 'product_id' => $m->product_id]) }}" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 inline-flex items-center justify-center transition-all text-sm" title="Restock / Sesuaikan Stok"><i class="fas fa-plus"></i></a>
+                @endif
+                {{-- Lihat Produk --}}
+                @if($m->product)
+                <a href="{{ route('products.edit', $m->product) }}" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center transition-all text-sm" title="Lihat Produk"><i class="fas fa-eye"></i></a>
+                {{-- Filter by Product --}}
+                <a href="{{ route('stock.index', ['product_id' => $m->product_id]) }}" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center transition-all text-sm" title="Riwayat Produk Ini"><i class="fas fa-filter"></i></a>
+                @endif
+                {{-- Hapus --}}
+                @if(auth()->user()->isOwner())
+                <form action="{{ route('stock.destroy', ['mutation' => $m->id]) }}" method="POST" onsubmit="return confirm('Hapus mutasi ini? Stok akan dikembalikan.')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 inline-flex items-center justify-center transition-all text-sm" title="Hapus"><i class="fas fa-trash"></i></button>
+                </form>
+                @endif
             </div>
         </div>
         @empty
@@ -209,7 +269,9 @@
                         <select name="product_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-medium text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors shadow-inner appearance-none" required>
                             <option value="">-- Pilih Produk --</option>
                             @foreach($products as $p)
-                            <option value="{{ $p->id }}">{{ $p->name }} (Stok: {{ $p->stock }})</option>
+                                @if(!$p->is_stockless)
+                                <option value="{{ $p->id }}" {{ request('product_id') == $p->id ? 'selected' : '' }}>{{ $p->name }} (Stok: {{ $p->stock }})</option>
+                                @endif
                             @endforeach
                         </select>
                     </div>
@@ -249,7 +311,7 @@
 <script>
 function stockApp() {
     return {
-        isModalOpen: false,
+        isModalOpen: {{ request('action') == 'restock' ? 'true' : 'false' }},
         openModal() {
             this.isModalOpen = true;
         },

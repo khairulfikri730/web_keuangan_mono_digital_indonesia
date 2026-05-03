@@ -10,8 +10,10 @@ class TeamController extends Controller
 {
     public function index()
     {
-        $users = User::latest()->paginate(15);
-        return view('team.index', compact('users'));
+        $users = User::with('worksheets')->latest()->paginate(15);
+        $availablePermissions = User::AVAILABLE_PERMISSIONS;
+        $worksheets = \App\Models\Worksheet::all();
+        return view('team.index', compact('users', 'availablePermissions', 'worksheets'));
     }
 
     public function store(Request $request)
@@ -20,18 +22,28 @@ class TeamController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:owner,operator',
+            'role' => 'required|in:owner,kasir',
             'password' => 'required|string|min:6|confirmed',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'in:' . implode(',', array_keys(User::AVAILABLE_PERMISSIONS)),
         ]);
 
-        User::create([
+        // Owner always gets all permissions
+        $permissions = $request->role === 'owner' ? array_keys(User::AVAILABLE_PERMISSIONS) : ($request->permissions ?? []);
+
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
             'role' => $request->role,
+            'permissions' => $permissions,
             'password' => Hash::make($request->password),
             'is_active' => true,
         ]);
+
+        if ($request->has('worksheets')) {
+            $user->worksheets()->sync($request->worksheets);
+        }
 
         return back()->with('success', 'Anggota tim berhasil ditambahkan!');
     }
@@ -42,21 +54,33 @@ class TeamController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:owner,operator',
+            'role' => 'required|in:owner,kasir',
             'password' => 'nullable|string|min:6|confirmed',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'in:' . implode(',', array_keys(User::AVAILABLE_PERMISSIONS)),
         ]);
+
+        $permissions = $request->role === 'owner' ? array_keys(User::AVAILABLE_PERMISSIONS) : ($request->permissions ?? []);
 
         $data = [
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
             'role' => $request->role,
+            'permissions' => $permissions,
         ];
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
         }
 
         $user->update($data);
+        
+        if ($request->has('worksheets')) {
+            $user->worksheets()->sync($request->worksheets);
+        } else if ($request->role === 'kasir') {
+            $user->worksheets()->detach();
+        }
+
         return back()->with('success', 'Data anggota tim berhasil diperbarui!');
     }
 

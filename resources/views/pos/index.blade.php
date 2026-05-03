@@ -43,14 +43,14 @@
                     <i class="far fa-clock text-blue-400"></i> <span></span>
                 </div>
                 
-                <a href="{{ route('shifts.index') }}" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/30 flex items-center gap-2">
+                <a href="{{ route('shifts.index') }}" x-show="products.length > 0" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/30 flex items-center gap-2">
                     <i class="fas fa-play"></i> <span class="hidden sm:inline">Buka Shift</span>
                 </a>
             </div>
         </div>
 
         {{-- SHIFT BANNER --}}
-        <div x-show="!activeShift" x-cloak class="bg-amber-100 border border-amber-300 text-amber-800 px-4 py-3 rounded-2xl flex items-center justify-between mb-4 shadow-sm shrink-0">
+        <div x-show="!activeShift && products.length > 0" x-cloak class="bg-amber-100 border border-amber-300 text-amber-800 px-4 py-3 rounded-2xl flex items-center justify-between mb-4 shadow-sm shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center text-amber-600 shadow-inner">
                     <i class="fas fa-exclamation-triangle text-xl"></i>
@@ -65,26 +65,7 @@
             </a>
         </div>
 
-        {{-- WORKSHEET BAR --}}
-        <div class="flex items-center gap-3 mb-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 shrink-0">
-            <div class="bg-slate-100 px-3 py-2 rounded-xl border border-slate-200">
-                <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Worksheet Aktif</span>
-            </div>
-            <div class="relative flex-1 max-w-sm">
-                <select x-model="activeTabId" class="w-full appearance-none bg-emerald-50 border border-emerald-200 rounded-xl pl-4 pr-10 py-2.5 text-sm font-bold text-emerald-700 outline-none focus:border-emerald-500 cursor-pointer shadow-sm transition-colors">
-                    <template x-for="sheet in worksheets" :key="sheet.id">
-                        <option :value="sheet.id" x-text="'📝 ' + sheet.name"></option>
-                    </template>
-                </select>
-                <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none text-xs"></i>
-            </div>
-            <button @click="addWorksheet()" class="w-11 h-11 rounded-xl bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700 transition-all shadow-md active:scale-95 shrink-0" title="Tambah Worksheet">
-                <i class="fas fa-plus"></i>
-            </button>
-            <div class="ml-auto">
-                <button class="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors shadow-sm">Semua Worksheet</button>
-            </div>
-        </div>
+
 
         {{-- FILTER KATEGORI (CHIPS) --}}
         <div class="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide shrink-0" id="category-buttons">
@@ -105,9 +86,15 @@
 
         {{-- GRID PRODUK --}}
         <div id="product-grid-container" class="flex-1 overflow-y-auto pr-2 pb-6 scrollbar-hide scroll-smooth relative">
-            <div x-show="filteredProductsCount === 0" class="absolute inset-0 flex flex-col items-center justify-center h-full text-slate-400 z-10 pointer-events-none">
-                <div class="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mb-4"><i class="fas fa-box-open text-3xl"></i></div>
-                <p class="text-sm font-bold">Produk tidak ditemukan</p>
+            <div x-show="filteredProductsCount === 0" class="absolute inset-0 flex flex-col items-center justify-center h-full text-slate-400 z-10">
+                <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-200 shadow-inner">
+                    <i class="fas fa-box-open text-3xl opacity-50"></i>
+                </div>
+                <p class="text-sm font-black text-slate-500 uppercase tracking-widest mb-2">Produk Belum Tersedia</p>
+                <p class="text-xs text-slate-400 mb-6 max-w-[200px] text-center font-medium">Isi katalog produk terlebih dahulu untuk dapat membuka shift dan mulai berjualan.</p>
+                <a href="{{ route('products.index') }}" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/30 flex items-center gap-2 pointer-events-auto">
+                    <i class="fas fa-plus"></i> Isi Katalog Produk
+                </a>
             </div>
             
             {{-- CUSTOM POS GROUPS --}}
@@ -283,6 +270,11 @@
             <button @click="openPayment()" :disabled="!activeShift || activeWorksheet.cart.length === 0" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:shadow-none flex items-center justify-center gap-2 text-lg">
                 <i class="fas fa-wallet"></i> BAYAR (F12)
             </button>
+
+            <!-- Expense Button -->
+            <button @click="showExpenseModal = true" :disabled="!activeShift" class="w-full bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 font-bold py-2.5 rounded-xl transition-all border border-orange-500/30 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm mt-2">
+                <i class="fas fa-arrow-down"></i> Catat Pengeluaran
+            </button>
         </div>
 
     </div>
@@ -433,50 +425,168 @@
 
     {{-- MODAL PEMBAYARAN --}}
     <div x-show="showPaymentModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div @click.away="showPaymentModal = false" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200 transform transition-all">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                <h3 class="text-xl font-black text-slate-800">Konfirmasi Pembayaran</h3>
+        <div @click.away="showPaymentModal = false" class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 transform transition-all max-h-[90vh] overflow-y-auto scrollbar-hide">
+            
+            {{-- Header --}}
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                <h3 class="text-xl font-black text-slate-800">Detail Pembayaran</h3>
                 <button @click="showPaymentModal = false" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            
-            <div class="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl mb-6 text-center shadow-inner">
-                <p class="text-emerald-700 text-xs font-black uppercase tracking-wider mb-2">Total Tagihan</p>
-                <p class="text-5xl font-black text-emerald-600 tracking-tighter" x-text="formatRp(currentTotal)"></p>
-            </div>
 
-            <div class="mb-6">
-                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Metode Pembayaran</label>
-                <div class="grid grid-cols-4 gap-3">
-                    <template x-for="(m, i) in activePaymentMethods" :key="i">
-                        <label class="cursor-pointer group">
-                            <input type="radio" x-model="paymentMethod" :value="m.id" class="peer sr-only">
-                            <div class="p-3 border-2 border-slate-100 rounded-2xl peer-checked:border-emerald-500 peer-checked:bg-emerald-50 text-center transition-all text-slate-500 peer-checked:text-emerald-600 bg-white group-hover:border-emerald-200">
-                                <i :class="m.icon" class="mb-2 text-2xl"></i><br>
-                                <span class="text-[10px] font-black uppercase" x-text="m.label"></span>
+            <div class="p-6 space-y-6">
+                {{-- Total Tagihan --}}
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-slate-500">Total Tagihan:</span>
+                    <span class="text-3xl font-black text-emerald-600 tracking-tight" x-text="formatRp(currentTotal)"></span>
+                </div>
+
+                {{-- Toggle: Bayar Sekarang / Bayar Nanti --}}
+                <div>
+                    <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Waktu Pembayaran</label>
+                    <div class="flex p-1 bg-slate-100 rounded-xl">
+                        <button @click="paymentTiming = 'now'" 
+                            :class="paymentTiming === 'now' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 hover:text-slate-700'" 
+                            class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all">Bayar Sekarang</button>
+                        <button @click="paymentTiming = 'later'" 
+                            :class="paymentTiming === 'later' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'text-slate-500 hover:text-slate-700'" 
+                            class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all">Bayar Nanti</button>
+                    </div>
+                </div>
+
+                {{-- ========== BAYAR SEKARANG ========== --}}
+                <template x-if="paymentTiming === 'now'">
+                    <div class="space-y-6">
+                        {{-- Metode Pembayaran --}}
+                        <div>
+                            <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Metode Pembayaran</label>
+                            <div class="flex gap-2">
+                                <template x-for="(m, i) in payNowMethods" :key="i">
+                                    <button @click="paymentMethod = m.id" 
+                                        :class="paymentMethod === m.id ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
+                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                                        <span x-text="m.label"></span>
+                                    </button>
+                                </template>
                             </div>
-                        </label>
-                    </template>
-                </div>
-            </div>
+                        </div>
 
-            <div class="mb-8">
-                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Jumlah Uang Diterima</label>
-                <div class="relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">Rp</span>
-                    <input type="number" x-model.number="paidAmount" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-2xl font-black text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors" placeholder="0">
-                </div>
-                <div class="flex gap-2 mt-3">
-                    <button @click="paidAmount = currentTotal" class="flex-1 bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 text-slate-600 text-xs font-bold py-2.5 rounded-xl transition-all shadow-sm">Uang Pas</button>
-                    <button @click="paidAmount += 50000" class="flex-1 bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 text-slate-600 text-xs font-bold py-2.5 rounded-xl transition-all shadow-sm">+50k</button>
-                    <button @click="paidAmount += 100000" class="flex-1 bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 text-slate-600 text-xs font-bold py-2.5 rounded-xl transition-all shadow-sm">+100k</button>
-                </div>
-            </div>
+                        {{-- PANEL: TUNAI --}}
+                        <div x-show="paymentMethod === 'cash'" x-transition class="space-y-4">
+                            <div>
+                                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                                    Jumlah Uang Diterima
+                                    <button @click="paidAmount = currentTotal" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 hover:bg-emerald-100 transition-colors"><i class="fas fa-check mr-1"></i>Uang Pas ({{ 'Rp ' }})<span x-text="new Intl.NumberFormat('id-ID').format(currentTotal)"></span></button>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Contoh:</span>
+                                    <input type="number" x-model.number="paidAmount" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-20 pr-4 py-4 text-xl font-black text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors" placeholder="50000">
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <span class="text-sm font-bold text-slate-500">Kembalian:</span>
+                                <span class="text-2xl font-black tracking-tight" 
+                                    :class="(paidAmount - currentTotal) >= 0 ? 'text-emerald-600' : 'text-red-500'"
+                                    x-text="formatRp(Math.max(0, paidAmount - currentTotal))"></span>
+                            </div>
+                        </div>
 
-            <button @click="processCheckout()" :disabled="isProcessing" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg">
-                <i x-show="!isProcessing" class="fas fa-check-circle"></i>
-                <i x-show="isProcessing" class="fas fa-spinner fa-spin"></i>
-                <span x-text="isProcessing ? 'Memproses Transaksi...' : 'Proses Pembayaran'"></span>
-            </button>
+                        {{-- PANEL: QRIS --}}
+                        <div x-show="paymentMethod === 'qris'" x-transition class="space-y-4">
+                            @if(!empty($settings['qris_image']))
+                            <div class="bg-white border-2 border-slate-100 rounded-2xl p-6 flex flex-col items-center">
+                                <img src="{{ asset('storage/' . $settings['qris_image']) }}" class="w-56 h-auto rounded-xl shadow-md mb-4" alt="QRIS QR Code">
+                                <p class="text-sm text-slate-500 font-medium text-center">Pindai kode QR untuk membayar.</p>
+                            </div>
+                            @else
+                            <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-qrcode text-2xl text-slate-400"></i></div>
+                                <p class="text-sm font-bold text-slate-500">QR Code belum diatur</p>
+                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko → Gambar QRIS</p>
+                            </div>
+                            @endif
+                        </div>
+
+                        {{-- PANEL: TRANSFER --}}
+                        <div x-show="paymentMethod === 'transfer'" x-transition class="space-y-4">
+                            @if(!empty($settings['bank_name']))
+                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i class="fas fa-building-columns text-blue-500"></i>
+                                    <span class="text-sm font-black text-slate-700">Info Rekening Transfer</span>
+                                </div>
+                                <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                                    <span class="text-slate-500 font-medium">Bank</span>
+                                    <span class="font-black text-slate-800">{{ $settings['bank_name'] ?? '-' }}</span>
+                                    <span class="text-slate-500 font-medium">No. Rekening</span>
+                                    <span class="font-black text-slate-800 tracking-wider">{{ $settings['bank_account'] ?? '-' }}</span>
+                                    <span class="text-slate-500 font-medium">Atas Nama</span>
+                                    <span class="font-black text-slate-800">{{ strtoupper($settings['bank_holder'] ?? '-') }}</span>
+                                    <span class="text-slate-500 font-medium">Jumlah Transfer</span>
+                                    <span class="font-black text-emerald-600" x-text="formatRp(currentTotal)"></span>
+                                </div>
+                            </div>
+                            @else
+                            <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-building-columns text-2xl text-slate-400"></i></div>
+                                <p class="text-sm font-bold text-slate-500">Info rekening belum diatur</p>
+                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko → Info Rekening Transfer</p>
+                            </div>
+                            @endif
+                        </div>
+
+                        {{-- PANEL: DEBIT --}}
+                        <div x-show="paymentMethod === 'debit'" x-transition>
+                            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-center gap-4">
+                                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-credit-card text-blue-500 text-xl"></i></div>
+                                <div>
+                                    <p class="text-sm font-bold text-blue-800">Pembayaran via Kartu Debit</p>
+                                    <p class="text-xs text-blue-600/70 mt-0.5">Proses pembayaran melalui mesin EDC.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Button Konfirmasi --}}
+                        <button @click="processCheckout()" :disabled="isProcessing || (paymentMethod === 'cash' && paidAmount < currentTotal)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg active:scale-[0.98]">
+                            <i x-show="!isProcessing" class="fas fa-check-circle"></i>
+                            <i x-show="isProcessing" class="fas fa-spinner fa-spin"></i>
+                            <span x-text="isProcessing ? 'Memproses...' : 'Konfirmasi Pembayaran'"></span>
+                        </button>
+                    </div>
+                </template>
+
+                {{-- ========== BAYAR NANTI (PIUTANG) ========== --}}
+                <template x-if="paymentTiming === 'later'">
+                    <div class="space-y-6">
+                        <div class="bg-orange-50 border border-orange-200 rounded-2xl p-5">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-hand-holding-dollar text-orange-500 text-lg"></i></div>
+                                <div>
+                                    <p class="text-sm font-black text-orange-800">Pembayaran Uang Muka (DP)</p>
+                                    <p class="text-xs text-orange-600/70">Masukkan nominal DP atau biarkan kosong untuk mencatat sebagai hutang penuh.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-2 block">Nominal Uang Diterima (DP)</label>
+                            <div class="relative">
+                                <input type="number" x-model.number="dpAmount" min="0" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-4 text-xl font-black text-slate-800 outline-none focus:border-orange-500 focus:bg-white transition-colors" placeholder="0">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                            <span class="text-sm font-bold text-orange-700">Sisa Piutang:</span>
+                            <span class="text-2xl font-black text-orange-600 tracking-tight" x-text="formatRp(Math.max(0, currentTotal - (dpAmount || 0)))"></span>
+                        </div>
+
+                        <button @click="processCheckout()" :disabled="isProcessing" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg active:scale-[0.98]">
+                            <i x-show="!isProcessing" class="fas fa-file-invoice-dollar"></i>
+                            <i x-show="isProcessing" class="fas fa-spinner fa-spin"></i>
+                            <span x-text="isProcessing ? 'Memproses...' : 'Catat Pesanan'"></span>
+                        </button>
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
 
@@ -512,7 +622,61 @@
         </div>
     </div>
 
+    {{-- MODAL TAMBAH GRUP --}}
+    <div x-show="showAddGroupModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div @click.away="closeAddGroupModal()" @keydown.escape.window="closeAddGroupModal()" class="bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700 transform transition-all overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80">
+                <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fas fa-layer-group text-blue-400"></i> Tambah Group Produk</h3>
+                <button @click="closeAddGroupModal()" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6">
+                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 block">Nama Group</label>
+                <input type="text" x-model="newGroupName" @keydown.enter="submitNewGroup()" x-ref="newGroupNameInput" class="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm" placeholder="Contoh: Promo Ramadhan, Minuman Dingin...">
+                <p x-show="newGroupError" class="text-red-400 text-xs mt-2 font-medium" x-text="newGroupError"></p>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-700/50 bg-slate-800/50 flex justify-end gap-3">
+                <button @click="closeAddGroupModal()" class="px-5 py-2.5 rounded-xl font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 transition-all text-sm">Batal</button>
+                <button @click="submitNewGroup()" class="px-5 py-2.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 text-sm">Simpan Group</button>
+            </div>
+        </div>
+    </div>
+
 </div>
+
+    {{-- MODAL PENGELUARAN / EXPENSE --}}
+    <div x-show="showExpenseModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div @click.away="showExpenseModal = false" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-lg font-black text-slate-800"><i class="fas fa-arrow-down text-orange-500 mr-2"></i>Catat Pengeluaran</h2>
+                <button @click="showExpenseModal = false" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Deskripsi <span class="text-red-500">*</span></label>
+                    <input type="text" x-model="expenseDesc" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500" placeholder="Beli air mineral, kertas, dll...">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nominal (Rp) <span class="text-red-500">*</span></label>
+                    <input type="number" x-model="expenseAmount" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-500" placeholder="10000" min="1">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kategori</label>
+                    <select x-model="expenseCategory" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500">
+                        <option>Pengeluaran Kasir</option>
+                        <option>Beli Keperluan</option>
+                        <option>Operasional</option>
+                        <option>Lain-lain</option>
+                    </select>
+                </div>
+                <template x-if="expenseError">
+                    <p class="text-red-500 text-xs font-bold" x-text="expenseError"></p>
+                </template>
+                <button @click="submitExpense()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95">
+                    <i class="fas fa-check mr-2"></i>Simpan Pengeluaran
+                </button>
+            </div>
+        </div>
+    </div>
 
 <script>
 function posApp() {
@@ -545,18 +709,28 @@ function posApp() {
         isSavingGroup: false,
         showPaymentModal: false,
         showReceiptModal: false,
+        showAddGroupModal: false,
+        showExpenseModal: false,
+        expenseDesc: '',
+        expenseAmount: 0,
+        expenseCategory: 'Pengeluaran Kasir',
+        expenseError: '',
+        newGroupName: '',
+        newGroupError: '',
         lastAddedId: null,
         
         // Transaction State
         paymentMethod: 'cash',
+        paymentTiming: 'now',
         paidAmount: 0,
+        dpAmount: 0,
         isProcessing: false,
         receiptData: null,
 
-        get activePaymentMethods() {
-            const icons = { cash: 'fa-money-bill-1-wave', transfer: 'fa-building-columns', qris: 'fa-qrcode', debit: 'fa-credit-card' };
+        get payNowMethods() {
             const labels = { cash: 'Tunai', transfer: 'Transfer', qris: 'QRIS', debit: 'Debit' };
-            return this.rawMethods.map(m => ({ id: m, icon: icons[m] || 'fa-wallet', label: labels[m] || m }));
+            // Exclude piutang from pay-now methods (piutang is handled by 'Bayar Nanti' toggle)
+            return this.rawMethods.filter(m => m !== 'piutang').map(m => ({ id: m, label: labels[m] || m }));
         },
 
         get filteredProductsCount() {
@@ -613,8 +787,20 @@ function posApp() {
         },
 
         initApp() {
-            // Setup First Worksheet
-            this.addWorksheet('MONOFRAME STUDIO 1');
+            // Setup Worksheets based on global selection
+            @if($activeWorksheetId === 'all')
+                @if(isset($userWorksheets) && $userWorksheets->count() > 0)
+                    @foreach($userWorksheets as $ws)
+                        this.addWorksheet('{{ $ws->name }}', {{ $ws->id }});
+                    @endforeach
+                @else
+                    this.addWorksheet('Draft POS');
+                @endif
+            @elseif($activeWorksheetId && $activeWorksheet)
+                this.addWorksheet('{{ $activeWorksheet->name }}', {{ $activeWorksheetId }});
+            @else
+                this.addWorksheet('Draft POS');
+            @endif
             
             // Search Debounce/Watcher
             this.$watch('searchQuery', () => { this.fetchProducts(); });
@@ -638,8 +824,8 @@ function posApp() {
             }, 1000);
         },
 
-        addWorksheet(customName = null) {
-            let id = Date.now();
+        addWorksheet(customName = null, customId = null) {
+            let id = customId || Date.now();
             this.worksheets.push({
                 id: id,
                 name: customName || ('Worksheet ' + (this.worksheets.length + 1)),
@@ -748,13 +934,19 @@ function posApp() {
 
         openPayment() {
             if(!this.activeShift || this.activeWorksheet.cart.length === 0) return;
+            this.paymentTiming = 'now';
+            this.paymentMethod = 'cash';
             this.paidAmount = this.currentTotal;
+            this.dpAmount = 0;
             this.showPaymentModal = true;
         },
 
         async processCheckout() {
             let w = this.activeWorksheet;
-            if(this.paidAmount < this.currentTotal && this.paymentMethod === 'cash') {
+            let isPiutang = this.paymentTiming === 'later';
+            let method = isPiutang ? 'piutang' : this.paymentMethod;
+
+            if(!isPiutang && method === 'cash' && this.paidAmount < this.currentTotal) {
                 return alert('Jumlah bayar kurang dari total!');
             }
 
@@ -768,6 +960,14 @@ function posApp() {
                 finalNotes = `[DELIVERY] ${finalNotes}`;
             }
 
+            // Determine paid_amount based on timing
+            let finalPaidAmount = 0;
+            if(isPiutang) {
+                finalPaidAmount = this.dpAmount || 0;
+            } else {
+                finalPaidAmount = this.paidAmount;
+            }
+
             try {
                 const res = await fetch('/pos/checkout', {
                     method: 'POST',
@@ -777,8 +977,8 @@ function posApp() {
                     },
                     body: JSON.stringify({
                         items: w.cart,
-                        payment_method: this.paymentMethod,
-                        paid_amount: this.paidAmount,
+                        payment_method: method,
+                        paid_amount: finalPaidAmount,
                         discount: w.globalDiscount,
                         discount_type: w.discountType,
                         customer_name: w.customerName,
@@ -827,8 +1027,26 @@ function posApp() {
         },
 
         addNewDraftGroup() {
-            const name = prompt('Masukkan nama grup baru:');
-            if(!name) return;
+            this.newGroupName = '';
+            this.newGroupError = '';
+            this.showAddGroupModal = true;
+            setTimeout(() => {
+                if(this.$refs.newGroupNameInput) {
+                    this.$refs.newGroupNameInput.focus();
+                }
+            }, 100);
+        },
+
+        closeAddGroupModal() {
+            this.showAddGroupModal = false;
+        },
+
+        submitNewGroup() {
+            const name = this.newGroupName.trim();
+            if (!name) {
+                this.newGroupError = 'Nama group wajib diisi.';
+                return;
+            }
             this.draftGroups.unshift({
                 id: 'new-' + Date.now(),
                 name: name,
@@ -836,6 +1054,7 @@ function posApp() {
                 position: 0,
                 products: []
             });
+            this.closeAddGroupModal();
         },
 
         deleteDraftGroup(gIndex) {
@@ -960,6 +1179,38 @@ function posApp() {
             w.notes = '';
             w.deliveryMode = false;
             this.receiptData = null;
+        },
+
+        async submitExpense() {
+            this.expenseError = '';
+            if (!this.expenseDesc.trim()) { this.expenseError = 'Deskripsi wajib diisi'; return; }
+            if (!this.expenseAmount || this.expenseAmount < 1) { this.expenseError = 'Nominal minimal Rp 1'; return; }
+
+            try {
+                const res = await fetch('/pos/expense', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        description: this.expenseDesc,
+                        amount: this.expenseAmount,
+                        category: this.expenseCategory,
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    this.showExpenseModal = false;
+                    this.expenseDesc = '';
+                    this.expenseAmount = 0;
+                    alert('✅ Pengeluaran berhasil dicatat!');
+                } else {
+                    this.expenseError = data.error || 'Gagal menyimpan';
+                }
+            } catch (e) {
+                this.expenseError = 'Terjadi kesalahan: ' + e.message;
+            }
         }
     }
 }

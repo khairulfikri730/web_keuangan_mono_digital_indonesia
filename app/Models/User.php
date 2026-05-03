@@ -10,8 +10,24 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    // Available permissions that super admin can assign to kasir
+    const AVAILABLE_PERMISSIONS = [
+        'pos'              => 'POS Kasir',
+        'transactions'     => 'Daftar Transaksi',
+        'shifts'           => 'Sesi Shift',
+        'products'         => 'Katalog Produk',
+        'categories'       => 'Kategori Produk',
+        'stock'            => 'Gudang Stok',
+        'cashflow'         => 'Arus Kas',
+        'sales'            => 'Analisa Penjualan',
+        'reports_financial'=> 'Laporan Laba Rugi',
+        'reports_shifts'   => 'Laporan Shift',
+        'team'             => 'Manajemen Tim',
+        'settings'         => 'Pengaturan Toko',
+    ];
+
     protected $fillable = [
-        'name', 'email', 'phone', 'role', 'is_active', 'password',
+        'name', 'email', 'phone', 'role', 'permissions', 'is_active', 'password',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -20,6 +36,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'permissions' => 'array',
     ];
 
     public function isOwner(): bool
@@ -27,9 +44,29 @@ class User extends Authenticatable
         return $this->role === 'owner';
     }
 
+    public function isKasir(): bool
+    {
+        return $this->role === 'kasir';
+    }
+
+    // Keep backward compat
     public function isOperator(): bool
     {
-        return $this->role === 'operator';
+        return $this->isKasir();
+    }
+
+    /**
+     * Check if user has a specific permission.
+     * Owners always have all permissions.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->isOwner()) {
+            return true;
+        }
+
+        $perms = $this->permissions ?? [];
+        return in_array($permission, $perms);
     }
 
     public function shifts()
@@ -50,5 +87,10 @@ class User extends Authenticatable
     public function stockMutations()
     {
         return $this->hasMany(StockMutation::class);
+    }
+
+    public function worksheets()
+    {
+        return $this->belongsToMany(Worksheet::class, 'worksheet_user');
     }
 }

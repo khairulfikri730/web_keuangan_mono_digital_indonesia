@@ -78,7 +78,30 @@
     </div>
 
     <!-- 2. SUMMARY STRIP -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Modal Usaha -->
+        <div class="bg-[#111827] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group hover:bg-[#1F2937] transition-colors">
+            <div class="absolute right-0 top-0 w-32 h-32 bg-indigo-500/5 rounded-bl-full group-hover:bg-indigo-500/10 transition-colors"></div>
+            <div class="flex justify-between items-start mb-2">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Modal Usaha</p>
+                <div class="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                    <i class="fas fa-vault text-sm"></i>
+                </div>
+            </div>
+            @php
+                $modalUsaha = 0;
+                if ($activeWorksheet) {
+                    $modalUsaha = $activeWorksheet->initial_balance;
+                } elseif ($activeWorksheetId === 'all' && isset($userWorksheets)) {
+                    $modalUsaha = $userWorksheets->sum('initial_balance');
+                }
+            @endphp
+            <h3 class="text-3xl font-black text-white tracking-tight" id="valModalUsaha">Rp {{ number_format($modalUsaha, 0, ',', '.') }}</h3>
+            <div class="mt-2 flex items-center gap-1.5 text-xs text-indigo-400 font-medium">
+                <i class="fas fa-building"></i>
+                <span>Saldo Awal Bisnis</span>
+            </div>
+        </div>
         <!-- Pemasukan -->
         <div class="bg-[#111827] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group hover:bg-[#1F2937] transition-colors">
             <div class="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full group-hover:bg-emerald-500/10 transition-colors"></div>

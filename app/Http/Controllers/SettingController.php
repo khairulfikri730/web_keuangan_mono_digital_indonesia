@@ -12,8 +12,11 @@ class SettingController extends Controller
         $settings = Setting::getMultiple([
             'store_name', 'store_address', 'store_phone', 'store_email',
             'store_footer', 'currency', 'tax_rate', 'store_logo',
+            'active_payment_methods',
+            'bank_name', 'bank_account', 'bank_holder', 'qris_image',
         ]);
-        return view('settings.index', compact('settings'));
+        $worksheets = \App\Models\Worksheet::all();
+        return view('settings.index', compact('settings', 'worksheets'));
     }
 
     public function update(Request $request)
@@ -26,11 +29,15 @@ class SettingController extends Controller
             'store_footer' => 'nullable|string|max:200',
             'currency' => 'required|string|max:10',
             'store_logo' => 'nullable|image|max:1024',
+            'qris_image' => 'nullable|image|max:2048',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'active_payment_methods' => 'nullable|array',
+            'bank_name' => 'nullable|string|max:50',
+            'bank_account' => 'nullable|string|max:50',
+            'bank_holder' => 'nullable|string|max:100',
         ]);
 
-        $keys = ['store_name', 'store_address', 'store_phone', 'store_email', 'store_footer', 'currency', 'tax_rate'];
+        $keys = ['store_name', 'store_address', 'store_phone', 'store_email', 'store_footer', 'currency', 'tax_rate', 'bank_name', 'bank_account', 'bank_holder'];
         foreach ($keys as $key) {
             Setting::set($key, $request->input($key));
         }
@@ -41,6 +48,11 @@ class SettingController extends Controller
         if ($request->hasFile('store_logo')) {
             $path = $request->file('store_logo')->store('settings', 'public');
             Setting::set('store_logo', $path);
+        }
+
+        if ($request->hasFile('qris_image')) {
+            $path = $request->file('qris_image')->store('settings', 'public');
+            Setting::set('qris_image', $path);
         }
 
         return back()->with('success', 'Pengaturan berhasil disimpan!');

@@ -36,8 +36,9 @@ class ProductController extends Controller
         if ($request->filled('stock_status')) {
             if ($request->stock_status === 'low') $query->lowStock();
             elseif ($request->stock_status === 'empty') $query->outOfStock();
+            elseif ($request->stock_status === 'unlimited') $query->whereIn('product_kind', ['unlimited', 'service']);
             elseif ($request->stock_status === 'safe') {
-                $query->where('stock', '>', 0)->whereColumn('stock', '>', 'min_stock');
+                $query->whereNotIn('product_kind', ['unlimited', 'service', 'bundle', 'formula'])->where('stock', '>', 0)->whereColumn('stock', '>', 'min_stock');
             }
         }
 
@@ -56,10 +57,11 @@ class ProductController extends Controller
         $allProducts    = Product::all();
         $stats = [
             'total'       => Product::where('product_type', $productType)->count(),
-            'total_stock' => Product::where('product_type', $productType)->sum('stock'),
-            'low_stock'   => Product::where('product_type', $productType)->where('stock', '>', 0)->whereColumn('stock', '<=', 'min_stock')->count(),
-            'out_stock'   => Product::where('product_type', $productType)->where('stock', '<=', 0)->count(),
-            'stock_value' => Product::where('product_type', $productType)->selectRaw('SUM(stock * cost_price) as val')->value('val') ?? 0,
+            'total_stock' => Product::where('product_type', $productType)->whereNotIn('product_kind', ['unlimited', 'service', 'bundle', 'formula'])->sum('stock'),
+            'low_stock'   => Product::where('product_type', $productType)->lowStock()->count(),
+            'out_stock'   => Product::where('product_type', $productType)->outOfStock()->count(),
+            'unlimited'   => Product::where('product_type', $productType)->whereIn('product_kind', ['unlimited', 'service'])->count(),
+            'stock_value' => Product::where('product_type', $productType)->whereNotIn('product_kind', ['unlimited', 'service', 'bundle', 'formula'])->selectRaw('SUM(stock * cost_price) as val')->value('val') ?? 0,
         ];
 
         return view('products.index', compact('products', 'categories', 'stats', 'productType'));

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToWorksheet;
 
     const TYPE_FINISHED = 'finished';
     const TYPE_SEMI_FINISHED = 'semi_finished';
@@ -21,7 +21,7 @@ class Product extends Model
     const KIND_FORMULA = 'formula';
 
     protected $fillable = [
-        'category_id', 'name', 'sku', 'barcode', 'description',
+        'worksheet_id', 'category_id', 'name', 'sku', 'barcode', 'description',
         'price', 'cost_price', 'stock', 'min_stock', 'unit', 'image', 'is_active',
         'product_type', 'product_kind', 'meta',
     ];
@@ -125,16 +125,24 @@ class Product extends Model
 
     public function scopeLowStock($query)
     {
-        return $query->where('stock', '>', 0)->whereColumn('stock', '<=', 'min_stock');
+        return $query->whereNotIn('product_kind', ['unlimited', 'service', 'bundle', 'formula'])
+                     ->where('stock', '>', 0)
+                     ->whereColumn('stock', '<=', 'min_stock');
     }
 
     public function scopeOutOfStock($query)
     {
-        return $query->where('stock', '<=', 0);
+        return $query->whereNotIn('product_kind', ['unlimited', 'service', 'bundle', 'formula'])
+                     ->where('stock', '<=', 0);
     }
 
     public function scopeByType($query, string $type)
     {
         return $query->where('product_type', $type);
+    }
+
+    public function worksheet()
+    {
+        return $this->belongsTo(Worksheet::class);
     }
 }

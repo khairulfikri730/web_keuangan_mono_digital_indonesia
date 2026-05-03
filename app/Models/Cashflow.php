@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cashflow extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToWorksheet;
 
     protected $fillable = [
-        'user_id', 'shift_id', 'type', 'category', 'description',
+        'worksheet_id', 'user_id', 'shift_id', 'type', 'category', 'description',
         'amount', 'reference', 'reference_id', 'source', 'transaction_date', 'notes',
     ];
 
@@ -69,5 +69,10 @@ class Cashflow extends Model
             'tahun_ini' => $query->whereYear('transaction_date', $now->year),
             default => $query,
         };
+    }
+
+    public function worksheet()
+    {
+        return $this->belongsTo(Worksheet::class);
     }
 }

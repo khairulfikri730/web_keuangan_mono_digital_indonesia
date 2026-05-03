@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Shift extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\BelongsToWorksheet;
 
     protected $fillable = [
-        'opened_by', 'closed_by', 'opening_cash', 'closing_cash',
+        'worksheet_id', 'opened_by', 'closed_by', 'opening_cash', 'closing_cash',
+        'expected_cash', 'discrepancy', 'cash_sales', 'bank_sales', 'cash_expenses',
         'total_sales', 'total_transactions', 'status', 'notes',
         'opened_at', 'closed_at',
     ];
@@ -18,6 +19,11 @@ class Shift extends Model
     protected $casts = [
         'opening_cash' => 'decimal:2',
         'closing_cash' => 'decimal:2',
+        'expected_cash' => 'decimal:2',
+        'discrepancy' => 'decimal:2',
+        'cash_sales' => 'decimal:2',
+        'bank_sales' => 'decimal:2',
+        'cash_expenses' => 'decimal:2',
         'total_sales' => 'decimal:2',
         'opened_at' => 'datetime',
         'closed_at' => 'datetime',
@@ -51,5 +57,10 @@ class Shift extends Model
     public static function activeShift(): ?Shift
     {
         return self::where('status', 'open')->latest()->first();
+    }
+
+    public function worksheet()
+    {
+        return $this->belongsTo(Worksheet::class);
     }
 }
