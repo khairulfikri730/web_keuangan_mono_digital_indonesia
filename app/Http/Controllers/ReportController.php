@@ -200,8 +200,8 @@ class ReportController extends Controller
         $highestShift = $closedShifts->sortByDesc('total_sales')->first();
 
         $bestCashier = Transaction::completed()
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('transactions.worksheet_id', $worksheetId))
             ->join('users', 'transactions.user_id', '=', 'users.id')
             ->selectRaw('users.name, SUM(transactions.total) as total')
             ->groupBy('users.name')->orderByDesc('total')->first();
