@@ -87,9 +87,9 @@ class FinancialReportService
             ->where('transactions.status', 'completed')
             ->whereBetween('transactions.created_at', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('transactions.worksheet_id', $worksheetId))
-            ->selectRaw('product_name, SUM(quantity) as total_qty, SUM(subtotal) as total_revenue, SUM(quantity * cost_price) as total_cost')
+            ->selectRaw('product_name, SUM(quantity) as total_qty, SUM(transaction_items.subtotal) as total_revenue, SUM(quantity * cost_price) as total_cost')
             ->groupBy('product_name')
-            ->selectRaw('SUM(subtotal - (quantity * cost_price)) as profit')
+            ->selectRaw('SUM(transaction_items.subtotal - (quantity * cost_price)) as profit')
             ->orderByDesc('profit')
             ->take($limit)
             ->get();
