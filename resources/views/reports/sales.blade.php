@@ -380,13 +380,13 @@
                             </span>
                         </td>
                         <td class="px-8 py-6 text-right">
-                            <p class="text-xs font-black text-slate-300">Rp {{ number_format($trx->total_price + $trx->discount, 0, ',', '.') }}</p>
+                            <p class="text-xs font-black text-slate-300">Rp {{ number_format($trx->total + $trx->discount, 0, ',', '.') }}</p>
                             @if($trx->discount > 0)
                             <p class="text-[10px] font-bold text-red-400 mt-0.5">- Rp {{ number_format($trx->discount, 0, ',', '.') }}</p>
                             @endif
                         </td>
                         <td class="px-8 py-6 text-right">
-                            <p class="text-sm font-black text-emerald-400">Rp {{ number_format($trx->total_price, 0, ',', '.') }}</p>
+                            <p class="text-sm font-black text-emerald-400">Rp {{ number_format($trx->total, 0, ',', '.') }}</p>
                         </td>
                         <td class="px-8 py-6 text-center">
                             <a href="{{ route('transactions.show', $trx) }}" class="inline-flex w-8 h-8 rounded-lg bg-slate-700/50 text-slate-400 hover:bg-blue-600 hover:text-white transition-all border border-white/5 items-center justify-center shadow-sm">

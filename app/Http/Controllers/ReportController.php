@@ -141,9 +141,9 @@ class ReportController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $monthlyUsagesSum = \App\Models\MonthlyUsage::whereBetween('date', [$dateFrom, $dateTo])
+        $monthlyUsagesSum = \App\Models\MonthlyUsage::whereBetween('expense_date', [$dateFrom, $dateTo])
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
-            ->sum('total_price');
+            ->sum('usage_amount');
 
         // 4. ROI Analytics
         $totalCapital = Capital::sum('total_amount');
