@@ -58,29 +58,40 @@ class FinancialReportService
     }
 
     /**
-     * Get all-time net profit for ROI calculation
+     * Get monthly profit trend for a specific year
      */
-    public function getAllTimeNetProfit($worksheetId = null)
+    public function getTrend($year, $worksheetId = null)
     {
-        $incomeQuery = Transaction::completed();
-        if ($worksheetId && $worksheetId !== 'all') {
-            $incomeQuery->where('worksheet_id', $worksheetId);
-        }
-        $totalIncome = $incomeQuery->sum('total');
-
-        $expenseQuery = Cashflow::where('type', 'expense')
-            ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            });
+        $trend = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $dateFrom = Carbon::createFromDate($year, $m, 1)->startOfMonth();
+            $dateTo = $dateFrom->copy()->endOfMonth();
             
-        if ($worksheetId && $worksheetId !== 'all') {
-            $expenseQuery->where('worksheet_id', $worksheetId);
+            $summary = $this->getSummary($dateFrom, $dateTo, $worksheetId);
+            $trend[] = [
+                'month' => $dateFrom->format('M'),
+                'profit' => $summary->net_profit,
+                'income' => $summary->total_income,
+                'expense' => $summary->total_expense,
+            ];
         }
-        
-        $totalExpense = $expenseQuery->sum('amount');
+        return $trend;
+    }
 
-        return $totalIncome - $totalExpense;
+    /**
+     * Get top profitable products
+     */
+    public function getTopProducts($dateFrom, $dateTo, $worksheetId = null, $limit = 5)
+    {
+        return \App\Models\TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->where('transactions.status', 'completed')
+            ->whereBetween('transactions.created_at', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('transactions.worksheet_id', $worksheetId))
+            ->selectRaw('product_name, SUM(quantity) as total_qty, SUM(subtotal) as total_revenue, SUM(quantity * cost_price) as total_cost')
+            ->groupBy('product_name')
+            ->selectRaw('SUM(subtotal - (quantity * cost_price)) as profit')
+            ->orderByDesc('profit')
+            ->take($limit)
+            ->get();
     }
 }

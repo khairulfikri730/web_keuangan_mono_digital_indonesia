@@ -103,14 +103,24 @@ class ReportController extends Controller
         
         $dateFrom = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $dateTo = $dateFrom->copy()->endOfMonth();
+        $prevDateFrom = $dateFrom->copy()->subMonth()->startOfMonth();
+        $prevDateTo = $dateFrom->copy()->subMonth()->endOfMonth();
         
         $worksheetId = session('active_worksheet_id');
         
-        // 1. Core Summary
+        // 1. Core Summary & Comparison
         $summary = $this->financialService->getSummary($dateFrom, $dateTo, $worksheetId);
-        $totalIncome = $summary->total_income;
-        $totalExpense = $summary->total_expense;
+        $prevSummary = $this->financialService->getSummary($prevDateFrom, $prevDateTo, $worksheetId);
+        
+        $income = $summary->total_income;
+        $expense = $summary->total_expense;
         $profit = $summary->net_profit;
+        
+        $growth = [
+            'income' => $this->calculateGrowth($income, $prevSummary->total_income),
+            'expense' => $this->calculateGrowth($expense, $prevSummary->total_expense),
+            'profit' => $this->calculateGrowth($profit, $prevSummary->net_profit),
+        ];
 
         // 2. Sales & COGS
         $salesQuery = Transaction::completed()
@@ -118,11 +128,18 @@ class ReportController extends Controller
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
         
         $salesTotal = (clone $salesQuery)->sum('total');
+        $transactionCount = (clone $salesQuery)->count();
         $cogs = TransactionItem::whereIn('transaction_id', (clone $salesQuery)->pluck('id'))
             ->sum(DB::raw('quantity * cost_price'));
         $grossProfit = $salesTotal - $cogs;
 
-        // 3. Details for View
+        // 3. Margins
+        $margins = [
+            'gross' => $salesTotal > 0 ? ($grossProfit / $salesTotal) * 100 : 0,
+            'net' => $income > 0 ? ($profit / $income) * 100 : 0,
+        ];
+
+        // 4. Details for View
         $incomeDetails = (clone $salesQuery)
             ->selectRaw('payment_method, SUM(total) as total')
             ->groupBy('payment_method')
@@ -141,11 +158,10 @@ class ReportController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $monthlyUsagesSum = \App\Models\MonthlyUsage::whereBetween('expense_date', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
-            ->sum('usage_amount');
+        $topProducts = $this->financialService->getTopProducts($dateFrom, $dateTo, $worksheetId);
+        $trendData = $this->financialService->getTrend($year, $worksheetId);
 
-        // 4. ROI Analytics
+        // 5. ROI Analytics
         $totalCapital = Capital::sum('total_amount');
         $allTimeNetProfit = $this->financialService->getAllTimeNetProfit($worksheetId);
         
@@ -155,14 +171,22 @@ class ReportController extends Controller
         $remainingToPayback = max(0, $totalCapital - $allTimeNetProfit);
         $paybackPeriodMonths = $avgMonthlyProfit > 0 ? $remainingToPayback / $avgMonthlyProfit : null;
 
-        // Map variables to view expectations
-        $income = $totalIncome;
-        $expense = $totalExpense;
+        // 6. Business Health & Insights
+        $health = 'healthy'; // healthy, warning, danger
+        if ($profit < 0) $health = 'danger';
+        elseif ($profit < ($income * 0.1)) $health = 'warning';
+
+        $insights = $this->generateAiInsights($summary, [
+            'top_products' => $topProducts,
+            'expense_categories' => $expenseDetails,
+        ]);
 
         return view('reports.financial', compact(
-            'totalIncome', 'totalExpense', 'profit', 'incomeDetails', 'expenseDetails', 'month', 'year',
-            'salesTotal', 'cogs', 'grossProfit', 'income', 'expense', 'monthlyUsagesSum',
-            'totalCapital', 'allTimeNetProfit', 'avgMonthlyProfit', 'paybackPeriodMonths'
+            'month', 'year', 'income', 'expense', 'profit', 'growth', 'margins',
+            'salesTotal', 'transactionCount', 'cogs', 'grossProfit',
+            'incomeDetails', 'expenseDetails', 'topProducts', 'trendData',
+            'totalCapital', 'allTimeNetProfit', 'avgMonthlyProfit', 
+            'remainingToPayback', 'paybackPeriodMonths', 'health', 'insights'
         ));
     }
 
@@ -422,34 +446,64 @@ class ReportController extends Controller
     protected function generateAiInsights($summary, $data)
     {
         $insights = [];
-        
-        // Income Insight
-        if ($summary->total_income > 0) {
-            $bestPayment = collect($data['payment_methods'] ?? [])->sortByDesc('total')->first();
-            if ($bestPayment) {
-                $insights[] = "Metode pembayaran " . strtoupper($bestPayment->payment_method) . " mendominasi transaksi sebesar " . round(($bestPayment->total / $summary->total_income) * 100) . "%.";
+        $income = $summary->total_income;
+        $expense = $summary->total_expense;
+        $profit = $summary->net_profit;
+
+        // 1. Profitability Insight
+        if ($income > 0) {
+            $margin = ($profit / $income) * 100;
+            if ($margin > 30) {
+                $insights[] = [
+                    'type' => 'success',
+                    'title' => 'Margin Laba Sangat Sehat',
+                    'text' => "Bisnis Anda mencatat margin laba bersih " . round($margin) . "%. Ini jauh di atas rata-rata industri."
+                ];
+            } elseif ($margin < 10 && $margin > 0) {
+                $insights[] = [
+                    'type' => 'warning',
+                    'title' => 'Margin Laba Tipis',
+                    'text' => "Margin laba bersih hanya " . round($margin) . "%. Pertimbangkan untuk meninjau kembali efisiensi operasional."
+                ];
+            } elseif ($margin <= 0) {
+                $insights[] = [
+                    'type' => 'danger',
+                    'title' => 'Bisnis Mengalami Kerugian',
+                    'text' => "Pengeluaran melebihi pemasukan bulan ini. Segera identifikasi pengeluaran non-esensial."
+                ];
             }
         }
 
-        // Expense Insight
-        if ($summary->total_expense > 0) {
-            $topExpense = collect($data['expense_categories'] ?? [])->sortByDesc('total')->first();
+        // 2. Expense Analysis
+        if ($expense > 0) {
+            $topExpense = collect($data['expense_categories'] ?? [])->first();
             if ($topExpense) {
-                $insights[] = "Pengeluaran terbesar berasal dari kategori " . $topExpense->category . " (" . round(($topExpense->total / $summary->total_expense) * 100) . "% dari total biaya).";
+                $ratio = ($topExpense->total / $expense) * 100;
+                $insights[] = [
+                    'type' => 'info',
+                    'title' => 'Fokus Pengeluaran',
+                    'text' => "Kategori '" . $topExpense->category . "' menyerap " . round($ratio) . "% dari total biaya Anda."
+                ];
             }
         }
 
-        // Product Insight
-        if (isset($data['top_products']) && $data['top_products']->count() > 0) {
-            $top = $data['top_products']->first();
-            $insights[] = "Produk paling laris periode ini adalah '" . $top->product_name . "' dengan penjualan sebanyak " . number_format($top->total_qty) . " unit.";
+        // 3. Product Performance
+        if (isset($data['top_products']) && count($data['top_products']) > 0) {
+            $best = $data['top_products'][0];
+            $insights[] = [
+                'type' => 'success',
+                'title' => 'Produk Primadona',
+                'text' => "Produk '" . $best->product_name . "' adalah kontributor profit terbesar periode ini."
+            ];
         }
 
-        // Profit Insight
-        if ($summary->net_profit > 0) {
-            $insights[] = "Bisnis mencatatkan margin laba bersih yang positif. Pertahankan efisiensi biaya operasional.";
-        } else {
-            $insights[] = "Laba bersih berada di angka negatif/nol. Disarankan meninjau kembali biaya variabel dan strategi harga.";
+        // 4. Operational Recommendations
+        if ($income > 0 && ($expense / $income) > 0.7) {
+            $insights[] = [
+                'type' => 'warning',
+                'title' => 'Rekomendasi Efisiensi',
+                'text' => "Rasio biaya operasional terlalu tinggi (70%+). Disarankan melakukan audit pada pengeluaran variabel."
+            ];
         }
 
         return $insights;
