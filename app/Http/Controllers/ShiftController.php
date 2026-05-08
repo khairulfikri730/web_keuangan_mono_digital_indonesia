@@ -7,15 +7,64 @@ use App\Models\Transaction;
 use App\Models\Cashflow;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ShiftController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $shifts = Shift::with(['opener', 'closer'])->latest()->paginate(15);
+        $query = Shift::with(['opener', 'closer'])
+            ->when($request->date_from, fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
+            ->when($request->date_to, fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->user_id, fn($q) => $q->where('opened_by', $request->user_id));
+
+        $shifts = $query->latest()->paginate(15)->withQueryString();
+        
+        $activeShiftsCount = Shift::where('status', 'open')->count();
+        $totalClosingCash = Shift::where('status', 'closed')
+            ->when($request->date_from, fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
+            ->when($request->date_to, fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
+            ->sum('closing_cash');
+            
+        $totalSalesToday = Transaction::whereDate('created_at', today())->completed()->sum('total');
+        
+        $totalDiscrepancy = Shift::where('status', 'closed')
+            ->when($request->date_from, fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
+            ->when($request->date_to, fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
+            ->sum('discrepancy');
+
         $activeShift = Shift::activeShift();
         $users = \App\Models\User::where('is_active', true)->get();
-        return view('shifts.index', compact('shifts', 'activeShift', 'users'));
+        $laciBalance = $this->getCurrentLaciBalance();
+
+        // Extra stats for insights
+        $bestCashier = Shift::select('opened_by', DB::raw('SUM(total_sales) as total'))
+            ->where('status', 'closed')
+            ->whereDate('opened_at', today())
+            ->groupBy('opened_by')
+            ->orderByDesc('total')
+            ->first()?->opener;
+            
+        if($bestCashier) {
+            $bestCashier->total = Shift::where('opened_by', $bestCashier->id)->whereDate('opened_at', today())->sum('total_sales');
+        }
+
+        $highestShift = Shift::where('status', 'closed')->orderByDesc('total_sales')->first();
+        $avgDiscrepancy = Shift::where('status', 'closed')->avg('discrepancy') ?: 0;
+
+        return view('reports.shifts', compact(
+            'shifts', 'activeShift', 'users', 'laciBalance', 
+            'activeShiftsCount', 'totalClosingCash', 'totalSalesToday', 'totalDiscrepancy',
+            'bestCashier', 'highestShift', 'avgDiscrepancy'
+        ));
+    }
+
+    private function getCurrentLaciBalance()
+    {
+        return (float) Cashflow::where('source', 'pos_cash')
+            ->where('bank_sync_status', 'synced')
+            ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
     }
 
     public function open(Request $request)
@@ -33,13 +82,27 @@ class ShiftController extends Controller
         // Owner bisa buka shift untuk user lain
         $userId = $request->user_id ?: auth()->id();
 
-        Shift::create([
+        $shift = Shift::create([
             'opened_by' => $userId,
             'opening_cash' => $request->opening_cash,
             'status' => 'open',
             'notes' => $request->notes,
             'opened_at' => now(),
         ]);
+
+        if ($request->opening_cash >= 0) {
+            \App\Models\Cashflow::create([
+                'user_id' => $userId,
+                'shift_id' => $shift->id,
+                'type' => 'income',
+                'category' => 'Modal Awal Kasir',
+                'description' => 'Kas Awal Shift',
+                'amount' => $request->opening_cash,
+                'source' => 'pos_cash',
+                'bank_sync_status' => 'synced',
+                'transaction_date' => today(),
+            ]);
+        }
 
         return back()->with('success', 'Shift berhasil dibuka!');
     }
@@ -98,6 +161,69 @@ class ShiftController extends Controller
         ]);
 
         return redirect()->route('shifts.index')->with('success', 'Shift berhasil ditutup!');
+    }
+
+    /**
+     * Cash Out: Catat pengeluaran tunai dari laci kasir saat shift aktif.
+     * Dicatat sebagai cashflow expense dengan source pos_cash.
+     */
+    public function cashOut(Request $request, Shift $shift)
+    {
+        if ($shift->status !== 'open') {
+            if ($request->expectsJson()) return response()->json(['error' => 'Shift sudah tidak aktif!'], 422);
+            return back()->with('error', 'Shift sudah tidak aktif!');
+        }
+
+        $request->validate([
+            'amount'      => 'required|numeric|min:1',
+            'description' => 'required|string|max:255',
+            'category'    => 'nullable|string|max:100', // Ini sekarang berisi Main Category (Operasional, etc)
+        ]);
+
+        $worksheetId = session('worksheet_id') ?: \App\Models\Worksheet::first()->id;
+        
+        // Map category to lowercase for expense_type
+        $expenseType = strtolower($request->category ?: 'operasional');
+
+        // 1. SIMPAN KE BIAYA BULANAN (MonthlyUsage)
+        $monthlyUsage = \App\Models\MonthlyUsage::create([
+            'worksheet_id'   => $worksheetId,
+            'expense_type'   => $expenseType, 
+            'expense_name'   => $request->description, // Berisi SubCategory + Catatan
+            'sub_category'   => $request->category ?: 'Operasional',
+            'quantity'       => 1,
+            'unit'           => 'Pcs',
+            'payment_method' => 'tunai',
+            'usage_amount'   => $request->amount,
+            'expense_date'   => today(),
+            'month'          => now()->month,
+            'year'           => now()->year,
+            'description'    => $request->description,
+            'status'         => 'dibayar',
+            'sync_status'    => 'synced',
+        ]);
+
+        // 2. SIMPAN KE CASHFLOW (Arus Kas)
+        Cashflow::create([
+            'user_id'          => auth()->id(),
+            'shift_id'         => $shift->id,
+            'worksheet_id'     => $worksheetId,
+            'type'             => 'expense',
+            'category'         => $request->category ?: 'Operasional',
+            'description'      => 'POS Cash Out: ' . $request->description,
+            'amount'           => $request->amount,
+            'source'           => 'pos_cash',
+            'bank_sync_status' => 'synced',
+            'transaction_date' => today(),
+            'reference_id'     => $monthlyUsage->id,
+            'reference_type'   => 'MonthlyUsage'
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Cash Out berhasil dicatat.']);
+        }
+
+        return back()->with('success', 'Cash Out sebesar Rp ' . number_format($request->amount, 0, ',', '.') . ' berhasil dicatat!');
     }
 
     public function show(Shift $shift)
@@ -189,14 +315,18 @@ class ShiftController extends Controller
     {
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use ($shift) {
-                // Delete related transaction items first
-                foreach ($shift->transactions as $trx) {
+                // Ambil semua transaksi tanpa mempedulikan global scope cabang
+                $transactions = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->get();
+                
+                foreach ($transactions as $trx) {
+                    \App\Models\Payment::where('transaction_id', $trx->id)->delete();
+                    \App\Models\StockMutation::where('reference', $trx->invoice_number)->delete();
                     $trx->items()->delete();
                     $trx->delete();
                 }
                 
-                // Delete related cashflows
-                \App\Models\Cashflow::where('shift_id', $shift->id)->delete();
+                // Delete related cashflows (juga ignore global scope)
+                \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->delete();
                 
                 // Delete the shift
                 $shift->delete();

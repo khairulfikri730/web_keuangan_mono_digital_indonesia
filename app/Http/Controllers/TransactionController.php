@@ -16,6 +16,7 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
         $users = \App\Models\User::all();
+        $worksheetId = session('active_worksheet_id');
 
         // --- Filter by status pill ---
         $statusFilter = $request->status; // 'piutang', 'lunas', or null
@@ -31,7 +32,8 @@ class TransactionController extends Controller
             ->when($request->search, fn($q) => $q->where(function($sq) use ($request) {
                 $sq->where('invoice_number', 'like', "%{$request->search}%")
                    ->orWhere('customer_name', 'like', "%{$request->search}%");
-            }));
+            }))
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
 
         // --- Build expense items ---
         $expenseQuery = Cashflow::with('user')
@@ -40,7 +42,8 @@ class TransactionController extends Controller
             ->when($request->date_from, fn($q) => $q->whereDate('transaction_date', '>=', $request->date_from))
             ->when($request->date_to, fn($q) => $q->whereDate('transaction_date', '<=', $request->date_to))
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
-            ->when($request->search, fn($q) => $q->where('description', 'like', "%{$request->search}%"));
+            ->when($request->search, fn($q) => $q->where('description', 'like', "%{$request->search}%"))
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
 
         // --- Compile based on type filter ---
         $items = collect();
@@ -60,7 +63,7 @@ class TransactionController extends Controller
         if ((!$type || $type === 'expense') && !$statusFilter) {
             $expItems = $expenseQuery->get()->map(function($e) {
                 return (object)[
-                    'sort_date' => $e->created_at,
+                    'sort_date' => $e->transaction_date,
                     'type' => 'expense',
                     'model' => $e,
                 ];
@@ -82,43 +85,97 @@ class TransactionController extends Controller
         );
 
         // --- Pill filter counts ---
-        $countAll = Transaction::count();
-        $countPiutang = Transaction::where('status', 'pending')->count();
-        $countLunas = Transaction::where('status', 'completed')->where('payment_method', 'piutang')->count();
-        $countCash = Transaction::where('payment_method', 'cash')->count();
-        $countQris = Transaction::where('payment_method', 'qris')->count();
-        $countTransfer = Transaction::where('payment_method', 'transfer')->count();
-        $countDebit = Transaction::where('payment_method', 'debit')->count();
+        $baseTx = Transaction::when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+        $baseExp = Cashflow::where('type', 'expense')->whereNull('reference')
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+
+        $countPenjualan = (clone $baseTx)->count();
+        $countExpense = (clone $baseExp)->count();
+        $countAll = $countPenjualan + $countExpense;
+
+        $countPiutang = (clone $baseTx)->where('status', 'pending')->count();
+        $countLunas = (clone $baseTx)->where('status', 'completed')->where('payment_method', 'piutang')->count();
+        $countCash = (clone $baseTx)->where('payment_method', 'cash')->count();
+        $countQris = (clone $baseTx)->where('payment_method', 'qris')->count();
+        $countTransfer = (clone $baseTx)->where('payment_method', 'transfer')->count();
+        $countDebit = (clone $baseTx)->where('payment_method', 'debit')->count();
 
         // --- Stats ---
         $activeShift = Shift::activeShift();
 
         $saldoLaci = 0;
+        $saldoLaciAwal = 0;
         if ($activeShift) {
             $cashSalesInShift = Transaction::where('shift_id', $activeShift->id)->completed()->where('payment_method', 'cash')->sum('total');
             $cashExpInShift = Cashflow::where('shift_id', $activeShift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
-            $saldoLaci = $activeShift->opening_cash + $cashSalesInShift - $cashExpInShift;
+            $saldoLaciAwal = (float) $activeShift->opening_cash;
+            $saldoLaci = $saldoLaciAwal + $cashSalesInShift - $cashExpInShift;
         }
 
-        $bankIncome = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('type', 'income')->sum('amount');
-        $bankExpense = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('type', 'expense')->sum('amount');
+        $baseBank = Cashflow::whereIn('source', ['pos_bank', 'transfer'])
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+        $bankIncome = (clone $baseBank)->where('type', 'income')->sum('amount');
+        $bankExpense = (clone $baseBank)->where('type', 'expense')->sum('amount');
         $saldoBank = $bankIncome - $bankExpense;
 
-        $todayTotalSales = Transaction::completed()->whereDate('created_at', today())->sum('total');
-        $todayExpenses = Cashflow::where('type', 'expense')->whereDate('transaction_date', today())->sum('amount');
+        $todayTotalSales = (clone $baseTx)->completed()->whereDate('created_at', today())->sum('total');
+        $todayExpenses = (clone $baseExp)->whereDate('transaction_date', today())
+            ->where(function($q) {
+                $q->where('category', 'not like', '%Transfer%')
+                  ->where('description', 'not like', '%Transfer%');
+            })
+            ->sum('amount');
         $todayNet = $todayTotalSales - $todayExpenses;
-        $totalPiutang = Transaction::piutang()->get()->sum(fn($t) => $t->total - $t->paid_so_far);
+        $totalPiutang = (clone $baseTx)->piutang()->get()->sum(fn($t) => $t->total - $t->paid_so_far);
+
+        $todayQris = (clone $baseTx)->completed()->whereDate('created_at', today())->where('payment_method', 'qris')->sum('total');
+        $todayCash = (clone $baseTx)->completed()->whereDate('created_at', today())->where('payment_method', 'cash')->sum('total');
+        $todayTransfer = (clone $baseTx)->completed()->whereDate('created_at', today())->where('payment_method', 'transfer')->sum('total');
 
         return view('transactions.index', compact(
             'transactions', 'users', 'todayTotalSales', 'todayExpenses', 'todayNet',
-            'saldoLaci', 'saldoBank', 'totalPiutang', 'activeShift',
-            'countAll', 'countPiutang', 'countLunas', 'countCash', 'countQris', 'countTransfer', 'countDebit'
+            'saldoLaci', 'saldoLaciAwal', 'saldoBank', 'totalPiutang', 'activeShift',
+            'countAll', 'countPenjualan', 'countExpense', 'countPiutang', 'countLunas', 'countCash', 'countQris', 'countTransfer', 'countDebit',
+            'todayQris', 'todayCash', 'todayTransfer'
         ));
     }
 
     public function show(Transaction $transaction)
     {
         $transaction->load(['items.product', 'user', 'shift', 'payments.user']);
+        
+        if (request()->wantsJson()) {
+            $settings = \App\Models\Setting::getMultiple([
+                'store_name', 'store_address', 'store_phone', 'store_footer'
+            ]);
+
+            return response()->json([
+                'invoice_number' => $transaction->invoice_number,
+                'created_at' => $transaction->created_at->format('d/m/y H:i'),
+                'store_name' => $settings['store_name'] ?? 'MONOFRAME STUDIO',
+                'store_address' => $settings['store_address'] ?? '',
+                'store_phone' => $settings['store_phone'] ?? '',
+                'store_footer' => $settings['store_footer'] ?? 'Terima kasih telah berbelanja!',
+                'subtotal' => $transaction->subtotal,
+                'discount' => $transaction->discount,
+                'tax' => $transaction->tax,
+                'total' => $transaction->total,
+                'paid_amount' => $transaction->paid_amount,
+                'change_amount' => $transaction->change_amount,
+                'payment_method' => strtoupper($transaction->payment_method),
+                'status' => $transaction->status === 'completed' ? 'LUNAS' : 'PENDING',
+                'customer_name' => $transaction->customer_name,
+                'customer_phone' => $transaction->customer_phone,
+                'notes' => $transaction->notes,
+                'items' => $transaction->items->map(fn($i) => [
+                    'product_name' => $i->product_name,
+                    'quantity' => $i->quantity,
+                    'price' => $i->price,
+                    'subtotal' => $i->subtotal
+                ])
+            ]);
+        }
+        
         return view('transactions.show', compact('transaction'));
     }
 

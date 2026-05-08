@@ -32,10 +32,17 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
         .active-link { @apply bg-blue-600 text-white rounded-lg !important; }
         [x-cloak] { display: none !important; }
+        .transition-premium { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .group:hover .group-hover\:bounce { animation: bounce 1s infinite; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
     </style>
     @stack('styles')
 </head>
 <body class="min-h-screen flex font-inter" x-data="{ sidebarOpen: false }">
+    @include('components.report-export-modal')
 
     {{-- Mobile Overlay --}}
     <div class="fixed inset-0 bg-black/60 z-40 lg:hidden" x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak></div>
@@ -136,6 +143,15 @@
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('reports_financial'))
+                    <a href="{{ route('capitals.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('capitals.*') ? 'active-link' : '' }}">
+                        <i class="fas fa-wallet w-6 mr-1 text-sm"></i> Modal Usaha
+                    </a>
+                    <a href="{{ route('monthly_expenses.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('monthly_expenses.*') ? 'active-link' : '' }}">
+                        <i class="fas fa-file-invoice w-6 mr-1 text-sm"></i> Biaya Bulanan
+                    </a>
+                    <a href="{{ route('expense_categories.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('expense_categories.*') ? 'active-link' : '' }}">
+                        <i class="fas fa-list-check w-6 mr-1 text-sm"></i> Master Jenis Biaya
+                    </a>
                     <a href="{{ route('reports.financial') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('reports.financial') ? 'active-link' : '' }}">
                         <i class="fas fa-file-invoice-dollar w-6 mr-1 text-sm"></i> Laporan Laba Rugi
                     </a>
@@ -148,6 +164,19 @@
                 </div>
             </div>
             @endif
+
+            <!-- INVOICE GENERATOR -->
+            <div class="mb-6">
+                <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Invoice Generator</p>
+                <div class="space-y-1">
+                    <a href="{{ route('invoices.index') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('invoices.index') ? 'active-link' : '' }}">
+                        <i class="fas fa-file-invoice w-6 mr-1 text-sm text-blue-400"></i> Semua Invoice
+                    </a>
+                    <a href="{{ route('invoices.create') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('invoices.create') ? 'active-link' : '' }}">
+                        <i class="fas fa-plus-circle w-6 mr-1 text-sm text-emerald-400"></i> Buat Invoice
+                    </a>
+                </div>
+            </div>
 
             <!-- LAINNYA (Owner only) -->
             @if(auth()->user()->hasPermission('team') || auth()->user()->hasPermission('settings'))
@@ -384,9 +413,22 @@
                                 </button>
                                 
                                 {{-- Delete --}}
-                                <form action="{{ route('worksheets.destroy', $activeWorksheet) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus Worksheet ini? Data yang terkait tidak akan terhapus, tetapi Anda tidak bisa lagi mengaksesnya lewat Worksheet ini.')" class="m-0">
+                                <form action="{{ route('worksheets.destroy', $activeWorksheet) }}" method="POST" id="form-delete-worksheet" class="m-0">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="w-[50px] h-[50px] rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-md shadow-red-500/20" title="Hapus Worksheet">
+                                    <button type="button" 
+                                            onclick="Swal.fire({
+                                                title: 'Hapus Worksheet?',
+                                                text: 'Data yang terkait tidak akan terhapus, tetapi Anda tidak bisa lagi mengaksesnya lewat Worksheet ini.',
+                                                icon: 'warning',
+                                                showCancelButton: true,
+                                                confirmButtonColor: '#ef4444',
+                                                cancelButtonColor: '#64748b',
+                                                confirmButtonText: 'Ya, Hapus!',
+                                                cancelButtonText: 'Batal'
+                                            }).then((result) => {
+                                                if (result.isConfirmed) document.getElementById('form-delete-worksheet').submit();
+                                            })"
+                                            class="w-[50px] h-[50px] rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-md shadow-red-500/20" title="Hapus Worksheet">
                                         <i class="fas fa-trash text-lg"></i>
                                     </button>
                                 </form>
@@ -441,6 +483,14 @@
             Toast.fire({
                 icon: 'error',
                 title: '{{ session('error') }}',
+                customClass: { popup: 'border border-red-500/20 shadow-xl shadow-red-900/20', icon: 'text-red-400' }
+            });
+        @endif
+
+        @if($errors->any())
+            Toast.fire({
+                icon: 'error',
+                title: '{!! implode("<br>", $errors->all()) !!}',
                 customClass: { popup: 'border border-red-500/20 shadow-xl shadow-red-900/20', icon: 'text-red-400' }
             });
         @endif

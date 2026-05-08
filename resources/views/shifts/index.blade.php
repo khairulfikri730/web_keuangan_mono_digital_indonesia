@@ -25,12 +25,64 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Uang Kas Awal (Rp) <span class="text-red-400">*</span></label>
+                        <div x-data="{ 
+                            method: 'sync',
+                            laciBalance: {{ $laciBalance }},
+                            manualValue: '',
+                            formattedManual: '',
+                            initValue() {
+                                this.updateValue();
+                            },
+                            updateManual() {
+                                let val = this.formattedManual.replace(/\D/g, '');
+                                this.manualValue = val;
+                                this.formattedManual = val ? parseInt(val).toLocaleString('id-ID') : '';
+                                if(this.method === 'manual') this.$refs.openingInput.value = this.manualValue;
+                            },
+                            updateValue() {
+                                if(this.method === 'sync') {
+                                    this.$refs.openingInput.value = this.laciBalance;
+                                } else {
+                                    this.$refs.openingInput.value = this.manualValue;
+                                }
+                            }
+                        }" x-init="initValue()">
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Uang Kas Awal (Rp) <span class="text-red-400">*</span></label>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <label class="cursor-pointer group">
+                                    <input type="radio" x-model="method" value="sync" @change="updateValue()" class="hidden">
+                                    <div class="p-3 border rounded-xl transition-all flex flex-col items-center gap-1"
+                                         :class="method === 'sync' ? 'bg-blue-500/20 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-700 text-slate-500 group-hover:border-slate-500'">
+                                        <i class="fas fa-sync-alt text-sm"></i>
+                                        <span class="text-[10px] font-bold uppercase">Sync dari Laci</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer group">
+                                    <input type="radio" x-model="method" value="manual" @change="updateValue()" class="hidden">
+                                    <div class="p-3 border rounded-xl transition-all flex flex-col items-center gap-1"
+                                         :class="method === 'manual' ? 'bg-blue-500/20 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-700 text-slate-500 group-hover:border-slate-500'">
+                                        <i class="fas fa-keyboard text-sm"></i>
+                                        <span class="text-[10px] font-bold uppercase">Input Manual</span>
+                                    </div>
+                                </label>
+                            </div>
+
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                                <input type="number" name="opening_cash" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-inner" required min="0" value="0">
+                                <input type="hidden" name="opening_cash" x-ref="openingInput">
+                                
+                                <template x-if="method === 'sync'">
+                                    <input type="text" :value="parseInt(laciBalance).toLocaleString('id-ID')" readonly class="w-full bg-slate-800/80 border border-blue-500/30 rounded-xl pl-12 pr-4 py-3 text-blue-400 font-black text-lg cursor-not-allowed shadow-inner" placeholder="0">
+                                </template>
+                                
+                                <template x-if="method === 'manual'">
+                                    <input type="text" x-model="formattedManual" @input="updateManual()" class="w-full bg-slate-900/50 border border-blue-500 rounded-xl pl-12 pr-4 py-3 text-white font-black text-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-inner" required placeholder="0">
+                                </template>
                             </div>
+                            <p x-show="method === 'sync'" class="mt-2 text-[10px] text-slate-500 italic flex items-center gap-1">
+                                <i class="fas fa-info-circle"></i> Mengambil saldo tersinkronisasi saat ini di laci.
+                            </p>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Catatan Pembukaan</label>
@@ -82,7 +134,8 @@
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Uang Fisik di Laci (Rp) <span class="text-red-400">*</span></label>
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                                <input type="number" name="closing_cash" x-model="closingCash" @input="calcDiff()" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-inner" required min="0" placeholder="Hitung uang fisik">
+                                <input type="hidden" name="closing_cash" :value="closingCash">
+                                <input type="text" x-model="closingCashFormatted" @input="updateClosing()" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-inner" required placeholder="Contoh: 2.000.000">
                             </div>
                         </div>
 
@@ -96,7 +149,22 @@
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Catatan Penutupan</label>
                             <textarea name="notes" rows="3" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-inner"></textarea>
                         </div>
-                        <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 flex items-center justify-center gap-2" onclick="return confirm('Yakin ingin menutup shift?')"><i class="fas fa-stop"></i> TUTUP SHIFT SEKARANG</button>
+                        <button type="button" 
+                                onclick="Swal.fire({
+                                    title: 'Tutup Shift?',
+                                    text: 'Pastikan uang kas di laci sudah sesuai sebelum menutup shift.',
+                                    icon: 'question',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#ef4444',
+                                    cancelButtonColor: '#64748b',
+                                    confirmButtonText: 'Ya, Tutup Shift',
+                                    cancelButtonText: 'Batal'
+                                }).then((result) => {
+                                    if (result.isConfirmed) this.closest('form').submit();
+                                })"
+                                class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                            <i class="fas fa-stop"></i> TUTUP SHIFT SEKARANG
+                        </button>
                     </div>
                 </form>
             @endif
@@ -105,10 +173,52 @@
 
     {{-- Riwayat Shift --}}
     <div class="lg:col-span-2">
-        <div class="card">
-            <div class="p-5 border-b border-slate-700/50">
-                <h3 class="font-bold text-white">Riwayat Shift</h3>
+        <div class="card overflow-visible">
+            <div class="p-6 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h3 class="font-black text-white tracking-tight text-lg">Riwayat Shift</h3>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Audit Log Operasional</p>
+                </div>
+                
+                <button onclick="window.openExportModal()" class="w-10 h-10 bg-slate-800 border border-white/5 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
+                    <i class="fas fa-file-export"></i>
+                </button>
             </div>
+
+            {{-- Filter Bar --}}
+            <div class="p-6 bg-slate-900/30 border-b border-white/5">
+                <form method="GET" class="flex flex-col gap-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-white/5">
+                            <input type="date" name="date_from" value="{{ request('date_from', now()->startOfMonth()->format('Y-m-d')) }}" 
+                                   class="bg-transparent border-none text-[11px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
+                            <span class="text-slate-600 text-[10px] font-black">S/D</span>
+                            <input type="date" name="date_to" value="{{ request('date_to', now()->format('Y-m-d')) }}" 
+                                   class="bg-transparent border-none text-[11px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
+                        </div>
+
+                        <select name="status" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-xl px-4 py-2 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
+                            <option value="">— Semua Status —</option>
+                            <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Aktif (Open)</option>
+                            <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Selesai (Closed)</option>
+                        </select>
+
+                        <select name="user_id" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-xl px-4 py-2 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
+                            <option value="">— Semua Kasir —</option>
+                            @foreach($users as $u)
+                                <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                            @endforeach
+                        </select>
+
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20">
+                            <i class="fas fa-filter mr-1.5"></i> Filter
+                        </button>
+                        
+                        <a href="{{ route('shifts.index') }}" class="text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-widest transition-colors">Reset</a>
+                    </div>
+                </form>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -150,48 +260,66 @@
                                 @endif
                             </td>
                             <td class="p-4 text-right">
-                                <div class="opacity-100 flex justify-end gap-2" x-data="{ showEdit: false, opening: {{ $s->opening_cash }}, closing: {{ $s->closing_cash ?? 0 }} }">
-                                    <a href="{{ route('shifts.show', $s) }}" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition-colors shadow-sm" title="Detail Shift">
-                                        <i class="fas fa-eye text-xs"></i>
-                                    </a>
-                                    @if(auth()->user()->isOwner())
-                                    <button @click="showEdit = true" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
-                                        <i class="fas fa-edit text-xs"></i>
-                                    </button>
-                                    
-                                    {{-- Inline Edit Modal --}}
-                                    <div x-show="showEdit" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 text-left">
-                                        <div @click.away="showEdit = false" class="bg-[#1e293b] rounded-3xl w-full max-w-sm shadow-2xl border border-slate-700 p-6">
-                                            <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2"><i class="fas fa-edit text-blue-400"></i> Edit Shift</h3>
-                                            <form action="{{ route('shifts.update', $s->id) }}" method="POST">
-                                                @csrf @method('PUT')
-                                                <div class="space-y-4">
-                                                    <div>
-                                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Awal (Rp)</label>
-                                                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                                                            <input type="number" name="opening_cash" x-model="opening" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                    <div class="opacity-100 flex justify-end gap-2" x-data="{ 
+                                        showEdit: false, 
+                                        opening: {{ $s->opening_cash }}, 
+                                        closing: {{ $s->closing_cash ?? 0 }},
+                                        openingFormatted: '{{ number_format($s->opening_cash, 0, '', '.') }}',
+                                        closingFormatted: '{{ number_format($s->closing_cash ?? 0, 0, '', '.') }}',
+                                        updateOpening() {
+                                            let val = this.openingFormatted.replace(/\D/g, '');
+                                            this.opening = val ? parseInt(val) : 0;
+                                            this.openingFormatted = val ? parseInt(val).toLocaleString('id-ID') : '';
+                                        },
+                                        updateClosing() {
+                                            let val = this.closingFormatted.replace(/\D/g, '');
+                                            this.closing = val ? parseInt(val) : 0;
+                                            this.closingFormatted = val ? parseInt(val).toLocaleString('id-ID') : '';
+                                        }
+                                    }">
+                                        <a href="{{ route('shifts.show', $s) }}" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition-colors shadow-sm" title="Detail Shift">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </a>
+                                        @if(auth()->user()->isOwner())
+                                        <button @click="showEdit = true" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
+                                            <i class="fas fa-edit text-xs"></i>
+                                        </button>
+                                        
+                                        {{-- Inline Edit Modal --}}
+                                        <div x-show="showEdit" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 text-left">
+                                            <div @click.away="showEdit = false" class="bg-[#1e293b] rounded-3xl w-full max-w-sm shadow-2xl border border-slate-700 p-6">
+                                                <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2"><i class="fas fa-edit text-blue-400"></i> Edit Shift</h3>
+                                                <form action="{{ route('shifts.update', $s->id) }}" method="POST">
+                                                    @csrf @method('PUT')
+                                                    <div class="space-y-4">
+                                                        <div>
+                                                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Awal (Rp)</label>
+                                                            <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                                                                <input type="hidden" name="opening_cash" :value="opening">
+                                                                <input type="text" x-model="openingFormatted" @input="updateOpening()" required class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                                            </div>
+                                                        </div>
+                                                        @if($s->status === 'closed')
+                                                        <div>
+                                                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Laci Akhir (Rp)</label>
+                                                            <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                                                                <input type="hidden" name="closing_cash" :value="closing">
+                                                                <input type="text" x-model="closingFormatted" @input="updateClosing()" required class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                                            </div>
+                                                        </div>
+                                                        @endif
+                                                        <div>
+                                                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Catatan</label>
+                                                            <textarea name="notes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">{{ $s->notes }}</textarea>
+                                                        </div>
+                                                        <div class="flex gap-2 pt-2">
+                                                            <button type="button" @click="showEdit = false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm transition-colors active:scale-95">Batal</button>
+                                                            <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 transition-all active:scale-95"><i class="fas fa-save mr-1"></i>Simpan Perubahan</button>
                                                         </div>
                                                     </div>
-                                                    @if($s->status === 'closed')
-                                                    <div>
-                                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Laci Akhir (Rp)</label>
-                                                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                                                            <input type="number" name="closing_cash" x-model="closing" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <div>
-                                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Catatan</label>
-                                                        <textarea name="notes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">{{ $s->notes }}</textarea>
-                                                    </div>
-                                                    <div class="flex gap-2 pt-2">
-                                                        <button type="button" @click="showEdit = false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm transition-colors active:scale-95">Batal</button>
-                                                        <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 transition-all active:scale-95"><i class="fas fa-save mr-1"></i>Simpan Perubahan</button>
-                                                    </div>
-                                                </div>
-                                            </form>
+                                                </form>
+                                            </div>
                                         </div>
-                                    </div>
 
                                     <form action="{{ route('shifts.destroy', $s->id) }}" method="POST" class="m-0" id="delete-shift-{{ $s->id }}">
                                         @csrf
@@ -232,12 +360,19 @@
 function shiftClose() {
     return {
         summary: { cash_sales: 0, bank_sales: 0, total_sales: 0, cash_expenses: 0, expected_cash: 0 },
-        closingCash: 0,
+        closingCash: '',
+        closingCashFormatted: '',
         diff: 0,
         init() {
             fetch('{{ route("shifts.summary", $activeShift) }}')
                 .then(r => r.json())
                 .then(d => { this.summary = d; this.calcDiff(); });
+        },
+        updateClosing() {
+            let val = String(this.closingCashFormatted).replace(/\D/g, '');
+            this.closingCash = val ? parseInt(val) : '';
+            this.closingCashFormatted = val ? parseInt(val).toLocaleString('id-ID') : '';
+            this.calcDiff();
         },
         calcDiff() {
             this.diff = (parseFloat(this.closingCash) || 0) - this.summary.expected_cash;

@@ -22,14 +22,16 @@ class Product extends Model
 
     protected $fillable = [
         'worksheet_id', 'category_id', 'name', 'sku', 'barcode', 'description',
-        'price', 'cost_price', 'stock', 'min_stock', 'unit', 'image', 'is_active',
-        'product_type', 'product_kind', 'meta',
+        'price', 'discount_price', 'cost_price', 'stock', 'min_stock', 'unit', 'image', 'is_active',
+        'is_promo', 'product_type', 'product_kind', 'meta',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'discount_price' => 'decimal:2',
         'cost_price' => 'decimal:2',
         'is_active' => 'boolean',
+        'is_promo' => 'boolean',
         'meta' => 'array',
     ];
 

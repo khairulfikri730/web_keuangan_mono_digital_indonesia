@@ -40,11 +40,26 @@ class Transaction extends Model
         return $this->hasMany(TransactionItem::class);
     }
 
-    public static function generateInvoiceNumber(): string
+    public static function generateInvoiceNumber(bool $shouldLock = false): string
     {
         $prefix = 'INV-' . date('Ymd') . '-';
-        $last = self::where('invoice_number', 'like', $prefix . '%')->latest()->first();
-        $number = $last ? ((int) substr($last->invoice_number, -4)) + 1 : 1;
+        
+        $query = self::withoutGlobalScope('worksheet')
+            ->where('invoice_number', 'like', $prefix . '%')
+            ->orderBy('invoice_number', 'desc');
+            
+        if ($shouldLock) {
+            $query->lockForUpdate();
+        }
+        
+        $last = $query->first();
+
+        $number = 1;
+        if ($last) {
+            $lastNumber = (int) substr($last->invoice_number, -4);
+            $number = $lastNumber + 1;
+        }
+
         return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
@@ -76,6 +91,16 @@ class Transaction extends Model
     public function isFullyPaid(): bool
     {
         return $this->paid_so_far >= $this->total;
+    }
+
+    public function getTotalCostAttribute(): float
+    {
+        return (float) $this->items->sum(fn($i) => $i->cost_price * $i->quantity);
+    }
+
+    public function getGrossProfitAttribute(): float
+    {
+        return (float) $this->total - $this->total_cost;
     }
 
     public function worksheet()

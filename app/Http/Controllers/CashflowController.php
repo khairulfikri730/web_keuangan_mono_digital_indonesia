@@ -3,12 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cashflow;
+use App\Models\Transaction;
+use App\Services\FinancialReportService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CashflowController extends Controller
 {
+    protected $financialService;
+
+    public function __construct(FinancialReportService $financialService)
+    {
+        $this->financialService = $financialService;
+    }
+
     private function baseQuery($filter, $source, $start = null, $end = null)
     {
         $query = Cashflow::with(['user', 'worksheet']);
@@ -44,6 +53,13 @@ class CashflowController extends Controller
             $query->where('source', $source);
         }
 
+        // Worksheet Filter
+        if ($activeWorksheetId = session('active_worksheet_id')) {
+            if ($activeWorksheetId !== 'all') {
+                $query->where('worksheet_id', $activeWorksheetId);
+            }
+        }
+
         return $query;
     }
 
@@ -56,10 +72,38 @@ class CashflowController extends Controller
         $query = $this->baseQuery($filter, $source, $start, $end);
 
         $cashflows = (clone $query)->latest('transaction_date')->paginate(20)->withQueryString();
-        $totalIncome = (clone $query)->where('type', 'income')->sum('amount');
-        $totalExpense = (clone $query)->where('type', 'expense')->sum('amount');
-        $netProfit = $totalIncome - $totalExpense;
+        
+        // 1. Get Unified Summary
+        $dateRange = $this->getDateRange($filter, $start, $end);
+        $worksheetId = session('active_worksheet_id');
+        
+        $finSummary = $this->financialService->getSummary($dateRange['from'], $dateRange['to'], $worksheetId);
+        
+        $totalIncome = $finSummary->total_income;
+        $totalExpense = $finSummary->total_expense;
+        $netProfit = $finSummary->net_profit;
 
+        // ROI Analysis Data
+        $totalInvestment = \App\Models\Capital::sum('total_amount');
+        $allTimeNetProfit = $this->financialService->getAllTimeNetProfit($worksheetId);
+        $totalCollectedProfit = $allTimeNetProfit;
+        $remainingCapital = max(0, $totalInvestment - $totalCollectedProfit);
+        
+        $firstTx = Cashflow::orderBy('transaction_date', 'asc')->first();
+        $monthsActive = $firstTx ? max(1, $firstTx->transaction_date->diffInMonths(now()) + 1) : 1;
+        $avgMonthlyProfit = $totalCollectedProfit / $monthsActive;
+        $paybackMonths = $avgMonthlyProfit > 0 ? ceil($remainingCapital / $avgMonthlyProfit) : null;
+
+        // Target Payback Analysis
+        $targetPaybackMonths = 12;
+        if ($worksheetId && $worksheetId !== 'all') {
+            $ws = \App\Models\Worksheet::find($worksheetId);
+            $targetPaybackMonths = $ws->target_payback_months ?? 12;
+        }
+
+        $requiredMonthlyProfit = $targetPaybackMonths > 0 ? $remainingCapital / $targetPaybackMonths : 0;
+        $requiredDailyProfit = $requiredMonthlyProfit / 30;
+        $profitGap = $avgMonthlyProfit - $requiredMonthlyProfit;
         $incomeByCategory = (clone $query)->where('type', 'income')
             ->selectRaw('category, SUM(amount) as total')->groupBy('category')->orderByDesc('total')->get();
 
@@ -86,22 +130,62 @@ class CashflowController extends Controller
 
         $trend = $this->calculateTrend($filter, $source, $start, $end);
 
-        // Saldo calculations (all time)
-        $saldoLaciIncome = Cashflow::where('source', 'pos_cash')->where('type', 'income')->sum('amount');
-        $saldoLaciExpense = Cashflow::where('source', 'pos_cash')->where('type', 'expense')->sum('amount');
-        $saldoLaci = $saldoLaciIncome - $saldoLaciExpense;
+        // SALDO = ALL-TIME aktual (bukan period-filtered)
+        // Saldo menunjukkan kondisi laci/rekening saat ini
+        $saldoLaciSyncedIncome  = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount');
+        $saldoLaciSyncedExpense = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+        $saldoLaciSynced = $saldoLaciSyncedIncome - $saldoLaciSyncedExpense;
 
-        $saldoBankIncome = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('type', 'income')->sum('amount');
-        $saldoBankExpense = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('type', 'expense')->sum('amount');
-        $saldoBank = $saldoBankIncome - $saldoBankExpense;
+        $saldoLaciPending = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'pending')->where('type', 'income')->sum('amount');
+        $pendingLaciCount = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'pending')->where('type', 'income')->count();
+
+        $saldoBankSyncedIncome  = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount');
+        $saldoBankSyncedExpense = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+        $saldoBankSynced = $saldoBankSyncedIncome - $saldoBankSyncedExpense;
+
+        $saldoBankPending = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'pending')->where('type', 'income')->sum('amount');
+        $pendingBankCount = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'pending')->where('type', 'income')->count();
+
+        $pendingQris     = Cashflow::where('source', 'pos_bank')->where('bank_sync_status', 'pending')->where('type', 'income')->sum('amount');
+        $pendingTransfer = Cashflow::where('source', 'transfer')->where('bank_sync_status', 'pending')->where('type', 'income')->sum('amount');
+
+        $saldoLaci = $saldoLaciSynced;
+        $saldoBank = $saldoBankSynced;
+
+        // Omset Metrics
+        $txQuery = $this->baseTransactionQuery($filter, $start, $end);
+        $incomeQris     = (clone $txQuery)->whereIn('payment_method', ['qris', 'debit'])->sum('total');
+        $incomeCash     = (clone $txQuery)->where('payment_method', 'cash')->sum('total');
+        $incomeTransfer = (clone $txQuery)->where('payment_method', 'transfer')->sum('total');
 
         return view('cashflow.index', compact(
             'cashflows', 'totalIncome', 'totalExpense', 'netProfit',
             'filter', 'start', 'end', 'source', 'incomeByCategory', 'expenseByCategory',
             'chartDates', 'chartIncome', 'chartExpense',
             'biggestExpense', 'avgIncome', 'trend',
-            'saldoLaci', 'saldoBank'
+            'saldoLaci', 'saldoBank', 'saldoLaciSynced', 'saldoLaciPending', 'saldoBankSynced', 'saldoBankPending',
+            'pendingQris', 'pendingTransfer', 'pendingBankCount', 'pendingLaciCount',
+            'totalInvestment', 'totalCollectedProfit', 'remainingCapital', 'paybackMonths',
+            'targetPaybackMonths', 'requiredMonthlyProfit', 'requiredDailyProfit', 'profitGap', 'avgMonthlyProfit',
+            'incomeQris', 'incomeCash', 'incomeTransfer'
         ));
+    }
+
+    private function getDateRange($filter, $start = null, $end = null)
+    {
+        $now = now();
+        switch ($filter) {
+            case 'today': return ['from' => $now->copy()->startOfDay(), 'to' => $now->copy()->endOfDay()];
+            case 'yesterday': return ['from' => $now->copy()->subDay()->startOfDay(), 'to' => $now->copy()->subDay()->endOfDay()];
+            case 'week': return ['from' => $now->copy()->startOfWeek(), 'to' => $now->copy()->endOfWeek()];
+            case 'month': return ['from' => $now->copy()->startOfMonth(), 'to' => $now->copy()->endOfMonth()];
+            case 'year': return ['from' => $now->copy()->startOfYear(), 'to' => $now->copy()->endOfYear()];
+            case 'custom': return [
+                'from' => $start ? Carbon::parse($start)->startOfDay() : $now->copy()->startOfMonth(),
+                'to' => $end ? Carbon::parse($end)->endOfDay() : $now->copy()->endOfMonth()
+            ];
+            default: return ['from' => $now->copy()->startOfMonth(), 'to' => $now->copy()->endOfMonth()];
+        }
     }
 
     public function getData(Request $request)
@@ -111,12 +195,29 @@ class CashflowController extends Controller
         $end = $request->end;
         $source = $request->source ?? 'all';
         $page = $request->page ?? 1;
+        
+        $dateRange = $this->getDateRange($filter, $start, $end);
+        $worksheetId = session('active_worksheet_id');
+        
+        $finSummary = $this->financialService->getSummary($dateRange['from'], $dateRange['to'], $worksheetId);
+        
+        $totalIncome = $finSummary->total_income;
+        $totalExpense = $finSummary->total_expense;
+        $netProfit = $finSummary->net_profit;
+
+        $txQuery = $this->baseTransactionQuery($filter, $start, $end);
+        $incomeQris = (clone $txQuery)->whereIn('payment_method', ['qris', 'debit'])->sum('total');
+        $incomeCash = (clone $txQuery)->where('payment_method', 'cash')->sum('total');
+        $incomeTransfer = (clone $txQuery)->where('payment_method', 'transfer')->sum('total');
+
+        // SALDO = ALL-TIME aktual
+        $saldoLaci = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
+                   - Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+
+        $saldoBankSynced = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
+                         - Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+
         $query = $this->baseQuery($filter, $source, $start, $end);
-
-        $totalIncome = (clone $query)->where('type', 'income')->sum('amount');
-        $totalExpense = (clone $query)->where('type', 'expense')->sum('amount');
-        $netProfit = $totalIncome - $totalExpense;
-
         $chartQuery = (clone $query)
             ->selectRaw("DATE(transaction_date) as date")
             ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")
@@ -162,6 +263,11 @@ class CashflowController extends Controller
                 'totalExpenseFmt' => number_format($totalExpense, 0, ',', '.'),
                 'netProfitFmt' => number_format(abs($netProfit), 0, ',', '.'),
                 'netProfitNegative' => $netProfit < 0,
+                'incomeQrisFmt' => number_format($incomeQris, 0, ',', '.'),
+                'incomeCashFmt' => number_format($incomeCash, 0, ',', '.'),
+                'incomeTransferFmt' => number_format($incomeTransfer, 0, ',', '.'),
+                'saldoLaciFmt' => number_format($saldoLaci, 0, ',', '.'),
+                'saldoBankSyncedFmt' => number_format($saldoBankSynced, 0, ',', '.'),
             ],
             'chart' => [
                 'labels' => $chartDates,
@@ -196,6 +302,37 @@ class CashflowController extends Controller
             'transactions' => $transactionsHtml,
             'pagination' => $paginationHtml,
         ]);
+    }
+
+    protected function baseTransactionQuery($filter, $start = null, $end = null)
+    {
+        $query = Transaction::completed();
+
+        if ($filter === 'today') {
+            $query->whereDate('created_at', today());
+        } elseif ($filter === 'yesterday') {
+            $query->whereDate('created_at', today()->subDay());
+        } elseif ($filter === 'week') {
+            $query->whereBetween('created_at', [
+                Carbon::now()->startOfWeek(),
+                Carbon::now()->endOfWeek(),
+            ]);
+        } elseif ($filter === 'month') {
+            $query->whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'));
+        } elseif ($filter === 'year') {
+            $query->whereYear('created_at', date('Y'));
+        } elseif ($filter === 'custom' && $start && $end) {
+            $query->whereBetween('created_at', [$start . ' 00:00:00', $end . ' 23:59:59']);
+        }
+
+        // Worksheet Filter
+        if ($activeWorksheetId = session('active_worksheet_id')) {
+            if ($activeWorksheetId !== 'all') {
+                $query->where('worksheet_id', $activeWorksheetId);
+            }
+        }
+
+        return $query;
     }
 
     private function calculateTrend($filter, $source, $start = null, $end = null)
@@ -313,24 +450,28 @@ class CashflowController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:income,expense',
-            'category' => 'required|string|max:100',
-            'description' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:1',
+            'type'             => 'required|in:income,expense',
+            'category'         => 'required|string|max:100',
+            'description'      => 'required|string|max:255',
+            'amount'           => 'required|numeric|min:1',
             'transaction_date' => 'required|date',
-            'notes' => 'nullable|string',
-            'source' => 'required|string|in:pos_cash,pos_bank,transfer,manual',
+            'notes'            => 'nullable|string',
+            'source'           => 'required|string|in:pos_cash,pos_bank,transfer,manual',
         ]);
 
+        // Manual entries from dashboard are immediately "synced" because they are performed by the owner
+        $bankSyncStatus = 'synced';
+
         Cashflow::create([
-            'user_id' => auth()->id(),
-            'type' => $request->type,
-            'category' => $request->category,
-            'description' => $request->description,
-            'amount' => $request->amount,
-            'transaction_date' => $request->transaction_date,
-            'source' => $request->source,
-            'notes' => $request->notes,
+            'user_id'          => auth()->id(),
+            'type'             => $request->type,
+            'category'         => $request->category,
+            'description'      => $request->description,
+            'amount'           => $request->amount,
+            'transaction_date' => Carbon::parse($request->transaction_date)->setTimeFrom(now()),
+            'source'           => $request->source,
+            'bank_sync_status' => $bankSyncStatus,
+            'notes'            => $request->notes,
         ]);
 
         return back()->with('success', 'Cashflow berhasil ditambahkan!');
@@ -338,18 +479,103 @@ class CashflowController extends Controller
 
     public function destroy(Cashflow $cashflow)
     {
-        if ($cashflow->reference) {
+        if ($cashflow->reference && !str_starts_with($cashflow->reference, 'TRF-')) {
             return back()->with('error', 'Cashflow dari transaksi POS tidak bisa dihapus manual!');
         }
 
-        $cashflow->delete();
+        if ($cashflow->category === 'Transfer Internal' && $cashflow->reference) {
+            // Delete both pairs of the transfer
+            Cashflow::where('reference', $cashflow->reference)->delete();
+            return back()->with('success', 'Riwayat transfer berhasil dihapus dan saldo telah dikembalikan!');
+        }
 
+        $cashflow->delete();
         return back()->with('success', 'Data cashflow dihapus!');
     }
 
-    /**
-     * Transfer between Laci and Bank
-     */
+    public function syncBank(Request $request)
+    {
+        $count = Cashflow::syncAllPendingBank();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'count'   => $count,
+                'message' => "{$count} transaksi bank berhasil disinkronkan ke Saldo Bank.",
+            ]);
+        }
+
+        return back()->with('success', "{$count} transaksi bank berhasil disinkronkan!");
+    }
+
+    public function syncLaci(Request $request)
+    {
+        $count = Cashflow::syncAllPendingLaci();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'count'   => $count,
+                'message' => "{$count} transaksi tunai berhasil disinkronkan ke Saldo Laci.",
+            ]);
+        }
+
+        return back()->with('success', "{$count} transaksi tunai berhasil disinkronkan!");
+    }
+
+    public function update(Request $request, Cashflow $cashflow)
+    {
+        if ($cashflow->reference && !str_starts_with($cashflow->reference, 'TRF-')) {
+            return back()->with('error', 'Cashflow dari transaksi POS tidak bisa diubah manual!');
+        }
+
+        $request->validate([
+            'type'             => 'required|in:income,expense',
+            'category'         => 'required|string|max:100',
+            'description'      => 'required|string|max:255',
+            'amount'           => 'required|numeric|min:1',
+            'transaction_date' => 'required|date',
+            'notes'            => 'nullable|string',
+            'source'           => 'required|string|in:pos_cash,pos_bank,transfer,manual',
+        ]);
+
+        if ($cashflow->category === 'Transfer Internal' && $cashflow->reference) {
+            // Update both pairs
+            $pairs = Cashflow::where('reference', $cashflow->reference)->get();
+            foreach ($pairs as $p) {
+                $p->update([
+                    'amount' => $request->amount,
+                    'transaction_date' => Carbon::parse($request->transaction_date)->setTimeFrom($p->transaction_date),
+                    'notes' => $request->notes ?? $request->description,
+                ]);
+            }
+            return back()->with('success', 'Data transfer diperbarui!');
+        }
+
+        $data = $request->all();
+        $data['transaction_date'] = Carbon::parse($request->transaction_date)->setTimeFrom($cashflow->transaction_date);
+        $cashflow->update($data);
+
+        return back()->with('success', 'Cashflow berhasil diperbarui!');
+    }
+
+    public function updateTarget(Request $request)
+    {
+        $request->validate([
+            'target_payback_months' => 'required|integer|min:1|max:120',
+        ]);
+
+        $activeWorksheetId = session('active_worksheet_id');
+        if ($activeWorksheetId && $activeWorksheetId !== 'all') {
+            \App\Models\Worksheet::where('id', $activeWorksheetId)->update([
+                'target_payback_months' => $request->target_payback_months
+            ]);
+            return back()->with('success', 'Target balik modal diperbarui!');
+        }
+
+        return back()->with('error', 'Pilih satu worksheet terlebih dahulu!');
+    }
+
     public function transfer(Request $request)
     {
         $request->validate([
@@ -369,8 +595,9 @@ class CashflowController extends Controller
                 'description' => 'Transfer Laci → Bank',
                 'amount' => $request->amount,
                 'source' => 'pos_cash',
+                'bank_sync_status' => 'synced',
                 'reference' => $ref,
-                'transaction_date' => today(),
+                'transaction_date' => now(),
                 'notes' => $request->notes,
             ]);
             // Income to bank
@@ -381,8 +608,9 @@ class CashflowController extends Controller
                 'description' => 'Transfer Laci → Bank',
                 'amount' => $request->amount,
                 'source' => 'transfer',
+                'bank_sync_status' => 'synced',
                 'reference' => $ref,
-                'transaction_date' => today(),
+                'transaction_date' => now(),
                 'notes' => $request->notes,
             ]);
         } else {
@@ -394,8 +622,9 @@ class CashflowController extends Controller
                 'description' => 'Transfer Bank → Laci',
                 'amount' => $request->amount,
                 'source' => 'transfer',
+                'bank_sync_status' => 'synced',
                 'reference' => $ref,
-                'transaction_date' => today(),
+                'transaction_date' => now(),
                 'notes' => $request->notes,
             ]);
             // Income to laci
@@ -406,8 +635,9 @@ class CashflowController extends Controller
                 'description' => 'Transfer Bank → Laci',
                 'amount' => $request->amount,
                 'source' => 'pos_cash',
+                'bank_sync_status' => 'synced',
                 'reference' => $ref,
-                'transaction_date' => today(),
+                'transaction_date' => now(),
                 'notes' => $request->notes,
             ]);
         }

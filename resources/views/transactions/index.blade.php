@@ -4,9 +4,10 @@
 @section('page-title', 'Riwayat Transaksi')
 
 @section('content')
-<div class="space-y-6">
+<div x-data="posApp()" x-init="loadPrinterSettings()">
+    <div class="space-y-6">
     {{-- Summary Cards --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm">
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Omset Hari Ini</p>
             <p class="text-lg font-black text-emerald-400">Rp {{ number_format($todayTotalSales, 0, ',', '.') }}</p>
@@ -17,358 +18,483 @@
         </div>
         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm">
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pendapatan Bersih</p>
-            <p class="text-lg font-black {{ $todayNet >= 0 ? 'text-emerald-400' : 'text-red-400' }}">Rp {{ number_format(abs($todayNet), 0, ',', '.') }}</p>
+            <p class="text-lg font-black {{ $todayNet >= 0 ? 'text-emerald-400' : 'text-red-400' }}">Rp {{ $todayNet < 0 ? '-' : '' }}{{ number_format(abs($todayNet), 0, ',', '.') }}</p>
         </div>
+        {{-- Saldo Laci Card: Sekarang vs Awal Sesi --}}
         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm">
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Saldo Laci</p>
-            <p class="text-lg font-black text-blue-400">Rp {{ number_format($saldoLaci, 0, ',', '.') }}</p>
+            @if($activeShift)
+                @php
+                    $selisih = $saldoLaci - $saldoLaciAwal;
+                    $naik = $selisih >= 0;
+                @endphp
+                <p class="text-lg font-black text-blue-400">Rp {{ number_format($saldoLaci, 0, ',', '.') }}</p>
+                <div class="mt-1.5 flex items-center justify-between gap-1">
+                    <p class="text-[10px] text-slate-500 truncate">
+                        <span class="text-slate-600 font-semibold">Awal sesi:</span>
+                        Rp {{ number_format($saldoLaciAwal, 0, ',', '.') }}
+                    </p>
+                    <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full shrink-0
+                        {{ $naik ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400' }}">
+                        {{ $naik ? '+' : '' }}{{ number_format($selisih, 0, ',', '.') }}
+                    </span>
+                </div>
+            @else
+                <p class="text-lg font-black text-blue-400">Rp {{ number_format($saldoLaci, 0, ',', '.') }}</p>
+                <p class="text-[10px] text-slate-600 mt-1">Tidak ada sesi aktif</p>
+            @endif
         </div>
-        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm">
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Saldo Bank</p>
-            <p class="text-lg font-black text-purple-400">Rp {{ number_format($saldoBank, 0, ',', '.') }}</p>
-        </div>
+
         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm">
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Piutang</p>
             <p class="text-lg font-black text-orange-400">Rp {{ number_format($totalPiutang, 0, ',', '.') }}</p>
         </div>
     </div>
 
-    {{-- Filter Pills (Santai Scale Style) --}}
-    <div class="space-y-3">
-        {{-- Status & Method Pills --}}
-        <div class="flex flex-wrap gap-2">
+    {{-- Breakdown Cards --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pemasukan QRIS (Hari Ini)</p>
+                <p class="text-lg font-black text-purple-400">Rp {{ number_format($todayQris, 0, ',', '.') }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl"><i class="fas fa-qrcode"></i></div>
+        </div>
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pemasukan Tunai (Hari Ini)</p>
+                <p class="text-lg font-black text-emerald-400">Rp {{ number_format($todayCash, 0, ',', '.') }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl"><i class="fas fa-money-bill-wave"></i></div>
+        </div>
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pemasukan Transfer (Hari Ini)</p>
+                <p class="text-lg font-black text-blue-400">Rp {{ number_format($todayTransfer, 0, ',', '.') }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl"><i class="fas fa-building-columns"></i></div>
+        </div>
+    </div>
+
+    {{-- Filter Pills & Search (Santai Scale Style) --}}
+    <div class="space-y-4 bg-slate-800/20 p-6 rounded-[2rem] border border-white/5 shadow-xl">
+        {{-- Row 1: Type & Date Filters --}}
+        <div class="flex flex-col lg:flex-row justify-between gap-4">
+            {{-- Type Filter --}}
+            <div class="flex flex-wrap items-center gap-2">
+                @php
+                    $curType = request('type');
+                    $pillBase = 'px-4 py-2 rounded-xl text-[11px] font-black whitespace-nowrap transition-all border inline-flex items-center gap-2 uppercase tracking-wider';
+                    $pillActive = 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20';
+                    $pillInactive = 'bg-slate-800/60 border-white/5 text-slate-400 hover:bg-slate-700 hover:text-white';
+                @endphp
+                <a href="{{ route('transactions.index', array_filter(request()->except(['type','page','status','payment_method']))) }}" 
+                   class="{{ $pillBase }} {{ !$curType ? $pillActive : $pillInactive }}">
+                    <i class="fas fa-list"></i> Semua <span class="bg-white/20 text-white px-1.5 py-0.5 rounded-lg ml-1">{{ $countAll }}</span>
+                </a>
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page','status','payment_method']), ['type' => 'penjualan'])) }}" 
+                   class="{{ $pillBase }} {{ $curType === 'penjualan' ? $pillActive : $pillInactive }}">
+                    <i class="fas fa-arrow-down text-emerald-400"></i> Pemasukan <span class="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-lg ml-1">{{ $countPenjualan }}</span>
+                </a>
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page','status','payment_method']), ['type' => 'expense'])) }}" 
+                   class="{{ $pillBase }} {{ $curType === 'expense' ? 'bg-red-500/20 text-red-400 border-red-500/30' : $pillInactive }}">
+                    <i class="fas fa-arrow-up text-red-400"></i> Pengeluaran <span class="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-lg ml-1">{{ $countExpense }}</span>
+                </a>
+
+                <div class="h-8 w-px bg-white/5 mx-2"></div>
+                
+                <button onclick="window.openExportModal()" class="w-10 h-10 bg-slate-800 border border-white/5 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
+                    <i class="fas fa-file-export"></i>
+                </button>
+            </div>
+
+            {{-- Date Filter --}}
+            <form id="dateFilterForm" method="GET" class="flex items-center gap-2">
+                @foreach(request()->except(['date_from', 'date_to', 'page']) as $key => $val)
+                    @if($val) <input type="hidden" name="{{ $key }}" value="{{ $val }}"> @endif
+                @endforeach
+                <div class="flex items-center gap-2 bg-slate-900/60 p-1 rounded-xl border border-white/5">
+                    <input type="date" name="date_from" value="{{ request('date_from', now()->format('Y-m-d')) }}" 
+                           class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
+                    <span class="text-slate-600 text-[10px] font-black">S/D</span>
+                    <input type="date" name="date_to" value="{{ request('date_to', now()->format('Y-m-d')) }}" 
+                           class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
+                    <button type="submit" class="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-500 transition-all">
+                        <i class="fas fa-search text-xs"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        @if(request('type') !== 'expense')
+        {{-- Row 2: Status & Method Filters --}}
+        <div class="flex flex-wrap items-center gap-2 border-t border-white/5 pt-4">
             @php
                 $curStatus = request('status');
                 $curMethod = request('payment_method');
-                $isActive = fn($s, $m) => request('status') == $s && request('payment_method') == $m;
-                $pillBase = 'px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border inline-flex items-center gap-2';
-                $pillActive = 'bg-slate-700 text-white border-slate-600 shadow-lg';
-                $pillInactive = 'bg-slate-800/40 border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white';
+                $pillBase = 'px-3 py-1.5 rounded-lg text-[10px] font-black whitespace-nowrap transition-all border inline-flex items-center gap-2 uppercase tracking-widest';
+                $pillActive = 'bg-slate-700 text-white border-slate-600';
+                $pillInactive = 'bg-slate-800/40 border-white/5 text-slate-500 hover:bg-slate-700 hover:text-white';
             @endphp
             <a href="{{ route('transactions.index', array_filter(request()->except(['status','payment_method','page']))) }}" 
-               class="{{ $pillBase }} {{ !$curStatus && !$curMethod ? $pillActive : $pillInactive }}">
-                <i class="fas fa-th-large text-xs"></i> Semua <span class="bg-slate-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{{ $countAll }}</span>
-            </a>
+               class="{{ $pillBase }} {{ !$curStatus && !$curMethod ? $pillActive : $pillInactive }}">Semua Status</a>
+            
             <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['status' => 'piutang', 'payment_method' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curStatus === 'piutang' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-lg' : $pillInactive }}">
-                <i class="fas fa-hourglass-half text-xs"></i> Piutang <span class="bg-orange-500/20 text-orange-400 text-[10px] font-black px-1.5 py-0.5 rounded-full">{{ $countPiutang }}</span>
+               class="{{ $pillBase }} {{ $curStatus === 'piutang' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : $pillInactive }}">
+               <i class="fas fa-clock"></i> Piutang
             </a>
             <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['status' => 'lunas', 'payment_method' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curStatus === 'lunas' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-lg' : $pillInactive }}">
-                <i class="fas fa-check-circle text-xs"></i> Lunas <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-1.5 py-0.5 rounded-full">{{ $countLunas }}</span>
+               class="{{ $pillBase }} {{ $curStatus === 'lunas' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : $pillInactive }}">
+               <i class="fas fa-check-circle"></i> Lunas (Piutang)
             </a>
-            <span class="border-l border-slate-700 mx-1"></span>
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'cash', 'status' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curMethod === 'cash' && !$curStatus ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-lg' : $pillInactive }}">
-                <i class="fas fa-money-bill-wave text-xs"></i> Tunai <span class="text-[10px] font-black bg-slate-700/50 px-1.5 py-0.5 rounded-full">{{ $countCash }}</span>
-            </a>
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'qris', 'status' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curMethod === 'qris' && !$curStatus ? 'bg-purple-500/20 text-purple-400 border-purple-500/30 shadow-lg' : $pillInactive }}">
-                <i class="fas fa-qrcode text-xs"></i> QRIS <span class="text-[10px] font-black bg-slate-700/50 px-1.5 py-0.5 rounded-full">{{ $countQris }}</span>
-            </a>
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'transfer', 'status' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curMethod === 'transfer' && !$curStatus ? 'bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-lg' : $pillInactive }}">
-                <i class="fas fa-building-columns text-xs"></i> Transfer <span class="text-[10px] font-black bg-slate-700/50 px-1.5 py-0.5 rounded-full">{{ $countTransfer }}</span>
-            </a>
-            @if($countDebit > 0)
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'debit', 'status' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curMethod === 'debit' && !$curStatus ? 'bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-lg' : $pillInactive }}">
-                <i class="fas fa-credit-card text-xs"></i> Debit <span class="text-[10px] font-black bg-slate-700/50 px-1.5 py-0.5 rounded-full">{{ $countDebit }}</span>
-            </a>
-            @endif
-        </div>
 
-        {{-- Kasir Pills + Search --}}
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="text-slate-500 text-sm font-bold mr-1"><i class="fas fa-user mr-1"></i> Kasir:</span>
-            <a href="{{ route('transactions.index', request()->except(['user_id','page'])) }}" 
-               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ !request('user_id') ? 'bg-slate-600 text-white' : 'bg-slate-800/40 border border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white' }}">Semua Kasir</a>
-            @foreach($users as $u)
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['user_id' => $u->id])) }}" 
-               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ request('user_id') == $u->id ? 'bg-slate-600 text-white' : 'bg-slate-800/40 border border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white' }}">{{ $u->name }}</a>
-            @endforeach
-            <span class="border-l border-slate-700 mx-1"></span>
-            <form method="GET" class="relative">
+            <div class="h-4 w-px bg-white/5 mx-2"></div>
+
+            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'cash', 'status' => ''])) }}" 
+               class="{{ $pillBase }} {{ $curMethod === 'cash' && !$curStatus ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : $pillInactive }}">Tunai</a>
+            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'qris', 'status' => ''])) }}" 
+               class="{{ $pillBase }} {{ $curMethod === 'qris' && !$curStatus ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : $pillInactive }}">QRIS</a>
+            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'transfer', 'status' => ''])) }}" 
+               class="{{ $pillBase }} {{ $curMethod === 'transfer' && !$curStatus ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : $pillInactive }}">Transfer</a>
+        </div>
+        @endif
+
+        {{-- Row 3: Users & Search --}}
+        <div class="flex flex-wrap items-center justify-between gap-4 border-t border-white/5 pt-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mr-2">Petugas:</span>
+                <a href="{{ route('transactions.index', request()->except(['user_id','page'])) }}" 
+                   class="px-3 py-1.5 rounded-lg text-[9px] font-black transition-all {{ !request('user_id') ? 'bg-slate-700 text-white' : 'bg-slate-800/40 border border-white/5 text-slate-500 hover:bg-slate-700 hover:text-white' }}">Semua</a>
+                @foreach($users as $u)
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['user_id' => $u->id])) }}" 
+                   class="px-3 py-1.5 rounded-lg text-[9px] font-black transition-all {{ request('user_id') == $u->id ? 'bg-slate-700 text-white' : 'bg-slate-800/40 border border-white/5 text-slate-500 hover:bg-slate-700 hover:text-white' }}">{{ $u->name }}</a>
+                @endforeach
+            </div>
+
+            <form method="GET" class="relative group">
                 @foreach(request()->except(['search','page']) as $key => $val)
                     @if($val) <input type="hidden" name="{{ $key }}" value="{{ $val }}"> @endif
                 @endforeach
-                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs group-focus-within:text-blue-400 transition-colors"></i>
                 <input type="text" name="search" value="{{ request('search') }}" 
-                       class="bg-slate-800/40 border border-slate-700/50 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none w-48" 
-                       placeholder="Cari invoice...">
+                       class="bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none w-64 transition-all" 
+                       placeholder="Cari Invoice atau Pelanggan...">
             </form>
         </div>
     </div>
 
-    {{-- Cards List --}}
-    <div class="flex flex-col gap-4">
-        @forelse($transactions as $entry)
-            @php
-                $entryType = $entry->type;
-                $model = $entry->model;
-            @endphp
+    {{-- Detailed Table List --}}
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-900/50 border-b border-slate-700">
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 whitespace-nowrap">No. Pesanan</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 whitespace-nowrap">Tanggal</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 whitespace-nowrap">Pelanggan / Meja</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 whitespace-nowrap">Produk</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center whitespace-nowrap">Qty</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center whitespace-nowrap">Status</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Harga Jual</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Diskon</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Piutang</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">HPP</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Gross Profit</th>
+                        <th class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/30">
+                    @forelse($transactions as $entry)
+                        @php
+                            $entryType = $entry->type;
+                            $model = $entry->model;
+                        @endphp
 
-            @if($entryType === 'penjualan')
-                {{-- PENJUALAN CARD --}}
-                @php
-                    $isPending = $model->status === 'pending';
-                    $isCancelled = $model->status === 'cancelled';
-                    $isLunas = $model->status === 'completed' && $model->payment_method === 'piutang';
-                    $statusColor = $isPending ? 'orange' : ($isCancelled ? 'red' : 'emerald');
-                    $statusIcon = $isPending ? 'fa-hourglass-half' : ($isCancelled ? 'fa-times' : 'fa-check');
-                    $pmInfo = [
-                        'cash' => ['icon' => 'fa-money-bill-wave', 'color' => 'emerald', 'label' => 'Tunai'],
-                        'transfer' => ['icon' => 'fa-building-columns', 'color' => 'blue', 'label' => 'Transfer'],
-                        'qris' => ['icon' => 'fa-qrcode', 'color' => 'purple', 'label' => 'QRIS'],
-                        'debit' => ['icon' => 'fa-credit-card', 'color' => 'orange', 'label' => 'Debit'],
-                        'piutang' => ['icon' => 'fa-hand-holding-dollar', 'color' => 'orange', 'label' => 'Piutang'],
-                    ];
-                    $pm = $pmInfo[$model->payment_method] ?? ['icon' => 'fa-wallet', 'color' => 'slate', 'label' => ucfirst($model->payment_method)];
-                @endphp
-                <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 hover:bg-slate-800/80 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 group {{ $isCancelled ? 'opacity-60' : '' }}">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                        <div class="flex items-start gap-4 flex-1">
-                            <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-{{ $statusColor }}-500/10 text-{{ $statusColor }}-400 border border-{{ $statusColor }}-500/20">
-                                <i class="fas {{ $statusIcon }} text-lg"></i>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <h3 class="text-base font-black text-white">{{ $model->invoice_number }}</h3>
-                                    <span class="text-[10px] font-bold text-slate-400"><i class="far fa-clock mr-0.5"></i>{{ $model->created_at->format('d M Y, H:i') }}</span>
-                                </div>
-                                <div class="flex flex-wrap items-center gap-2 text-xs">
-                                    <span class="text-slate-300 bg-slate-900/40 px-2 py-0.5 rounded font-medium"><i class="fas fa-user-tie text-blue-400 mr-1"></i>{{ $model->user->name }}</span>
-                                    <span class="text-slate-400"><i class="fas fa-user text-slate-500 mr-1"></i>{{ $model->customer_name ?: 'Umum' }}</span>
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-{{ $pm['color'] }}-500/10 text-{{ $pm['color'] }}-400 border border-{{ $pm['color'] }}-500/20 font-bold">
-                                        <i class="fas {{ $pm['icon'] }} text-[10px]"></i> {{ $pm['label'] }}
-                                    </span>
-                                    @if($isPending)
-                                        <span class="px-2 py-0.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 font-bold">PIUTANG</span>
-                                    @elseif($isLunas)
-                                        <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">LUNAS</span>
+                        @if($entryType === 'penjualan')
+                            @php
+                                $isPending = $model->status === 'pending';
+                                $isCancelled = $model->status === 'cancelled';
+                                $isLunas = $model->status === 'completed' && $model->payment_method === 'piutang';
+                                $statusColor = $isPending ? 'orange' : ($isCancelled ? 'red' : 'emerald');
+                                $statusIcon = $isPending ? 'fa-hourglass-half' : ($isCancelled ? 'fa-times' : 'fa-check');
+                                $pmInfo = [
+                                    'cash' => ['icon' => 'fa-money-bill-wave', 'color' => 'emerald', 'label' => 'Tunai'],
+                                    'transfer' => ['icon' => 'fa-building-columns', 'color' => 'blue', 'label' => 'Transfer'],
+                                    'qris' => ['icon' => 'fa-qrcode', 'color' => 'purple', 'label' => 'QRIS'],
+                                    'debit' => ['icon' => 'fa-credit-card', 'color' => 'orange', 'label' => 'Debit'],
+                                    'piutang' => ['icon' => 'fa-hand-holding-dollar', 'color' => 'orange', 'label' => 'Piutang'],
+                                ];
+                                $pm = $pmInfo[$model->payment_method] ?? ['icon' => 'fa-wallet', 'color' => 'slate', 'label' => ucfirst($model->payment_method)];
+                            @endphp
+                            <tr class="hover:bg-slate-800/60 transition-all group {{ $isCancelled ? 'opacity-50' : '' }}">
+                                <td class="px-4 py-4">
+                                    <p class="text-xs font-black text-white mb-0.5">{{ $model->invoice_number }}</p>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase">{{ $model->user->name }}</span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <p class="text-xs font-bold text-slate-300">{{ $model->created_at->format('d/m/Y') }}</p>
+                                    <p class="text-[10px] text-slate-500">{{ $model->created_at->format('H:i') }}</p>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <p class="text-xs font-bold text-slate-300">{{ $model->customer_name ?: 'Umum' }}</p>
+                                    @if($model->table_number)
+                                        <span class="text-[10px] font-black text-blue-400 uppercase">Meja {{ $model->table_number }}</span>
                                     @endif
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <div class="text-right">
-                                <p class="text-lg font-black text-emerald-400">+Rp {{ number_format($model->total, 0, ',', '.') }}</p>
-                                @if($isPending)
-                                    <p class="text-xs font-bold text-orange-400">Sisa: Rp {{ number_format($model->remaining, 0, ',', '.') }}</p>
-                                @elseif($isLunas)
-                                    <p class="text-xs font-bold text-emerald-400">{{ $model->items->count() }} item · Lunas</p>
-                                @else
-                                    <p class="text-xs text-slate-500">{{ $model->items->count() }} item</p>
-                                @endif
-                            </div>
-                            <div class="flex items-center gap-1.5 bg-slate-900/50 p-1 rounded-xl border border-slate-700/50">
-                                {{-- Detail (mata) --}}
-                                <button onclick="document.getElementById('detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center transition-all text-sm" title="Detail"><i class="fas fa-eye"></i></button>
-                                {{-- Edit (pensil) --}}
-                                @if(!$isCancelled && auth()->user()->isOwner())
-                                <a href="{{ route('transactions.show', $model) }}" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center transition-all text-sm" title="Edit"><i class="fas fa-pencil"></i></a>
-                                @endif
-                                {{-- Invoice (doc) --}}
-                                <a href="{{ route('pos.receipt', $model) }}" target="_blank" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center transition-all text-sm" title="Invoice"><i class="fas fa-file-invoice"></i></a>
-                                {{-- Print --}}
-                                <a href="{{ route('pos.receipt', $model) }}" target="_blank" onclick="setTimeout(()=>{let w=window.open(this.href);w.onload=()=>w.print()},100);return false;" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center transition-all text-sm" title="Print"><i class="fas fa-print"></i></a>
-                                {{-- Pelunasan (piutang only) --}}
-                                @if($isPending && auth()->user()->isOwner())
-                                    <button onclick="document.getElementById('pay-modal-{{ $model->id }}').classList.remove('hidden')" class="w-9 h-9 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 inline-flex items-center justify-center transition-all text-sm" title="Bayar Piutang"><i class="fas fa-hand-holding-dollar"></i></button>
-                                @endif
-                                {{-- Hapus (sampah) --}}
-                                @if(auth()->user()->isOwner())
-                                <form action="{{ route('transactions.cancel', $model) }}" method="POST" class="inline" onsubmit="return confirm('Hapus transaksi {{ $model->invoice_number }}?')">@csrf
-                                    <button type="submit" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 inline-flex items-center justify-center transition-all text-sm" title="Hapus"><i class="fas fa-trash"></i></button>
-                                </form>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Detail Transaksi Modal (Santai Scale Style) --}}
-                <div id="detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-                        <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
-                            <h3 class="text-lg font-black text-slate-800">Detail Transaksi</h3>
-                            <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="p-5 space-y-4">
-                            {{-- Product list --}}
-                            @foreach($model->items as $item)
-                            <div class="flex justify-between text-sm">
-                                <div>
-                                    <p class="font-bold text-slate-800">{{ $item->product_name }}</p>
-                                    <p class="text-slate-400 text-xs">{{ $item->quantity }}x @ Rp {{ number_format($item->price, 0, ',', '.') }}</p>
-                                </div>
-                                <p class="font-bold text-slate-700">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</p>
-                            </div>
-                            @endforeach
-
-                            <hr class="border-slate-100">
-
-                            {{-- Info rows --}}
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between"><span class="text-slate-500">No. Pesanan</span><span class="font-bold text-slate-700">{{ $model->invoice_number }}</span></div>
-                                <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->created_at->translatedFormat('d F Y') }}</span></div>
-                                <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->created_at->format('H:i') }}</span></div>
-                                <div class="flex justify-between"><span class="text-slate-500">Kasir</span><span class="font-bold text-slate-700">{{ $model->user->name }}</span></div>
-                                <div class="flex justify-between"><span class="text-slate-500">Pembayaran</span><span class="font-bold text-slate-700">{{ ucfirst($model->payment_method) }}</span></div>
-                                @if($model->payment_method === 'piutang')
-                                <div class="flex justify-between"><span class="text-slate-500">Status</span>
-                                    @if($isPending)<span class="font-bold text-orange-500">Belum Lunas</span>
-                                    @else<span class="font-bold text-emerald-500">Lunas</span>@endif
-                                </div>
-                                @if($model->paid_so_far > 0)
-                                <div class="flex justify-between"><span class="text-slate-500">DP Dibayar</span><span class="font-bold text-slate-700">Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span></div>
-                                @endif
-                                @endif
-                            </div>
-
-                            <hr class="border-slate-100">
-
-                            {{-- Totals --}}
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span class="font-medium text-slate-700">Rp {{ number_format($model->subtotal, 0, ',', '.') }}</span></div>
-                                @if($model->discount > 0)
-                                <div class="flex justify-between"><span class="text-slate-500">Diskon</span><span class="font-medium text-red-500">-Rp {{ number_format($model->discount, 0, ',', '.') }}</span></div>
-                                @endif
-                                @if($model->tax > 0)
-                                <div class="flex justify-between"><span class="text-slate-500">Pajak</span><span class="font-medium text-slate-700">Rp {{ number_format($model->tax, 0, ',', '.') }}</span></div>
-                                @endif
-                            </div>
-
-                            <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-                                <span class="font-black text-slate-700">Total</span>
-                                <span class="text-xl font-black text-emerald-600">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
-                            </div>
-
-                            {{-- Action buttons --}}
-                            <div class="flex gap-3 pt-2">
-                                <a href="{{ route('pos.receipt', $model) }}" target="_blank" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all text-center text-sm flex items-center justify-center gap-2">
-                                    <i class="fas fa-print"></i> Cetak Struk
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Piutang Payment Modal (Santai Scale Style) --}}
-                @if($isPending && auth()->user()->isOwner())
-                <div id="pay-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" 
-                     x-data="{ 
-                        pelunasanMethod: 'cash', 
-                        pelunasanAmount: {{ $model->remaining }},
-                        get kembalian() { return Math.max(0, this.pelunasanAmount - {{ $model->remaining }}) }
-                     }">
-                    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-                        {{-- Header --}}
-                        <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
-                            <h3 class="text-lg font-black text-slate-800">Detail Pelunasan</h3>
-                            <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
-                        </div>
-
-                        <form action="{{ route('transactions.pay', $model) }}" method="POST">
-                            @csrf
-                            <div class="p-5 space-y-5">
-                                {{-- Summary --}}
-                                <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2 text-sm">
-                                    <div class="flex justify-between">
-                                        <span class="text-slate-500 font-medium">Total Nilai Pesanan:</span>
-                                        <span class="font-bold text-slate-800">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <div class="max-w-[200px]">
+                                        @php $itemCount = $model->items->count(); @endphp
+                                        <p class="text-xs font-medium text-slate-400 truncate">
+                                            @if($itemCount > 0)
+                                                {{ $model->items->first()->product_name }}
+                                                @if($itemCount > 1) <span class="text-[10px] text-slate-600"> +{{ $itemCount - 1 }} lainnya</span> @endif
+                                            @else
+                                                -
+                                            @endif
+                                        </p>
                                     </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-slate-500 font-medium">Uang Muka (DP) Dibayar:</span>
-                                        <span class="font-bold text-red-500">- Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <span class="text-xs font-black text-white">{{ $model->items->sum('quantity') }}</span>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg bg-{{ $statusColor }}-500/10 text-{{ $statusColor }}-400 border border-{{ $statusColor }}-500/20 text-[10px] font-black uppercase">
+                                        {{ $isPending ? 'PIUTANG' : ($isCancelled ? 'BATAL' : ($isLunas ? 'LUNAS' : 'LUNAS')) }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 text-right">
+                                    <p class="text-xs font-black text-emerald-400">Rp {{ number_format($model->total, 0, ',', '.') }}</p>
+                                    <span class="text-[10px] text-slate-600 font-bold uppercase">{{ $pm['label'] }}</span>
+                                </td>
+                                <td class="px-4 py-4 text-right">
+                                    <p class="text-xs font-bold text-red-400">Rp {{ number_format($model->discount, 0, ',', '.') }}</p>
+                                </td>
+                                <td class="px-4 py-4 text-right">
+                                    <p class="text-xs font-bold text-orange-400">Rp {{ number_format($model->remaining, 0, ',', '.') }}</p>
+                                </td>
+                                <td class="px-4 py-4 text-right">
+                                    <p class="text-xs font-bold text-slate-400">Rp {{ number_format($model->total_cost, 0, ',', '.') }}</p>
+                                </td>
+                                <td class="px-4 py-4 text-right">
+                                    <p class="text-xs font-black text-blue-400">Rp {{ number_format($model->gross_profit, 0, ',', '.') }}</p>
+                                </td>
+                                <td class="px-4 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {{-- Detail --}}
+                                        <button onclick="document.getElementById('detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Detail"><i class="fas fa-eye text-xs"></i></button>
+                                        {{-- Edit --}}
+                                        @if(!$isCancelled && auth()->user()->isOwner())
+                                            <a href="{{ route('transactions.show', $model) }}" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Edit"><i class="fas fa-pencil text-xs"></i></a>
+                                        @endif
+                                        {{-- Print --}}
+                                        <button @click="doPrint('{{ $model->id }}')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Print"><i class="fas fa-print text-xs"></i></button>
+                                        {{-- Hapus --}}
+                                        @if(auth()->user()->isOwner())
+                                            <form action="{{ route('transactions.cancel', $model) }}" method="POST" class="inline">@csrf
+                                                <button type="button" 
+                                                        onclick="Swal.fire({
+                                                            title: 'Hapus Transaksi?',
+                                                            text: 'Transaksi {{ $model->invoice_number }} akan dibatalkan dan stok produk akan dikembalikan.',
+                                                            icon: 'warning',
+                                                            showCancelButton: true,
+                                                            confirmButtonColor: '#ef4444',
+                                                            cancelButtonColor: '#64748b',
+                                                            confirmButtonText: 'Ya, Hapus!',
+                                                            cancelButtonText: 'Batal'
+                                                        }).then((result) => {
+                                                            if (result.isConfirmed) this.closest('form').submit();
+                                                        })"
+                                                        class="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-all" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            {{-- Detail Transaksi Modal (Santai Scale Style) --}}
+                            <div id="detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+                                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                                        <h3 class="text-lg font-black text-slate-800">Detail Transaksi</h3>
+                                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
+                                    </div>
+                                    <div class="p-5 space-y-4">
+                                        {{-- Product list --}}
+                                        @foreach($model->items as $item)
+                                        <div class="flex justify-between text-sm">
+                                            <div>
+                                                <p class="font-bold text-slate-800">{{ $item->product_name }}</p>
+                                                <p class="text-slate-400 text-xs">{{ $item->quantity }}x @ Rp {{ number_format($item->price, 0, ',', '.') }}</p>
+                                            </div>
+                                            <p class="font-bold text-slate-700">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</p>
+                                        </div>
+                                        @endforeach
+
+                                        <hr class="border-slate-100">
+
+                                        {{-- Info rows --}}
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between"><span class="text-slate-500">No. Pesanan</span><span class="font-bold text-slate-700">{{ $model->invoice_number }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->created_at->translatedFormat('d F Y') }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->created_at->format('H:i') }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Kasir</span><span class="font-bold text-slate-700">{{ $model->user->name }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Pembayaran</span><span class="font-bold text-slate-700">{{ ucfirst($model->payment_method) }}</span></div>
+                                            @if($model->payment_method === 'piutang')
+                                            <div class="flex justify-between"><span class="text-slate-500">Status</span>
+                                                @if($isPending)<span class="font-bold text-orange-500">Belum Lunas</span>
+                                                @else<span class="font-bold text-emerald-500">Lunas</span>@endif
+                                            </div>
+                                            @if($model->paid_so_far > 0)
+                                            <div class="flex justify-between"><span class="text-slate-500">DP Dibayar</span><span class="font-bold text-slate-700">Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span></div>
+                                            @endif
+                                            @endif
+                                        </div>
+
+                                        <hr class="border-slate-100">
+
+                                        {{-- Totals --}}
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span class="font-medium text-slate-700">Rp {{ number_format($model->subtotal, 0, ',', '.') }}</span></div>
+                                            @if($model->discount > 0)
+                                            <div class="flex justify-between"><span class="text-slate-500">Diskon</span><span class="font-medium text-red-500">-Rp {{ number_format($model->discount, 0, ',', '.') }}</span></div>
+                                            @endif
+                                            @if($model->tax > 0)
+                                            <div class="flex justify-between"><span class="text-slate-500">Pajak</span><span class="font-medium text-slate-700">Rp {{ number_format($model->tax, 0, ',', '.') }}</span></div>
+                                            @endif
+                                        </div>
+
+                                        <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+                                            <span class="font-black text-slate-700">Total</span>
+                                            <span class="text-xl font-black text-emerald-600">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
+                                        </div>
+
+                                        {{-- Action buttons --}}
+                                        <div class="flex gap-3 pt-2">
+                                            <button @click="doPrint('{{ $model->id }}')" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all text-center text-sm flex items-center justify-center gap-2">
+                                                <i class="fas fa-print"></i> Cetak Struk
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                {{-- Nominal Pelunasan --}}
-                                <div class="bg-red-50 border-2 border-red-100 rounded-2xl p-5 text-center">
-                                    <p class="text-xs font-black text-red-600 uppercase tracking-wider mb-1">Nominal Pelunasan:</p>
-                                    <p class="text-3xl font-black text-red-600 tracking-tight">Rp {{ number_format($model->remaining, 0, ',', '.') }}</p>
-                                </div>
-
-                                {{-- Metode Pelunasan --}}
-                                <div>
-                                    <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Metode Pelunasan</label>
-                                    <div class="flex gap-2">
-                                        <button type="button" @click="pelunasanMethod = 'cash'" 
-                                            :class="pelunasanMethod === 'cash' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
-                                            class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Tunai</button>
-                                        <button type="button" @click="pelunasanMethod = 'qris'" 
-                                            :class="pelunasanMethod === 'qris' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
-                                            class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">QRIS</button>
-                                        <button type="button" @click="pelunasanMethod = 'transfer'" 
-                                            :class="pelunasanMethod === 'transfer' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
-                                            class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Transfer</button>
+                            {{-- Piutang Payment Modal (Santai Scale Style) --}}
+                            @if($isPending && auth()->user()->isOwner())
+                            <div id="pay-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" 
+                                 x-data="{ 
+                                    pelunasanMethod: 'cash', 
+                                    pelunasanAmount: {{ $model->remaining }},
+                                    get kembalian() { return Math.max(0, this.pelunasanAmount - {{ $model->remaining }}) }
+                                 }">
+                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+                                    {{-- Header --}}
+                                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                                        <h3 class="text-lg font-black text-slate-800">Detail Pelunasan</h3>
+                                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
                                     </div>
-                                    <input type="hidden" name="payment_method" :value="pelunasanMethod">
+
+                                    <form action="{{ route('transactions.pay', $model) }}" method="POST">
+                                        @csrf
+                                        <div class="p-5 space-y-5">
+                                            {{-- Summary --}}
+                                            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2 text-sm">
+                                                <div class="flex justify-between">
+                                                    <span class="text-slate-500 font-medium">Total Nilai Pesanan:</span>
+                                                    <span class="font-bold text-slate-800">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-slate-500 font-medium">Uang Muka (DP) Dibayar:</span>
+                                                    <span class="font-bold text-red-500">- Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span>
+                                                </div>
+                                            </div>
+
+                                            {{-- Nominal Pelunasan --}}
+                                            <div class="bg-red-50 border-2 border-red-100 rounded-2xl p-5 text-center">
+                                                <p class="text-xs font-black text-red-600 uppercase tracking-wider mb-1">Nominal Pelunasan:</p>
+                                                <p class="text-3xl font-black text-red-600 tracking-tight">Rp {{ number_format($model->remaining, 0, ',', '.') }}</p>
+                                            </div>
+
+                                            {{-- Metode Pelunasan --}}
+                                            <div>
+                                                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Metode Pelunasan</label>
+                                                <div class="flex gap-2">
+                                                    <button type="button" @click="pelunasanMethod = 'cash'" 
+                                                        :class="pelunasanMethod === 'cash' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
+                                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Tunai</button>
+                                                    <button type="button" @click="pelunasanMethod = 'qris'" 
+                                                        :class="pelunasanMethod === 'qris' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
+                                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">QRIS</button>
+                                                    <button type="button" @click="pelunasanMethod = 'transfer'" 
+                                                        :class="pelunasanMethod === 'transfer' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
+                                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Transfer</button>
+                                                </div>
+                                                <input type="hidden" name="payment_method" :value="pelunasanMethod">
+                                            </div>
+
+                                            {{-- Jumlah Uang Diterima --}}
+                                            <div>
+                                                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-2 block">Jumlah Uang Diterima</label>
+                                                <input type="number" name="amount" x-model.number="pelunasanAmount" min="1" max="{{ $model->remaining }}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-lg font-black text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors" required>
+                                            </div>
+
+                                            {{-- Kembalian --}}
+                                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100" x-show="pelunasanMethod === 'cash'">
+                                                <span class="text-sm font-bold text-slate-500">Kembalian:</span>
+                                                <span class="text-xl font-black text-emerald-600 tracking-tight" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(kembalian)"></span>
+                                            </div>
+
+                                            {{-- Catatan --}}
+                                            <input type="text" name="notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 transition-colors" placeholder="Catatan (opsional)">
+
+                                            {{-- Button --}}
+                                            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
+                                                <i class="fas fa-check-circle"></i> Konfirmasi Pelunasan
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
-
-                                {{-- Jumlah Uang Diterima --}}
-                                <div>
-                                    <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-2 block">Jumlah Uang Diterima</label>
-                                    <input type="number" name="amount" x-model.number="pelunasanAmount" min="1" max="{{ $model->remaining }}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-lg font-black text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors" required>
-                                </div>
-
-                                {{-- Kembalian --}}
-                                <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100" x-show="pelunasanMethod === 'cash'">
-                                    <span class="text-sm font-bold text-slate-500">Kembalian:</span>
-                                    <span class="text-xl font-black text-emerald-600 tracking-tight" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(kembalian)"></span>
-                                </div>
-
-                                {{-- Catatan --}}
-                                <input type="text" name="notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 transition-colors" placeholder="Catatan (opsional)">
-
-                                {{-- Button --}}
-                                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
-                                    <i class="fas fa-check-circle"></i> Konfirmasi Pelunasan
-                                </button>
                             </div>
-                        </form>
-                    </div>
-                </div>
-                @endif
-
-            @elseif($entryType === 'expense')
-                {{-- EXPENSE CARD --}}
-                <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 hover:bg-slate-800/80 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 group">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                        <div class="flex items-start gap-4 flex-1">
-                            <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-500/10 text-red-400 border border-red-500/20">
-                                <i class="fas fa-arrow-down text-lg"></i>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <h3 class="text-base font-black text-white">{{ $model->description }}</h3>
-                                    <span class="text-[10px] font-bold text-slate-400"><i class="far fa-clock mr-0.5"></i>{{ $model->created_at->format('d M Y, H:i') }}</span>
+                            @endif
+                        @elseif($entryType === 'expense')
+                            <tr class="bg-red-500/5 hover:bg-red-500/10 transition-all group">
+                                <td class="px-4 py-4">
+                                    <p class="text-xs font-black text-red-400 mb-0.5">EXPENSE</p>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase">{{ $model->user->name }}</span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <p class="text-xs font-bold text-slate-300">{{ $model->created_at->format('d/m/Y') }}</p>
+                                    <p class="text-[10px] text-slate-500">{{ $model->created_at->format('H:i') }}</p>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <p class="text-xs font-bold text-slate-300">{{ $model->category }}</p>
+                                </td>
+                                <td class="px-4 py-4" colspan="3">
+                                    <p class="text-xs font-medium text-slate-400">{{ $model->description }}</p>
+                                </td>
+                                <td class="px-4 py-4 text-right">
+                                    <p class="text-xs font-black text-red-400">-Rp {{ number_format($model->amount, 0, ',', '.') }}</p>
+                                </td>
+                                <td class="px-4 py-4 text-right">-</td>
+                                <td class="px-4 py-4 text-right">-</td>
+                                <td class="px-4 py-4 text-right">-</td>
+                                <td class="px-4 py-4 text-right">-</td>
+                                <td class="px-4 py-4 text-right"></td>
+                            </tr>
+                        @endif
+                    @empty
+                        <tr>
+                            <td colspan="10" class="py-12 text-center">
+                                <div class="w-16 h-16 bg-slate-900/50 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+                                    <i class="fas fa-box-open text-2xl text-slate-600"></i>
                                 </div>
-                                <div class="flex flex-wrap items-center gap-2 text-xs">
-                                    <span class="text-slate-300 bg-slate-900/40 px-2 py-0.5 rounded font-medium"><i class="fas fa-user-tie text-blue-400 mr-1"></i>{{ $model->user->name }}</span>
-                                    <span class="px-2 py-0.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 font-bold">EXPENSE</span>
-                                    <span class="text-slate-500">{{ $model->category }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-lg font-black text-red-400">-Rp {{ number_format($model->amount, 0, ',', '.') }}</p>
-                            <p class="text-xs text-slate-500">Pengeluaran Kasir</p>
-                        </div>
-                    </div>
-                </div>
-
-            @endif
-        @empty
-            <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-sm">
-                <div class="w-20 h-20 bg-slate-900/50 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                    <i class="fas fa-box-open text-4xl text-slate-600"></i>
-                </div>
-                <h3 class="text-xl font-black text-white mb-2">Belum ada aktivitas</h3>
-                <p class="text-sm font-medium text-slate-400">Tidak ditemukan data untuk filter saat ini.</p>
-            </div>
-        @endforelse
+                                <h3 class="text-sm font-black text-white mb-1">Belum ada aktivitas</h3>
+                                <p class="text-xs font-medium text-slate-500">Tidak ditemukan data untuk filter saat ini.</p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
     {{-- Pagination --}}
@@ -380,3 +506,185 @@
 
 </div>
 @endsection
+
+{{-- Hidden Print Iframe --}}
+<iframe id="print-iframe" style="display:none;"></iframe>
+
+@push('scripts')
+<script>
+    function posApp() {
+        return {
+            printerStatus: 'disconnected',
+            printerName: '',
+            printerHandle: null,
+            connectionMethod: null,
+            paperSize: '58mm',
+            storeFooter: 'Powered by monodev.id',
+
+            fmt(num) {
+                return new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
+            },
+
+            async loadPrinterSettings() {
+                const saved = localStorage.getItem('pos_printer_settings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    this.paperSize = settings.paperSize || '58mm';
+                    this.connectionMethod = settings.connectionMethod || null;
+                    this.printerName = settings.printerName || '';
+                    
+                    if (this.connectionMethod === 'usb_direct' && this.printerName && navigator.usb) {
+                        try {
+                            const devices = await navigator.usb.getDevices();
+                            const matching = devices.find(d => d.productName === this.printerName);
+                            if (matching) {
+                                this.printerHandle = matching;
+                                this.printerStatus = 'connected';
+                            }
+                        } catch (e) { console.error("Auto-reconnect failed:", e); }
+                    } else if (this.printerName) {
+                        this.printerStatus = 'connected';
+                    }
+                }
+            },
+
+            async printRaw(commands) {
+                if (!this.printerHandle) return false;
+                const device = this.printerHandle;
+                try {
+                    if (!device.opened) await device.open();
+                    await device.selectConfiguration(1);
+                    let interfaceNumber = -1, endpointOut = -1;
+                    
+                    for (const iface of device.configuration.interfaces) {
+                        for (const alt of iface.alternates) {
+                            if (alt.interfaceClass === 7) { 
+                                interfaceNumber = iface.interfaceNumber;
+                                for (const endpoint of alt.endpoints) {
+                                    if (endpoint.direction === 'out') { endpointOut = endpoint.endpointNumber; break; }
+                                }
+                            }
+                        }
+                        if (interfaceNumber !== -1) break;
+                    }
+
+                    if (interfaceNumber === -1 || endpointOut === -1) {
+                        for (const iface of device.configuration.interfaces) {
+                            for (const alt of iface.alternates) {
+                                for (const endpoint of alt.endpoints) {
+                                    if (endpoint.direction === 'out') { interfaceNumber = iface.interfaceNumber; endpointOut = endpoint.endpointNumber; break; }
+                                }
+                                if (interfaceNumber !== -1) break;
+                            }
+                            if (interfaceNumber !== -1) break;
+                        }
+                    }
+
+                    if (interfaceNumber === -1) throw new Error("Printer not found");
+                    
+                    await device.claimInterface(interfaceNumber);
+                    await device.transferOut(endpointOut, commands);
+                    await device.releaseInterface(interfaceNumber);
+                    await device.close();
+                    return true;
+                } catch (e) {
+                    console.error("Direct Print Error:", e);
+                    return false;
+                }
+            },
+
+            async doPrint(transactionId) {
+                if (!transactionId) return;
+
+                if (this.connectionMethod === 'usb_direct' && this.printerHandle) {
+                    try {
+                        const res = await fetch(`/transactions/${transactionId}`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const tx = await res.json();
+                        
+                        const encoder = new TextEncoder();
+                        const init = new Uint8Array([0x1B, 0x40]);
+                        const center = new Uint8Array([0x1B, 0x61, 0x01]);
+                        const left = new Uint8Array([0x1B, 0x61, 0x00]);
+                        const boldOn = new Uint8Array([0x1B, 0x45, 0x01]);
+                        const boldOff = new Uint8Array([0x1B, 0x45, 0x00]);
+                        
+                        let commands = [];
+                        commands.push(init, center, boldOn);
+                        commands.push(encoder.encode(tx.store_name + '\n'));
+                        commands.push(boldOff);
+                        if (tx.store_address) commands.push(encoder.encode(tx.store_address + '\n'));
+                        if (tx.store_phone) commands.push(encoder.encode('Telp: ' + tx.store_phone + '\n'));
+                        commands.push(encoder.encode('--------------------------------\n'));
+                        
+                        commands.push(left);
+                        commands.push(encoder.encode('No : ' + tx.invoice_number + '\n'));
+                        commands.push(encoder.encode('Tgl: ' + tx.created_at + '\n'));
+                        if (tx.customer_name) commands.push(encoder.encode('Plg: ' + tx.customer_name + '\n'));
+                        if (tx.customer_phone) commands.push(encoder.encode('Hp : ' + tx.customer_phone + '\n'));
+                        commands.push(encoder.encode('--------------------------------\n'));
+                        
+                        tx.items.forEach(item => {
+                            commands.push(boldOn, encoder.encode(item.product_name + '\n'), boldOff);
+                            let qtyPrice = item.quantity + ' x ' + this.fmt(item.price);
+                            let sub = this.fmt(item.subtotal);
+                            commands.push(encoder.encode(qtyPrice.padEnd(32 - sub.length) + sub + '\n'));
+                        });
+                        
+                        commands.push(encoder.encode('--------------------------------\n'));
+                        let subVal = this.fmt(tx.subtotal);
+                        commands.push(encoder.encode('Subtotal:'.padEnd(32 - subVal.length) + subVal + '\n'));
+                        
+                        if (tx.discount > 0) {
+                            let discVal = '-' + this.fmt(tx.discount);
+                            commands.push(encoder.encode('Diskon:'.padEnd(32 - discVal.length) + discVal + '\n'));
+                        }
+
+                        let totalVal = this.fmt(tx.total);
+                        commands.push(boldOn, encoder.encode('TOTAL:'.padEnd(32 - totalVal.length) + totalVal + '\n'), boldOff);
+                        commands.push(encoder.encode('--------------------------------\n'));
+                        
+                        let paidVal = this.fmt(tx.paid_amount);
+                        commands.push(encoder.encode((tx.payment_method + ':').padEnd(32 - paidVal.length) + paidVal + '\n'));
+                        let changeVal = this.fmt(tx.change_amount);
+                        commands.push(encoder.encode('KEMBALI:'.padEnd(32 - changeVal.length) + changeVal + '\n'));
+                        
+                        if (tx.notes) {
+                            commands.push(encoder.encode('--------------------------------\n'));
+                            commands.push(encoder.encode('Catatan:\n' + tx.notes + '\n'));
+                        }
+                        commands.push(encoder.encode('--------------------------------\n'));
+                        
+                        commands.push(center);
+                        commands.push(encoder.encode('\n' + tx.store_footer + '\n'));
+                        commands.push(encoder.encode('\nPowered by monodev.id\n\n\n\n\n'));
+                        
+                        const cut = new Uint8Array([0x1D, 0x56, 0x41, 0x03]);
+                        commands.push(cut);
+
+                        let totalLen = commands.reduce((acc, c) => acc + c.length, 0);
+                        let combined = new Uint8Array(totalLen);
+                        let offset = 0;
+                        for (const c of commands) {
+                            combined.set(c, offset);
+                            offset += c.length;
+                        }
+                        
+                        const success = await this.printRaw(combined);
+                        if (success) {
+                            Swal.fire({ icon: 'success', title: 'Berhasil Cetak!', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                            return;
+                        }
+                    } catch (e) { console.error("Direct Print failed:", e); }
+                }
+
+                // Fallback to iframe browser print
+                const iframe = document.getElementById('print-iframe');
+                const url = `/pos/receipt/${transactionId}?paper=${this.paperSize}`;
+                iframe.src = url;
+            }
+        };
+    }
+</script>
+@endpush

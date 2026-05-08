@@ -9,6 +9,7 @@ class Worksheet extends Model
     protected $fillable = [
         'name',
         'initial_balance',
+        'target_payback_months',
         'description',
     ];
 

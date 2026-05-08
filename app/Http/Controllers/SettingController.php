@@ -14,6 +14,7 @@ class SettingController extends Controller
             'store_footer', 'currency', 'tax_rate', 'store_logo',
             'active_payment_methods',
             'bank_name', 'bank_account', 'bank_holder', 'qris_image',
+            'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines'
         ]);
         $worksheets = \App\Models\Worksheet::all();
         return view('settings.index', compact('settings', 'worksheets'));
@@ -35,9 +36,17 @@ class SettingController extends Controller
             'bank_name' => 'nullable|string|max:50',
             'bank_account' => 'nullable|string|max:50',
             'bank_holder' => 'nullable|string|max:100',
+            'printer_paper_size' => 'nullable|string',
+            'printer_auto_print' => 'nullable|string',
+            'printer_font_small' => 'nullable|string',
+            'printer_feed_lines' => 'nullable|integer|min:0|max:15',
         ]);
 
-        $keys = ['store_name', 'store_address', 'store_phone', 'store_email', 'store_footer', 'currency', 'tax_rate', 'bank_name', 'bank_account', 'bank_holder'];
+        $keys = [
+            'store_name', 'store_address', 'store_phone', 'store_email', 'store_footer', 
+            'currency', 'tax_rate', 'bank_name', 'bank_account', 'bank_holder',
+            'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines'
+        ];
         foreach ($keys as $key) {
             Setting::set($key, $request->input($key));
         }

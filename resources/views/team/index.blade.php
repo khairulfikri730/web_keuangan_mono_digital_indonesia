@@ -129,9 +129,22 @@
                             <i class="fas {{ $user->is_active ? 'fa-ban text-orange-400' : 'fa-check text-emerald-400' }}"></i>
                         </button>
                     </form>
-                    <form action="{{ route('team.destroy', $user) }}" method="POST" onsubmit="return confirm('Yakin hapus akun ini secara permanen?')">
+                    <form action="{{ route('team.destroy', $user) }}" method="POST">
                         @csrf @method('DELETE')
-                        <button type="submit" class="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-all border border-transparent hover:border-red-500/30 shadow-sm" title="Hapus Permanen">
+                        <button type="button" 
+                                onclick="Swal.fire({
+                                    title: 'Hapus Anggota?',
+                                    text: 'Akun {{ $user->name }} akan dihapus secara permanen.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#ef4444',
+                                    cancelButtonColor: '#64748b',
+                                    confirmButtonText: 'Ya, Hapus!',
+                                    cancelButtonText: 'Batal'
+                                }).then((result) => {
+                                    if (result.isConfirmed) this.closest('form').submit();
+                                })"
+                                class="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-all border border-transparent hover:border-red-500/30 shadow-sm" title="Hapus Permanen">
                             <i class="fas fa-trash text-sm"></i>
                         </button>
                     </form>

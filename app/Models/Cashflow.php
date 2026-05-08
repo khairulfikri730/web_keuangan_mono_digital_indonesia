@@ -11,12 +11,12 @@ class Cashflow extends Model
 
     protected $fillable = [
         'worksheet_id', 'user_id', 'shift_id', 'type', 'category', 'description',
-        'amount', 'reference', 'reference_id', 'source', 'transaction_date', 'notes',
+        'amount', 'reference', 'reference_id', 'reference_type', 'source', 'bank_sync_status', 'transaction_date', 'notes',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'transaction_date' => 'date',
+        'transaction_date' => 'datetime',
     ];
 
     public function user()
@@ -39,6 +39,51 @@ class Cashflow extends Model
         return $query->where('type', 'expense');
     }
 
+    public function scopePendingBank($query)
+    {
+        return $query->whereIn('source', ['pos_bank', 'transfer'])
+            ->where('bank_sync_status', 'pending');
+    }
+
+    public function scopeSyncedBank($query)
+    {
+        return $query->whereIn('source', ['pos_bank', 'transfer'])
+            ->where('bank_sync_status', 'synced');
+    }
+
+    public function scopePendingLaci($query)
+    {
+        return $query->where('source', 'pos_cash')
+            ->where('bank_sync_status', 'pending');
+    }
+
+    public function scopeSyncedLaci($query)
+    {
+        return $query->where('source', 'pos_cash')
+            ->where('bank_sync_status', 'synced');
+    }
+
+    public static function syncAllPendingBank(): int
+    {
+        return static::whereIn('source', ['pos_bank', 'transfer'])
+            ->where('bank_sync_status', 'pending')
+            ->update(['bank_sync_status' => 'synced']);
+    }
+
+    public static function syncAllPendingLaci(): int
+    {
+        return static::where('source', 'pos_cash')
+            ->where('bank_sync_status', 'pending')
+            ->update(['bank_sync_status' => 'synced']);
+    }
+
+    public static function syncAllPending(): int
+    {
+        return static::whereNotNull('bank_sync_status')
+            ->where('bank_sync_status', 'pending')
+            ->update(['bank_sync_status' => 'synced']);
+    }
+
     public static function sourceLabels(): array
     {
         return [
@@ -47,6 +92,7 @@ class Cashflow extends Model
             'transfer' => 'Transfer Kasir ke Bank',
             'pos' => 'POS',
             'manual' => 'Manual',
+            'capital' => 'Modal / Investasi',
         ];
     }
 

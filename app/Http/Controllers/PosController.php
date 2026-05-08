@@ -23,7 +23,36 @@ class PosController extends Controller
         $products = Product::active()->with('category')->orderBy('name')->get();
         $posGroups = PosGroup::with('products.category')->orderBy('position')->get();
         $settings = \App\Models\Setting::getMultiple(['tax_rate', 'active_payment_methods', 'bank_name', 'bank_account', 'bank_holder', 'qris_image']);
-        return view('pos.index', compact('activeShift', 'categories', 'products', 'posGroups', 'settings'));
+        
+        // BEP Analysis Data
+        $totalCapital = \App\Models\Capital::sum('total_amount');
+        $monthlyRevenue = Transaction::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('total');
+
+        // Promo Products
+        $promoProductIds = Product::active()->where('is_promo', true)->pluck('id')->toArray();
+
+        // Best Seller Products (Top 10 by quantity in last 30 days)
+        $bestSellerProductIds = TransactionItem::select('product_id', DB::raw('SUM(quantity) as total_sold'))
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('product_id')
+            ->orderByDesc('total_sold')
+            ->limit(10)
+            ->pluck('product_id')
+            ->toArray();
+
+        // Expense Categories for Cash Out
+        $expenseCategories = \App\Models\ExpenseCategory::where('is_active', true)
+            ->get()
+            ->unique('name')
+            ->groupBy('parent_category');
+
+        return view('pos.index', compact(
+            'activeShift', 'categories', 'products', 'posGroups', 'settings', 
+            'totalCapital', 'monthlyRevenue', 'promoProductIds', 'bestSellerProductIds',
+            'expenseCategories'
+        ));
     }
 
     public function getProducts(Request $request)
@@ -123,7 +152,7 @@ class PosController extends Controller
             $dpAmount = $isPiutang ? max(0, $request->paid_amount) : 0;
 
             $transaction = Transaction::create([
-                'invoice_number' => Transaction::generateInvoiceNumber(),
+                'invoice_number' => Transaction::generateInvoiceNumber(true),
                 'shift_id' => $activeShift->id,
                 'user_id' => auth()->id(),
                 'subtotal' => $subtotal,
@@ -158,7 +187,7 @@ class PosController extends Controller
                     'category' => 'Uang Muka (DP)',
                     'description' => 'DP pesanan #' . $transaction->invoice_number,
                     'amount' => $dpAmount,
-                    'source' => 'pos_cash',
+                    'source' => $request->dp_method ?? 'pos_cash',
                     'transaction_date' => today(),
                     'reference_id' => $transaction->id,
                 ]);
@@ -179,13 +208,55 @@ class PosController extends Controller
         }
     }
 
-    public function receipt(Transaction $transaction)
+    public function receipt(Request $request, Transaction $transaction)
     {
         $transaction->load(['items', 'user', 'shift']);
         $settings = \App\Models\Setting::getMultiple([
             'store_name', 'store_address', 'store_phone', 'store_footer'
         ]);
-        return view('pos.receipt', compact('transaction', 'settings'));
+
+        $paperSize = $request->query('paper', '80mm');
+        $fontSize = $request->query('font', 'medium');
+        $fontSmall = $request->query('small_font') === 'true';
+
+        return view('pos.receipt', compact('transaction', 'settings', 'paperSize', 'fontSize', 'fontSmall'));
+    }
+
+    public function testReceipt(Request $request)
+    {
+        $settings = \App\Models\Setting::getMultiple([
+            'store_name', 'store_address', 'store_phone', 'store_footer'
+        ]);
+
+        $paperSize = $request->query('paper', '58mm');
+        $fontSize = $request->query('font', 'medium');
+        $fontSmall = $request->query('small_font') === 'true';
+
+        // Create a dummy transaction object for the view
+        $transaction = new \stdClass();
+        $transaction->invoice_number = 'TEST-PRINT';
+        $transaction->created_at = now();
+        $transaction->subtotal = 10000;
+        $transaction->discount = 0;
+        $transaction->tax = 0;
+        $transaction->total = 10000;
+        $transaction->paid_amount = 10000;
+        $transaction->change_amount = 0;
+        $transaction->payment_method = 'tunai';
+        $transaction->customer_name = 'Customer Test';
+        $transaction->user = (object) ['name' => auth()->user()->name ?? 'Kasir'];
+        
+        $transaction->items = collect([
+            (object) [
+                'product_name' => 'Item Testing Printer',
+                'quantity' => 1,
+                'price' => 10000,
+                'discount' => 0,
+                'subtotal' => 10000
+            ]
+        ]);
+
+        return view('pos.receipt', compact('transaction', 'settings', 'paperSize', 'fontSize', 'fontSmall'));
     }
 
     public function storeGroup(Request $request)

@@ -221,9 +221,22 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
               <a href="{{ route('stock.index', ['action' => 'restock', 'product_id' => $p->id]) }}" class="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400 hover:text-emerald-300 transition-all hover:scale-110" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);" title="Restock / Sesuaikan Stok"><i class="fas fa-plus text-xs"></i></a>
               @endif
               <a href="{{ route('products.edit',$p) }}" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition-all hover:scale-110" style="background:rgba(71,85,105,.5);border:1px solid rgba(71,85,105,.5);" title="Edit"><i class="fas fa-pen text-xs"></i></a>
-              <form action="{{ route('products.destroy',$p) }}" method="POST" onsubmit="return confirm('Hapus produk {{ addslashes($p->name) }}?')">
+              <form action="{{ route('products.destroy',$p) }}" method="POST" id="delete-product-{{ $p->id }}">
                 @csrf @method('DELETE')
-                <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 transition-all hover:scale-110" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+                <button type="button" 
+                        onclick="Swal.fire({
+                            title: 'Hapus Produk?',
+                            text: 'Produk {{ addslashes($p->name) }} akan dihapus secara permanen.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#ef4444',
+                            cancelButtonColor: '#64748b',
+                            confirmButtonText: 'Ya, Hapus!',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) this.closest('form').submit();
+                        })"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 transition-all hover:scale-110" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
               </form>
             </div>
           </td>

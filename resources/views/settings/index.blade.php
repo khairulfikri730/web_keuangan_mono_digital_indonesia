@@ -175,6 +175,87 @@
             </div>
         </div>
 
+        {{-- Section: Pengaturan Printer --}}
+        <div class="card overflow-hidden border border-slate-700/80 shadow-xl mt-6">
+            <div class="p-6 border-b border-slate-700 bg-slate-800/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Pengaturan Printer</h3>
+                        <p class="text-xs text-slate-400">Konfigurasi default untuk printer thermal POS</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 lg:p-8 space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {{-- Lebar Kertas --}}
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Lebar Kertas Default</label>
+                        <div class="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-700 w-full">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="printer_paper_size" value="58mm" class="sr-only peer" {{ ($settings['printer_paper_size'] ?? '58mm') == '58mm' ? 'checked' : '' }}>
+                                <div class="py-3 text-center rounded-xl text-xs font-black uppercase tracking-widest transition-all peer-checked:bg-blue-600 peer-checked:text-white text-slate-500">58mm</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="printer_paper_size" value="80mm" class="sr-only peer" {{ ($settings['printer_paper_size'] ?? '') == '80mm' ? 'checked' : '' }}>
+                                <div class="py-3 text-center rounded-xl text-xs font-black uppercase tracking-widest transition-all peer-checked:bg-blue-600 peer-checked:text-white text-slate-500">80mm</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Jarak Feed --}}
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Jarak Bawah Struk (Feed)</label>
+                        <div class="relative w-full">
+                            <input type="number" name="printer_feed_lines" min="0" max="15" value="{{ $settings['printer_feed_lines'] ?? '0' }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-inner transition-all">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs uppercase tracking-widest">Baris</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-2 font-medium uppercase tracking-wider">Jumlah baris kosong sebelum kertas dipotong</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{-- Auto Print --}}
+                    <label class="flex items-center justify-between p-5 bg-slate-900/50 border border-slate-700 rounded-2xl cursor-pointer hover:border-blue-500/50 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-blue-400 transition-colors">
+                                <i class="fas fa-magic"></i>
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200 block">Auto Print</span>
+                                <span class="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Cetak otomatis setelah bayar</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="printer_auto_print" value="0">
+                            <input type="checkbox" name="printer_auto_print" value="1" class="sr-only peer" {{ ($settings['printer_auto_print'] ?? '0') == '1' ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </div>
+                    </label>
+
+                    {{-- Font Small --}}
+                    <label class="flex items-center justify-between p-5 bg-slate-900/50 border border-slate-700 rounded-2xl cursor-pointer hover:border-blue-500/50 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-blue-400 transition-colors">
+                                <i class="fas fa-font"></i>
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200 block">Font Kecil</span>
+                                <span class="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Gunakan Font B (Compressed)</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="printer_font_small" value="0">
+                            <input type="checkbox" name="printer_font_small" value="1" class="sr-only peer" {{ ($settings['printer_font_small'] ?? '0') == '1' ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
         {{-- Footer Save Button --}}
         <div class="flex justify-end pt-4">
             <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black px-10 py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center gap-3 uppercase tracking-[0.1em] text-sm">

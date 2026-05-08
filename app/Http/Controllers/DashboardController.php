@@ -22,7 +22,11 @@ class DashboardController extends Controller
         $todayTransactions = Transaction::completed()
             ->whereDate('created_at', $today)->count();
         $todayExpenses = Cashflow::expense()
-            ->whereDate('transaction_date', $today)->sum('amount');
+            ->whereDate('transaction_date', $today)
+            ->where(function($q) {
+                $q->where('category', 'not like', '%Transfer%')
+                  ->where('description', 'not like', '%Transfer%');
+            })->sum('amount');
 
         // Stats bulan ini
         $monthSales = Transaction::completed()

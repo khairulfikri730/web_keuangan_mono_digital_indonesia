@@ -224,8 +224,8 @@
         <div class="lg:col-span-8 bg-slate-800 rounded-2xl border border-slate-700/80 shadow-sm overflow-hidden flex flex-col">
             <div class="p-5 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2"><i class="fas fa-list text-slate-300"></i> Riwayat Shift</h3>
-                <button class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-lg transition-colors border border-slate-600 flex items-center gap-2 shadow-sm">
-                    <i class="fas fa-file-export text-emerald-400"></i> Export
+                <button onclick="window.openExportModal()" class="w-10 h-10 bg-slate-800 border border-white/5 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
+                    <i class="fas fa-file-export"></i>
                 </button>
             </div>
 

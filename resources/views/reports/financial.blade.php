@@ -25,6 +25,10 @@
                 <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
             </div>
         </form>
+
+        <button onclick="window.openExportModal()" class="w-10 h-10 bg-slate-800 border border-white/5 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
+            <i class="fas fa-file-export"></i>
+        </button>
     </div>
 
     <div class="card overflow-hidden shadow-2xl relative z-10 border border-slate-700/80">
@@ -104,6 +108,10 @@
                             <span class="flex items-center gap-2"><i class="fas fa-file-invoice-dollar text-slate-500 w-4"></i> Beban Operasional</span>
                             <span class="font-bold text-red-400">- Rp {{ number_format($expense, 0, ',', '.') }}</span>
                         </div>
+                        <div class="flex justify-between items-center text-slate-300">
+                            <span class="flex items-center gap-2"><i class="fas fa-box text-slate-500 w-4"></i> Pemakaian Habis Pakai</span>
+                            <span class="font-bold text-red-400">- Rp {{ number_format($monthlyUsagesSum, 0, ',', '.') }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -126,6 +134,45 @@
                     </span>
                 </div>
             </div>
+
+            {{-- ROI & BEP Section --}}
+            <div class="mt-8 rounded-3xl p-6 sm:p-8 border border-blue-500/30 bg-slate-800/80 shadow-xl relative overflow-hidden">
+                <div class="flex items-center gap-3 border-b border-slate-700/80 pb-4 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/20 flex-shrink-0">
+                        <i class="fas fa-chart-pie text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-white font-bold text-lg">Return on Investment (ROI) & BEP</h4>
+                        <p class="text-xs text-slate-400">Analisa pengembalian modal awal</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-900/50 rounded-2xl p-4 border border-slate-700">
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-2">Total Modal Awal</p>
+                        <h3 class="text-xl font-black text-white">Rp {{ number_format($totalCapital, 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="bg-slate-900/50 rounded-2xl p-4 border border-slate-700">
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-2">Total Laba Keseluruhan</p>
+                        <h3 class="text-xl font-black {{ $allTimeNetProfit >= 0 ? 'text-emerald-400' : 'text-red-400' }}">Rp {{ number_format($allTimeNetProfit, 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="bg-slate-900/50 rounded-2xl p-4 border border-slate-700">
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-2">Estimasi Balik Modal (BEP)</p>
+                        <h3 class="text-xl font-black text-blue-400">
+                            @if($totalCapital <= 0)
+                                <span class="text-slate-400 text-sm">Belum ada modal</span>
+                            @elseif($allTimeNetProfit >= $totalCapital)
+                                <span class="text-emerald-400">Sudah BEP! <i class="fas fa-check-circle"></i></span>
+                            @elseif($avgMonthlyProfit <= 0)
+                                <span class="text-red-400 text-sm">Rugi, BEP tak terhingga</span>
+                            @else
+                                {{ number_format($paybackPeriodMonths, 1, ',', '.') }} Bulan
+                            @endif
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </div>
 </div>

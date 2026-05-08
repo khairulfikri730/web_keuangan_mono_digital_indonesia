@@ -14,6 +14,9 @@ use App\Http\Controllers\SalesController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\WorksheetController;
+use App\Http\Controllers\CapitalController;
+use App\Http\Controllers\MonthlyExpenseController;
+use App\Http\Controllers\ExpenseCategoryController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes
@@ -45,6 +48,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/products', [PosController::class, 'getProducts'])->name('products');
         Route::post('/checkout', [PosController::class, 'checkout'])->name('checkout');
         Route::get('/receipt/{transaction}', [PosController::class, 'receipt'])->name('receipt');
+        Route::get('/receipt-test', [PosController::class, 'testReceipt'])->name('receipt.test');
         Route::post('/expense', [PosController::class, 'storeExpense'])->name('expense');
 
         // POS Groups
@@ -66,6 +70,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ShiftController::class, 'index'])->name('index');
         Route::post('/open', [ShiftController::class, 'open'])->name('open');
         Route::post('/{shift}/close', [ShiftController::class, 'close'])->name('close');
+        Route::post('/{shift}/cashout', [ShiftController::class, 'cashOut'])->name('cashout');
         Route::put('/{shift}', [ShiftController::class, 'update'])->name('update');
         Route::delete('/{shift}', [ShiftController::class, 'destroy'])->name('destroy');
         Route::get('/{shift}', [ShiftController::class, 'show'])->name('show');
@@ -100,13 +105,68 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export', [CashflowController::class, 'export'])->name('export');
         Route::post('/', [CashflowController::class, 'store'])->name('store');
         Route::post('/transfer', [CashflowController::class, 'transfer'])->name('transfer');
+        Route::post('/update-target', [CashflowController::class, 'updateTarget'])->name('update-target');
+        Route::post('/sync-bank', [CashflowController::class, 'syncBank'])->name('sync-bank');
+        Route::post('/sync-laci', [CashflowController::class, 'syncLaci'])->name('sync-laci');
+        Route::put('/{cashflow}', [CashflowController::class, 'update'])->name('update');
         Route::delete('/{cashflow}', [CashflowController::class, 'destroy'])->name('destroy');
+    });
+
+    // Modal Usaha & Pemakaian Bulanan (Owner / Financial access)
+    Route::middleware('permission:reports_financial')->group(function () {
+        Route::post('capitals/import', [CapitalController::class, 'import'])->name('capitals.import');
+        Route::get('capitals/template', function () {
+            $path = public_path('templates/Template_Import_Modal.xlsx');
+            if (!file_exists($path)) {
+                // Return dummy response since creating real excel here is complex, we just create an empty file if needed or user creates it.
+                // Or better, generate dynamically.
+                $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+                $sheet = $spreadsheet->getActiveSheet();
+                $sheet->setCellValue('A1', 'Nama Item');
+                $sheet->setCellValue('B1', 'Tipe');
+                $sheet->setCellValue('C1', 'Harga Satuan');
+                $sheet->setCellValue('D1', 'Jumlah');
+                $sheet->setCellValue('E1', 'Satuan');
+                
+                $sheet->setCellValue('A2', 'Kamera Canon 5D');
+                $sheet->setCellValue('B2', 'Aset');
+                $sheet->setCellValue('C2', '15000000');
+                $sheet->setCellValue('D2', '1');
+                $sheet->setCellValue('E2', 'Pcs');
+                
+                $sheet->setCellValue('A3', 'Kertas HVS A4');
+                $sheet->setCellValue('B3', 'Bahan Baku');
+                $sheet->setCellValue('C3', '55000');
+                $sheet->setCellValue('D3', '10');
+                $sheet->setCellValue('E3', 'Rim');
+
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                header('Content-Disposition: attachment; filename="Template_Import_Modal.xlsx"');
+                $writer->save('php://output');
+                exit;
+            }
+            return response()->download($path);
+        })->name('capitals.template');
+        Route::resource('capitals', CapitalController::class);
+        Route::resource('monthly_expenses', MonthlyExpenseController::class);
+        Route::resource('expense_categories', ExpenseCategoryController::class);
+        
+        // Invoice Generator Routes
+        Route::resource('invoices', \App\Http\Controllers\InvoiceController::class);
+        Route::get('invoices/{invoice}/pdf', [\App\Http\Controllers\InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+        Route::post('invoices/{invoice}/payments', [\App\Http\Controllers\InvoiceController::class, 'addPayment'])->name('invoices.payments.store');
+
+        Route::resource('expense_categories', ExpenseCategoryController::class);
     });
 
     // Laporan - permission based
     Route::middleware('permission:sales')->get('/reports/sales', [ReportController::class, 'sales'])->name('sales.index');
     Route::middleware('permission:reports_financial')->get('/reports/financial', [ReportController::class, 'financial'])->name('reports.financial');
     Route::middleware('permission:reports_shifts')->get('/reports/shifts', [ReportController::class, 'shifts'])->name('reports.shifts');
+    Route::post('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
+    Route::post('/reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
+    Route::post('/reports/export-csv', [ReportController::class, 'exportCsv'])->name('reports.export-csv');
 
     // Owner-only routes
     Route::middleware(['role:owner'])->group(function () {
