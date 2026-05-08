@@ -58,6 +58,33 @@ class FinancialReportService
     }
 
     /**
+     * Get all-time net profit for ROI calculation
+     */
+    public function getAllTimeNetProfit($worksheetId = null)
+    {
+        $incomeQuery = Transaction::completed();
+        if ($worksheetId && $worksheetId !== 'all') {
+            $incomeQuery->where('worksheet_id', $worksheetId);
+        }
+        $totalIncome = $incomeQuery->sum('total');
+
+        $expenseQuery = Cashflow::where('type', 'expense')
+            ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
+            ->where(function($q) {
+                $q->where('category', 'not like', '%Transfer%')
+                  ->where('description', 'not like', '%Transfer%');
+            });
+            
+        if ($worksheetId && $worksheetId !== 'all') {
+            $expenseQuery->where('worksheet_id', $worksheetId);
+        }
+        
+        $totalExpense = $expenseQuery->sum('amount');
+
+        return $totalIncome - $totalExpense;
+    }
+
+    /**
      * Get monthly profit trend for a specific year
      */
     public function getTrend($year, $worksheetId = null)
