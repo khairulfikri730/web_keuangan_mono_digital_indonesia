@@ -71,10 +71,19 @@
                    :class="p.is_stockless ? 'text-indigo-600' : 'text-emerald-600'"
                    x-text="p.is_promo && p.discount_price > 0 ? formatRp(p.discount_price) : formatRp(p.price)"></p>
             </div>
-            <button class="w-9 h-9 rounded-xl flex items-center justify-center opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:scale-110 active:scale-95 border"
-                    :style="`background-color: ${adjustBrightness(p.category?.color || '#10b981', 40)}; border-color: ${adjustBrightness(p.category?.color || '#10b981', 30)}; color: ${p.category?.color || '#10b981'}; ${viewMode !== 'grid' ? 'opacity: 1;' : ''}`">
-                <i class="fas fa-plus"></i>
-            </button>
+            <div class="flex items-center gap-1.5">
+                <template x-if="customPriceEnabled && customPriceShowBadge">
+                    <button @click.stop="openCustomPrice(p)" 
+                            class="h-9 px-2 rounded-xl flex items-center justify-center opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:scale-105 active:scale-95 border bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-500 hover:text-white"
+                            title="Set Harga Khusus">
+                        <i class="fas fa-tags text-[10px] mr-1"></i> <span class="text-[9px] font-black uppercase">Khusus</span>
+                    </button>
+                </template>
+                <button class="w-9 h-9 rounded-xl flex items-center justify-center opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:scale-110 active:scale-95 border"
+                        :style="`background-color: ${adjustBrightness(p.category?.color || '#10b981', 40)}; border-color: ${adjustBrightness(p.category?.color || '#10b981', 30)}; color: ${p.category?.color || '#10b981'}; ${viewMode !== 'grid' ? 'opacity: 1;' : ''}`">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
         </div>
     </div>
 

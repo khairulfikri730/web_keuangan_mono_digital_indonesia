@@ -26,6 +26,7 @@ class CreateCashflowFromTransaction
             'user_id'          => $transaction->user_id,
             'shift_id'         => $transaction->shift_id,
             'type'             => 'income',
+            'transaction_category' => 'income',
             'category'         => 'Penjualan',
             'description'      => 'Penjualan POS #' . $transaction->invoice_number,
             'amount'           => $transaction->total,
@@ -36,6 +37,7 @@ class CreateCashflowFromTransaction
             'transaction_date' => $transaction->created_at
                 ? $transaction->created_at->format('Y-m-d')
                 : today(),
+            'worksheet_id'     => $transaction->worksheet_id,
         ]);
     }
 }

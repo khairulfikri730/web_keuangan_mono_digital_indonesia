@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cashflow;
+use App\Models\CashTransaction;
 use App\Models\Transaction;
 use App\Services\FinancialReportService;
 use Carbon\Carbon;
@@ -65,9 +66,9 @@ class CashflowController extends Controller
 
     public function index(Request $request)
     {
-        $filter = $request->filter ?? 'today';
-        $start = $request->start;
-        $end = $request->end;
+        $filter = $request->filter ?? $request->period ?? 'today';
+        $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
+        $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
         $source = $request->source ?? 'all';
         $query = $this->baseQuery($filter, $source, $start, $end);
 
@@ -107,13 +108,16 @@ class CashflowController extends Controller
         $incomeByCategory = (clone $query)->where('type', 'income')
             ->selectRaw('category, SUM(amount) as total')->groupBy('category')->orderByDesc('total')->get();
 
-        $expenseByCategory = (clone $query)->where('type', 'expense')
+        $expenseByCategory = (clone $query)->where('transaction_category', 'expense')
             ->selectRaw('category, SUM(amount) as total')->groupBy('category')->orderByDesc('total')->get();
+
+        $totalAdjIn = (clone $query)->where('transaction_category', 'adjustment')->where('type', 'income')->sum('amount');
+        $totalAdjOut = (clone $query)->where('transaction_category', 'adjustment')->where('type', 'expense')->sum('amount');
 
         $chartQuery = (clone $query)
             ->selectRaw("DATE(transaction_date) as date")
-            ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")
-            ->selectRaw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
+            ->selectRaw("SUM(CASE WHEN transaction_category = 'income' THEN amount ELSE 0 END) as income")
+            ->selectRaw("SUM(CASE WHEN transaction_category = 'expense' THEN amount ELSE 0 END) as expense")
             ->groupBy(DB::raw("DATE(transaction_date)"))
             ->orderBy('date', 'asc')
             ->get();
@@ -125,7 +129,7 @@ class CashflowController extends Controller
         $daysCount = max($chartQuery->count(), 1);
         $avgIncome = $totalIncome / $daysCount;
 
-        $biggestExpense = (clone $query)->where('type', 'expense')
+        $biggestExpense = (clone $query)->where('transaction_category', 'expense')
             ->orderByDesc('amount')->first();
 
         $trend = $this->calculateTrend($filter, $source, $start, $end);
@@ -167,7 +171,7 @@ class CashflowController extends Controller
             'pendingQris', 'pendingTransfer', 'pendingBankCount', 'pendingLaciCount',
             'totalInvestment', 'totalCollectedProfit', 'remainingCapital', 'paybackMonths',
             'targetPaybackMonths', 'requiredMonthlyProfit', 'requiredDailyProfit', 'profitGap', 'avgMonthlyProfit',
-            'incomeQris', 'incomeCash', 'incomeTransfer'
+            'incomeQris', 'incomeCash', 'incomeTransfer', 'totalAdjIn', 'totalAdjOut'
         ));
     }
 
@@ -220,11 +224,14 @@ class CashflowController extends Controller
         $query = $this->baseQuery($filter, $source, $start, $end);
         $chartQuery = (clone $query)
             ->selectRaw("DATE(transaction_date) as date")
-            ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")
-            ->selectRaw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
+            ->selectRaw("SUM(CASE WHEN transaction_category = 'income' THEN amount ELSE 0 END) as income")
+            ->selectRaw("SUM(CASE WHEN transaction_category = 'expense' THEN amount ELSE 0 END) as expense")
             ->groupBy(DB::raw("DATE(transaction_date)"))
             ->orderBy('date', 'asc')
             ->get();
+
+        $totalAdjIn = (clone $query)->where('transaction_category', 'adjustment')->where('type', 'income')->sum('amount');
+        $totalAdjOut = (clone $query)->where('transaction_category', 'adjustment')->where('type', 'expense')->sum('amount');
 
         $chartDates = $chartQuery->map(fn($r) => Carbon::parse($r->date)->format('d M'))->toArray();
         $chartIncome = $chartQuery->pluck('income')->toArray();
@@ -233,13 +240,13 @@ class CashflowController extends Controller
         $daysCount = max($chartQuery->count(), 1);
         $avgIncome = $totalIncome / $daysCount;
 
-        $expenseByCategory = (clone $query)->where('type', 'expense')
+        $expenseByCategory = (clone $query)->where('transaction_category', 'expense')
             ->selectRaw('category, SUM(amount) as total')->groupBy('category')->orderByDesc('total')->get();
 
-        $incomeByCategory = (clone $query)->where('type', 'income')
+        $incomeByCategory = (clone $query)->where('transaction_category', 'income')
             ->selectRaw('category, SUM(amount) as total')->groupBy('category')->orderByDesc('total')->get();
 
-        $biggestExpense = (clone $query)->where('type', 'expense')
+        $biggestExpense = (clone $query)->where('transaction_category', 'expense')
             ->orderByDesc('amount')->first();
 
         $trend = $this->calculateTrend($filter, $source, $start, $end);
@@ -268,6 +275,10 @@ class CashflowController extends Controller
                 'incomeTransferFmt' => number_format($incomeTransfer, 0, ',', '.'),
                 'saldoLaciFmt' => number_format($saldoLaci, 0, ',', '.'),
                 'saldoBankSyncedFmt' => number_format($saldoBankSynced, 0, ',', '.'),
+                'totalAdjIn' => (float) $totalAdjIn,
+                'totalAdjOut' => (float) $totalAdjOut,
+                'totalAdjInFmt' => number_format($totalAdjIn, 0, ',', '.'),
+                'totalAdjOutFmt' => number_format($totalAdjOut, 0, ',', '.'),
             ],
             'chart' => [
                 'labels' => $chartDates,
@@ -385,12 +396,12 @@ class CashflowController extends Controller
                 return 'stable';
         }
 
-        $currentIncome = Cashflow::where('type', 'income')
+        $currentIncome = Cashflow::where('transaction_category', 'income')
             ->whereBetween('transaction_date', [$currentStart, $currentEnd])
             ->when($source !== 'all', fn($q) => $q->where('source', $source))
             ->sum('amount');
 
-        $prevIncome = Cashflow::where('type', 'income')
+        $prevIncome = Cashflow::where('transaction_category', 'income')
             ->whereBetween('transaction_date', [$prevStart, $prevEnd])
             ->when($source !== 'all', fn($q) => $q->where('source', $source))
             ->sum('amount');
@@ -465,6 +476,7 @@ class CashflowController extends Controller
         Cashflow::create([
             'user_id'          => auth()->id(),
             'type'             => $request->type,
+            'transaction_category' => $request->type, // Manual store from dashboard usually follows type
             'category'         => $request->category,
             'description'      => $request->description,
             'amount'           => $request->amount,
@@ -472,6 +484,7 @@ class CashflowController extends Controller
             'source'           => $request->source,
             'bank_sync_status' => $bankSyncStatus,
             'notes'            => $request->notes,
+            'worksheet_id'     => session('active_worksheet_id'),
         ]);
 
         return back()->with('success', 'Cashflow berhasil ditambahkan!');
@@ -552,8 +565,17 @@ class CashflowController extends Controller
             return back()->with('success', 'Data transfer diperbarui!');
         }
 
-        $data = $request->all();
+        $data = $request->only(['type', 'category', 'description', 'amount', 'source', 'notes']);
         $data['transaction_date'] = Carbon::parse($request->transaction_date)->setTimeFrom($cashflow->transaction_date);
+        
+        // If it was already an adjustment, keep it as adjustment
+        // If it was income/expense, update it to the new type
+        if ($cashflow->transaction_category !== 'adjustment') {
+            $data['transaction_category'] = $request->type;
+        } else {
+            $data['transaction_category'] = 'adjustment';
+        }
+        
         $cashflow->update($data);
 
         return back()->with('success', 'Cashflow berhasil diperbarui!');
@@ -591,6 +613,7 @@ class CashflowController extends Controller
             Cashflow::create([
                 'user_id' => auth()->id(),
                 'type' => 'expense',
+                'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
                 'description' => 'Transfer Laci → Bank',
                 'amount' => $request->amount,
@@ -604,6 +627,7 @@ class CashflowController extends Controller
             Cashflow::create([
                 'user_id' => auth()->id(),
                 'type' => 'income',
+                'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
                 'description' => 'Transfer Laci → Bank',
                 'amount' => $request->amount,
@@ -618,6 +642,7 @@ class CashflowController extends Controller
             Cashflow::create([
                 'user_id' => auth()->id(),
                 'type' => 'expense',
+                'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
                 'description' => 'Transfer Bank → Laci',
                 'amount' => $request->amount,
@@ -631,6 +656,7 @@ class CashflowController extends Controller
             Cashflow::create([
                 'user_id' => auth()->id(),
                 'type' => 'income',
+                'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
                 'description' => 'Transfer Bank → Laci',
                 'amount' => $request->amount,
@@ -643,5 +669,67 @@ class CashflowController extends Controller
         }
 
         return back()->with('success', 'Transfer berhasil dicatat!');
+    }
+
+    public function storeQuick(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|in:income,expense',
+            'source' => 'required|in:pos_cash,pos_bank',
+            'amount' => 'required|numeric|min:1',
+            'transaction_date' => 'required|date',
+            'notes' => 'required|string|max:255',
+        ]);
+
+        $type = $request->type;
+        $source = $request->source;
+        $amount = $request->amount;
+
+        // Validation for "Saldo tidak mencukupi"
+        if ($type === 'expense') {
+            $currentBalance = 0;
+            if ($source === 'pos_cash') {
+                $income = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount');
+                $expense = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+                $currentBalance = $income - $expense;
+            } else {
+                $income = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount');
+                $expense = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+                $currentBalance = $income - $expense;
+            }
+
+            if ($amount > $currentBalance) {
+                return back()->with('error', 'Saldo tidak mencukupi! Saldo tersedia: Rp ' . number_format($currentBalance, 0, ',', '.'));
+            }
+        }
+
+        DB::transaction(function () use ($request, $type, $source, $amount) {
+            // 1. Record to cash_transactions (New dedicated history table)
+            CashTransaction::create([
+                'type' => $type,
+                'source' => $source === 'pos_cash' ? 'cash' : 'bank',
+                'amount' => $amount,
+                'note' => $request->notes,
+                'created_by' => auth()->id(),
+                'transaction_date' => $request->transaction_date,
+            ]);
+
+            // 2. Record to cashflows (Main history for reports & stats)
+            Cashflow::create([
+                'user_id' => auth()->id(),
+                'type' => $type,
+                'transaction_category' => 'adjustment',
+                'category' => 'Input Saldo Manual',
+                'description' => $request->notes,
+                'amount' => $amount,
+                'transaction_date' => Carbon::parse($request->transaction_date)->setTimeFrom(now()),
+                'source' => $source,
+                'bank_sync_status' => 'synced',
+                'notes' => $request->notes,
+                'worksheet_id' => session('active_worksheet_id'),
+            ]);
+        });
+
+        return back()->with('success', 'Transaksi saldo berhasil dicatat!');
     }
 }

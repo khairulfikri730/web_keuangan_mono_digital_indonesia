@@ -29,7 +29,7 @@
                 @endphp
                 <input type="hidden" name="date_from" id="date_from" value="{{ $dateFrom->format('Y-m-d') }}">
                 <input type="hidden" name="date_to" id="date_to" value="{{ $dateTo->format('Y-m-d') }}">
-                <input type="hidden" name="period" id="period" value="{{ $activePeriod }}">
+                <input type="hidden" name="period" id="period" value="{{ is_array($activePeriod) ? 'month' : $activePeriod }}">
                 
                 <button type="button" @click="setPeriod('today', '{{ $today }}', '{{ $today }}')" :class="period === 'today' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-[10px] font-black rounded-lg transition-all">HARI INI</button>
                 <button type="button" @click="setPeriod('week', '{{ $startOfWeek }}', '{{ $today }}')" :class="period === 'week' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-[10px] font-black rounded-lg transition-all">MINGGUAN</button>
@@ -457,7 +457,7 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('expenseDashboard', () => ({
-            period: '{{ $activePeriod }}',
+            period: '{{ is_array($activePeriod) ? "month" : $activePeriod }}',
             showDetailModal: false,
             setPeriod(period, from, to) {
                 this.period = period;

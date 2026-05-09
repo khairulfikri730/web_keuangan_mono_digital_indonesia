@@ -13,11 +13,33 @@ class ShiftController extends Controller
 {
     public function index(Request $request)
     {
+        // Handle Quick Period Filter
+        if ($request->period && $request->period !== 'custom') {
+            switch ($request->period) {
+                case 'today':
+                    $request->merge(['date_from' => today()->toDateString(), 'date_to' => today()->toDateString()]);
+                    break;
+                case 'yesterday':
+                    $yesterday = today()->subDay()->toDateString();
+                    $request->merge(['date_from' => $yesterday, 'date_to' => $yesterday]);
+                    break;
+                case 'week':
+                    $request->merge(['date_from' => now()->startOfWeek()->toDateString(), 'date_to' => now()->endOfWeek()->toDateString()]);
+                    break;
+                case 'month':
+                    $request->merge(['date_from' => now()->startOfMonth()->toDateString(), 'date_to' => now()->endOfMonth()->toDateString()]);
+                    break;
+                case 'year':
+                    $request->merge(['date_from' => now()->startOfYear()->toDateString(), 'date_to' => now()->endOfYear()->toDateString()]);
+                    break;
+            }
+        }
+
         $query = Shift::with(['opener', 'closer'])
-            ->when($request->date_from, fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
-            ->when($request->date_to, fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->user_id, fn($q) => $q->where('opened_by', $request->user_id));
+            ->when($request->date_from && !is_array($request->date_from), fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
+            ->when($request->date_to && !is_array($request->date_to), fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
+            ->when($request->status && !is_array($request->status), fn($q) => $q->where('status', $request->status))
+            ->when($request->user_id && !is_array($request->user_id), fn($q) => $q->where('opened_by', $request->user_id));
 
         $shifts = $query->latest()->paginate(15)->withQueryString();
         
@@ -27,7 +49,12 @@ class ShiftController extends Controller
             ->when($request->date_to, fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
             ->sum('closing_cash');
             
-        $totalSalesToday = Transaction::whereDate('created_at', today())->completed()->sum('total');
+        $totalSalesToday = Transaction::withoutGlobalScopes()
+            ->completed()
+            ->when($request->date_from, fn($q) => $q->whereDate('created_at', '>=', $request->date_from))
+            ->when($request->date_to, fn($q) => $q->whereDate('created_at', '<=', $request->date_to))
+            ->when(!$request->date_from && !$request->date_to, fn($q) => $q->whereDate('created_at', today()))
+            ->sum('total');
         
         $totalDiscrepancy = Shift::where('status', 'closed')
             ->when($request->date_from, fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
@@ -94,7 +121,9 @@ class ShiftController extends Controller
             \App\Models\Cashflow::create([
                 'user_id' => $userId,
                 'shift_id' => $shift->id,
+                'worksheet_id' => $shift->worksheet_id,
                 'type' => 'income',
+                'transaction_category' => 'adjustment',
                 'category' => 'Modal Awal Kasir',
                 'description' => 'Kas Awal Shift',
                 'amount' => $request->opening_cash,
@@ -119,24 +148,24 @@ class ShiftController extends Controller
         ]);
 
         // Calculate all financial data for the shift
-        $cashSales = Transaction::where('shift_id', $shift->id)
+        $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
             ->completed()
             ->where('payment_method', 'cash')
             ->sum('total');
 
-        $bankSales = Transaction::where('shift_id', $shift->id)
+        $bankSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
             ->completed()
             ->whereIn('payment_method', ['transfer', 'qris', 'debit'])
             ->sum('total');
 
-        $totalSales = Transaction::where('shift_id', $shift->id)
+        $totalSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
             ->completed()->sum('total');
 
-        $totalTransactions = Transaction::where('shift_id', $shift->id)
+        $totalTransactions = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
             ->completed()->count();
 
         // Cash expenses within this shift
-        $cashExpenses = Cashflow::where('shift_id', $shift->id)
+        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)
             ->where('type', 'expense')
             ->where('source', 'pos_cash')
             ->sum('amount');
@@ -209,6 +238,7 @@ class ShiftController extends Controller
             'shift_id'         => $shift->id,
             'worksheet_id'     => $worksheetId,
             'type'             => 'expense',
+            'transaction_category' => 'expense',
             'category'         => $request->category ?: 'Operasional',
             'description'      => 'POS Cash Out: ' . $request->description,
             'amount'           => $request->amount,
@@ -223,7 +253,8 @@ class ShiftController extends Controller
             return response()->json(['success' => true, 'message' => 'Cash Out berhasil dicatat.']);
         }
 
-        return back()->with('success', 'Cash Out sebesar Rp ' . number_format($request->amount, 0, ',', '.') . ' berhasil dicatat!');
+        $dispAmount = is_array($request->amount) ? 0 : $request->amount;
+        return back()->with('success', 'Cash Out sebesar Rp ' . number_format($dispAmount, 0, ',', '.') . ' berhasil dicatat!');
     }
 
     public function show(Shift $shift)
@@ -245,11 +276,15 @@ class ShiftController extends Controller
      */
     public function getSummary(Shift $shift)
     {
-        $cashSales = Transaction::where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
-        $bankSales = Transaction::where('shift_id', $shift->id)->completed()->whereIn('payment_method', ['transfer', 'qris', 'debit'])->sum('total');
+        $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
+        $qrisSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'qris')->sum('total');
+        $transferSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'transfer')->sum('total');
+        $debitSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'debit')->sum('total');
+        
+        $bankSales = $qrisSales + $transferSales + $debitSales;
         $totalSales = $cashSales + $bankSales;
-        $totalTransactions = Transaction::where('shift_id', $shift->id)->completed()->count();
-        $cashExpenses = Cashflow::where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+        $totalTransactions = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->count();
+        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
         $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses;
 
         $duration = '';
@@ -269,6 +304,9 @@ class ShiftController extends Controller
             'opening_cash' => (float)$shift->opening_cash,
             'closing_cash' => (float)($shift->closing_cash ?? 0),
             'cash_sales' => (float)$cashSales,
+            'qris_sales' => (float)$qrisSales,
+            'transfer_sales' => (float)$transferSales,
+            'debit_sales' => (float)$debitSales,
             'bank_sales' => (float)$bankSales,
             'total_sales' => (float)$totalSales,
             'total_transactions' => $totalTransactions,
@@ -290,8 +328,8 @@ class ShiftController extends Controller
         $openingCash = $request->opening_cash;
         $closingCash = $request->closing_cash ?? $shift->closing_cash;
 
-        $cashSales = Transaction::where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
-        $cashExpenses = Cashflow::where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+        $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
+        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
         
         $expectedCash = $openingCash + $cashSales - $cashExpenses;
         $discrepancy = null;

@@ -14,12 +14,12 @@
                 <div class="col-span-1 md:col-span-2 flex items-center gap-2">
                     <div class="w-full relative group">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="far fa-calendar-alt"></i> Tanggal Awal</label>
-                        <input type="date" name="date_from" value="{{ request('date_from', $dateFrom->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold text-[#E5E7EB] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-inner transition-all placeholder-slate-500">
+                        <input type="date" name="date_from" value="{{ is_array(request('date_from')) ? $dateFrom->format('Y-m-d') : request('date_from', $dateFrom->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold text-[#E5E7EB] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-inner transition-all placeholder-slate-500">
                     </div>
                     <span class="text-slate-600 font-black self-end mb-3">-</span>
                     <div class="w-full relative group">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="far fa-calendar-check"></i> Tanggal Akhir</label>
-                        <input type="date" name="date_to" value="{{ request('date_to', $dateTo->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold text-[#E5E7EB] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-inner transition-all placeholder-slate-500">
+                        <input type="date" name="date_to" value="{{ is_array(request('date_to')) ? $dateTo->format('Y-m-d') : request('date_to', $dateTo->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold text-[#E5E7EB] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-inner transition-all placeholder-slate-500">
                     </div>
                 </div>
                 

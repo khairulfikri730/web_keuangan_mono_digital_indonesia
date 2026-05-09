@@ -22,7 +22,11 @@ class PosController extends Controller
         $categories = Category::where('is_active', true)->get();
         $products = Product::active()->with('category')->orderBy('name')->get();
         $posGroups = PosGroup::with('products.category')->orderBy('position')->get();
-        $settings = \App\Models\Setting::getMultiple(['tax_rate', 'active_payment_methods', 'bank_name', 'bank_account', 'bank_holder', 'qris_image']);
+        $settings = \App\Models\Setting::getMultiple([
+            'tax_rate', 'active_payment_methods', 'bank_name', 'bank_account', 'bank_holder', 'qris_image',
+            'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
+            'custom_price_require_reason', 'custom_price_access'
+        ]);
         
         // BEP Analysis Data
         $totalCapital = \App\Models\Capital::sum('total_amount');
@@ -109,7 +113,15 @@ class PosController extends Controller
                     ], 422);
                 }
 
-                $itemSubtotal = ($item['price'] * $item['quantity']) - ($item['discount'] ?? 0);
+                $isCustomPrice = !empty($item['is_custom_price']) ? true : false;
+                $customPrice = $isCustomPrice ? $item['custom_price'] : null;
+                $customHpp = $isCustomPrice && isset($item['custom_hpp']) ? $item['custom_hpp'] : null;
+                $customPriceReason = $isCustomPrice && isset($item['custom_price_reason']) ? $item['custom_price_reason'] : null;
+
+                $usedPrice = $isCustomPrice ? $customPrice : $item['price'];
+                $usedCostPrice = $isCustomPrice && $customHpp !== null ? $customHpp : $product->cost_price;
+
+                $itemSubtotal = ($usedPrice * $item['quantity']) - ($item['discount'] ?? 0);
                 $subtotal += $itemSubtotal;
 
                 if (!$isStockless) {
@@ -130,11 +142,15 @@ class PosController extends Controller
                 $itemsData[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
-                    'price' => $item['price'],
-                    'cost_price' => $product->cost_price,
+                    'price' => $usedPrice,
+                    'cost_price' => $usedCostPrice,
                     'quantity' => $item['quantity'],
                     'discount' => $item['discount'] ?? 0,
                     'subtotal' => $itemSubtotal,
+                    'is_custom_price' => $isCustomPrice,
+                    'custom_price' => $customPrice,
+                    'custom_hpp' => $customHpp,
+                    'custom_price_reason' => $customPriceReason,
                 ];
             }
 
@@ -168,6 +184,7 @@ class PosController extends Controller
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone,
                 'notes' => $request->notes,
+                'worksheet_id' => $activeShift->worksheet_id,
             ]);
 
             foreach ($itemsData as &$item) {
@@ -190,21 +207,59 @@ class PosController extends Controller
                     'source' => $request->dp_method ?? 'pos_cash',
                     'transaction_date' => today(),
                     'reference_id' => $transaction->id,
+                    'transaction_category' => 'income',
+                    'worksheet_id' => $activeShift->worksheet_id,
                 ]);
             }
 
             DB::commit();
 
             $transaction->load('items');
+
+            // --- AUTO OPEN CASH DRAWER LOGIC ---
+            $printerStatus = null;
+            if ($request->payment_method === 'cash') {
+                try {
+                    $printerService = app(\App\Services\PrinterService::class);
+                    $printResult = $printerService->openDrawer($transaction->id);
+                    $printerStatus = $printResult;
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Drawer Error: ' . $e->getMessage());
+                    $printerStatus = ['success' => false, 'message' => 'Gagal membuka laci kasir (System Error)'];
+                }
+            }
+            // ------------------------------------
+
             return response()->json([
                 'success' => true,
                 'transaction' => $transaction,
                 'change' => max(0, $change),
                 'invoice_number' => $transaction->invoice_number,
+                'printer_status' => $printerStatus
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function printReceipt(Request $request, Transaction $transaction)
+    {
+        try {
+            $transaction->load(['items', 'user']);
+            $printerService = app(\App\Services\PrinterService::class);
+            
+            // Check if payment was cash to open drawer
+            $shouldOpenDrawer = $transaction->payment_method === 'cash';
+            
+            $result = $printerService->printReceiptAndOpenDrawer($transaction, $shouldOpenDrawer);
+            
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -374,11 +429,13 @@ class PosController extends Controller
             'user_id' => auth()->id(),
             'shift_id' => $activeShift->id,
             'type' => 'expense',
+            'transaction_category' => 'expense',
             'category' => $request->category ?? 'Pengeluaran Kasir',
             'description' => $request->description,
             'amount' => $request->amount,
             'source' => 'pos_cash',
             'transaction_date' => today(),
+            'worksheet_id' => $activeShift->worksheet_id,
         ]);
 
         return response()->json(['success' => true, 'message' => 'Pengeluaran berhasil dicatat.']);

@@ -11,22 +11,24 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    protected $financialService;
+
+    public function __construct(\App\Services\FinancialReportService $financialService)
+    {
+        $this->financialService = $financialService;
+    }
+
     public function index()
     {
         $today = Carbon::today();
         $activeShift = Shift::activeShift();
 
-        // Stats hari ini
-        $todaySales = Transaction::completed()
-            ->whereDate('created_at', $today)->sum('total');
+        // 1. Stats using Unified Service
+        $finSummary = $this->financialService->getSummary($today, $today);
+        $todaySales = $finSummary->total_income;
+        $todayExpenses = $finSummary->total_expense;
         $todayTransactions = Transaction::completed()
             ->whereDate('created_at', $today)->count();
-        $todayExpenses = Cashflow::expense()
-            ->whereDate('transaction_date', $today)
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            })->sum('amount');
 
         // Stats bulan ini
         $monthSales = Transaction::completed()

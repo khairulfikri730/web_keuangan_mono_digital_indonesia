@@ -79,7 +79,7 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
     {{-- Search --}}
     <div class="relative flex-shrink-0">
       <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[11px] pointer-events-none"></i>
-      <input type="text" name="search" value="{{ request('search') }}"
+      <input type="text" name="search" value="{{ is_array(request('search')) ? '' : request('search') }}"
              placeholder="Cari..."
              class="py-1.5 pl-7 pr-3 text-sm rounded-xl text-white placeholder-slate-500 outline-none transition-all"
              style="background:rgba(15,23,42,.7);border:1px solid rgba(71,85,105,.5);width:170px;">

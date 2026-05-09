@@ -40,6 +40,15 @@
     .period-btn.active {
         box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.5);
     }
+
+    @keyframes scaleUp {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    .animate-balance-update {
+        animation: scaleUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 </style>
 @endpush
 
@@ -97,9 +106,9 @@
 
             <!-- Custom Date Container -->
             <div id="customDateContainer" class="{{ $filter == 'custom' ? 'flex' : 'hidden' }} items-center gap-2 bg-slate-900/80 rounded-2xl px-3 py-1.5 border border-white/5">
-                <input type="date" id="customStart" value="{{ $start }}" class="bg-transparent border-none text-white text-xs font-bold focus:ring-0 w-32">
+                <input type="date" id="customStart" value="{{ is_array($start) ? '' : $start }}" class="bg-transparent border-none text-white text-xs font-bold focus:ring-0 w-32">
                 <span class="text-slate-600 font-black">/</span>
-                <input type="date" id="customEnd" value="{{ $end }}" class="bg-transparent border-none text-white text-xs font-bold focus:ring-0 w-32">
+                <input type="date" id="customEnd" value="{{ is_array($end) ? '' : $end }}" class="bg-transparent border-none text-white text-xs font-bold focus:ring-0 w-32">
                 <button type="button" id="applyCustomBtn" class="w-8 h-8 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center transition-premium">
                     <i class="fas fa-check text-xs"></i>
                 </button>
@@ -244,7 +253,7 @@
                 </div>
                 <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tunai / Laci</span>
             </div>
-            <h3 class="text-2xl font-black text-white tracking-tight" id="valSaldoLaci">Rp {{ number_format($saldoLaci, 0, ',', '.') }}</h3>
+            <h3 class="text-2xl font-black text-white tracking-tight transition-all duration-500" id="valSaldoLaci">Rp {{ number_format($saldoLaci, 0, ',', '.') }}</h3>
             <div class="flex items-center gap-1.5 text-[9px] font-black text-amber-400 uppercase tracking-tighter">
                 <i class="fas fa-money-bill-wave"></i>
                 Saldo Fisik Saat Ini
@@ -264,10 +273,35 @@
                     <span class="inline-block mt-1 text-[8px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest">✓ Synced</span>
                 </div>
             </div>
-            <h3 class="text-2xl font-black text-white tracking-tight" id="valSaldoBankSynced">Rp {{ number_format($saldoBankSynced, 0, ',', '.') }}</h3>
+            <h3 class="text-2xl font-black text-white tracking-tight transition-all duration-500" id="valSaldoBankSynced">Rp {{ number_format($saldoBankSynced, 0, ',', '.') }}</h3>
             <div class="flex items-center gap-1.5 text-[9px] font-black text-purple-400 uppercase tracking-tighter">
                 <i class="fas fa-check-circle"></i>
                 Rekening Bisnis
+            </div>
+        </div>
+
+        <!-- Adjustment Kas (NEW) -->
+        <div class="glass-card grad-amber rounded-[2.5rem] p-7 transition-premium group relative overflow-hidden bg-slate-900/40 border-amber-500/20">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-premium"></div>
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 border border-amber-500/30 group-hover:bg-amber-600 group-hover:text-white transition-premium shadow-xl">
+                    <i class="fas fa-sliders-h text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Adjustment Kas</span>
+            </div>
+            <div class="flex flex-col gap-1">
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] font-bold text-slate-500 uppercase">Masuk:</span>
+                    <span class="text-xs font-black text-emerald-400" id="valAdjIn">+ Rp {{ number_format($totalAdjIn, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] font-bold text-slate-500 uppercase">Keluar:</span>
+                    <span class="text-xs font-black text-red-400" id="valAdjOut">- Rp {{ number_format($totalAdjOut, 0, ',', '.') }}</span>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center gap-1.5 text-[9px] font-black text-amber-400 uppercase tracking-tighter">
+                <i class="fas fa-info-circle"></i>
+                Koreksi & Audit
             </div>
         </div>
     </div>
@@ -486,6 +520,7 @@
                     <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="Penjualan">Penjualan</button>
                     <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="Input Saldo Manual">Input Saldo</button>
                     <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="Transfer Internal">Transfer</button>
+                    <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="adjustment">Penyesuaian Kas</button>
 
                     <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="income">Uang Masuk</button>
                     <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="expense">Uang Keluar</button>
@@ -650,13 +685,13 @@
     </div>
 </div>
 
-{{-- Modal Add --}}
+{{-- Modal Add / Quick Input Revamped --}}
 <div id="addModal" x-data="{ 
     amount: '', 
     amountFormatted: '', 
-    type: 'income',
+    type: 'masuk', {{-- masuk / keluar --}}
     source: 'pos_cash',
-    category: '',
+    category: 'Input Saldo Manual',
     isQuick: false,
     dateText: '{{ date('d/m/Y') }}',
     sourceText: 'Tunai',
@@ -670,111 +705,151 @@
     },
     openAdd(data = {}) {
         this.isQuick = !!data.quick;
-        this.type = data.type || 'income';
+        this.type = data.type === 'expense' ? 'expense' : 'income';
         this.source = data.source || 'pos_cash';
-        this.category = data.category || (this.isQuick ? 'Input Saldo Manual' : '');
+        this.category = data.category || 'Input Saldo Manual';
         this.sourceText = this.source === 'pos_cash' ? 'Tunai / Laci' : 'Saldo Bank';
         this.amount = '';
         this.amountFormatted = '';
         document.getElementById('addModal').classList.remove('hidden');
     }
-}" @open-add-modal.window="openAdd($event.detail)" class="fixed inset-0 bg-[#0F172A]/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#111827] rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl transform scale-100 transition-transform">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-lg font-bold text-white" x-text="isQuick ? 'Input Saldo Cepat' : 'Tambah Transaksi'"></h3>
-            <button onclick="document.getElementById('addModal').classList.add('hidden')" class="text-slate-400 hover:text-white transition-colors">
+}" @open-add-modal.window="openAdd($event.detail)" class="fixed inset-0 bg-[#0F172A]/90 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-[#111827] rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden transform transition-all duration-500"
+         :class="type === 'income' ? 'shadow-emerald-500/10' : 'shadow-red-500/10'">
+        
+        <!-- Modal Header -->
+        <div class="p-8 pb-4 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10 pointer-events-none transition-all duration-700"
+                 :class="type === 'income' ? 'bg-emerald-500' : 'bg-red-500'"></div>
+            
+            <div class="relative z-10 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-all duration-500 shadow-lg"
+                     :class="type === 'income' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'">
+                    <i :class="type === 'income' ? 'fas fa-plus-circle' : 'fas fa-minus-circle'"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-white tracking-tighter leading-none" x-text="type === 'income' ? 'Menambah Saldo' : 'Mengurangi Saldo'"></h3>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1.5" x-text="isQuick ? 'Input Saldo Cepat' : 'Transaksi Manual'"></p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('addModal').classList.add('hidden')" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all flex items-center justify-center relative z-10">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         
-        <!-- Info Input Cepat -->
-        <template x-if="isQuick">
-            <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                        <i :class="source === 'pos_cash' ? 'fas fa-cash-register' : 'fas fa-university'"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] text-slate-400 uppercase font-bold leading-none mb-1">Menambah Saldo</p>
-                        <p class="text-xs text-white font-black" x-text="sourceText"></p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold leading-none mb-1">Tanggal</p>
-                    <p class="text-xs text-white font-black" x-text="dateText"></p>
-                </div>
-            </div>
-        </template>
-
-        <form action="{{ route('cashflow.store') }}" method="POST">
+        <form :action="isQuick ? '{{ route('cashflow.quick-store') }}' : '{{ route('cashflow.store') }}'" method="POST" class="p-8 pt-4">
             @csrf
-            <div class="space-y-4">
-                <!-- Fields hidden in Quick Mode -->
-                <div x-show="!isQuick" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Tanggal</label>
-                        <input type="date" name="transaction_date" value="{{ date('Y-m-d') }}" class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" :required="!isQuick">
+            <div class="space-y-6">
+                <!-- Transaction Type Toggle (Only if isQuick) -->
+                <template x-if="isQuick">
+                    <div class="flex p-1.5 bg-slate-900/80 rounded-2xl border border-white/5 shadow-inner">
+                        <button type="button" @click="type = 'income'" 
+                                class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500"
+                                :class="type === 'income' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-500 hover:text-slate-300'">
+                            <i class="fas fa-arrow-up-long"></i>
+                            Tambah (+)
+                        </button>
+                        <button type="button" @click="type = 'expense'" 
+                                class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500"
+                                :class="type === 'expense' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' : 'text-slate-500 hover:text-slate-300'">
+                            <i class="fas fa-arrow-down-long"></i>
+                            Kurangi (-)
+                        </button>
                     </div>
-                    
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Jenis Transaksi</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="cursor-pointer relative">
-                                <input type="radio" name="type" value="income" x-model="type" class="peer sr-only">
-                                <div class="w-full text-center px-4 py-2.5 bg-[#0F172A] border border-slate-700 rounded-xl text-sm font-medium text-slate-400 peer-checked:bg-emerald-500/10 peer-checked:border-emerald-500/50 peer-checked:text-emerald-400 transition-all">
-                                    Pemasukan
-                                </div>
-                            </label>
-                            <label class="cursor-pointer relative">
-                                <input type="radio" name="type" value="expense" x-model="type" class="peer sr-only">
-                                <div class="w-full text-center px-4 py-2.5 bg-[#0F172A] border border-slate-700 rounded-xl text-sm font-medium text-slate-400 peer-checked:bg-red-500/10 peer-checked:border-red-500/50 peer-checked:text-red-400 transition-all">
-                                    Pengeluaran
-                                </div>
-                            </label>
+                </template>
+
+                <!-- Detailed Fields (Only if NOT isQuick) -->
+                <div x-show="!isQuick" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tanggal</label>
+                            <input type="date" name="transaction_date" value="{{ date('Y-m-d') }}" class="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-blue-500/50 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tipe Transaksi</label>
+                            <select name="type" x-model="type" class="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-blue-500/50 transition-all">
+                                <option value="income">Pemasukan</option>
+                                <option value="expense">Pengeluaran</option>
+                            </select>
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Sumber Dana</label>
-                        <select name="source" x-model="source" class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" :required="!isQuick">
-                            <option value="pos_cash">Tunai</option>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Sumber Dana</label>
+                        <select name="source" x-model="source" class="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-blue-500/50 transition-all">
+                            <option value="pos_cash">Tunai / Laci</option>
                             <option value="pos_bank">Bank / QRIS</option>
-                            <option value="transfer">Transfer Kasir ke Bank</option>
+                            <option value="transfer">Transfer Internal</option>
                             <option value="manual">Lainnya (Manual)</option>
                         </select>
                     </div>
                     
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Kategori</label>
-                        <input type="text" name="category" x-model="category" class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" :required="!isQuick" placeholder="Cth: Listrik, Gaji, ATK...">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Kategori</label>
+                        <input type="text" name="category" x-model="category" class="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-blue-500/50 transition-all" placeholder="Misal: Operasional, Gaji, dsb">
                     </div>
                 </div>
 
-                <!-- Hidden Inputs for Quick Mode -->
+                <!-- Quick Mode Info Badges -->
+                <template x-if="isQuick">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-900/50 rounded-2xl p-4 border border-white/5">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Sumber Saldo</p>
+                            <div class="flex items-center gap-2">
+                                <i :class="source === 'pos_cash' ? 'fas fa-cash-register text-amber-400' : 'fas fa-university text-purple-400'"></i>
+                                <span class="text-xs font-black text-white" x-text="sourceText"></span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/50 rounded-2xl p-4 border border-white/5">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Tanggal</p>
+                            <div class="flex items-center gap-2 text-white">
+                                <i class="far fa-calendar-alt text-blue-400"></i>
+                                <span class="text-xs font-black" x-text="dateText"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Hidden Inputs for Quick Store -->
                 <template x-if="isQuick">
                     <div>
                         <input type="hidden" name="transaction_date" value="{{ date('Y-m-d') }}">
                         <input type="hidden" name="type" :value="type">
                         <input type="hidden" name="source" :value="source">
-                        <input type="hidden" name="category" :value="category">
+                        <input type="hidden" name="category" value="Input Saldo Manual">
                     </div>
                 </template>
                 
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Nominal (Rp)</label>
-                    <input type="text" x-model="amountFormatted" @input="amountFormatted = formatCurrency($event.target.value); amount = amountFormatted.replace(/\./g, '')" class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-3 text-2xl font-black text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 placeholder-slate-600" required placeholder="0" autofocus>
-                    <input type="hidden" name="amount" :value="amount">
+                <!-- Main Inputs -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nominal (Rp)</label>
+                        <div class="relative group">
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black group-focus-within:text-white transition-colors">Rp</div>
+                            <input type="text" x-model="amountFormatted" 
+                                   @input="amountFormatted = formatCurrency($event.target.value); amount = amountFormatted.replace(/\./g, '')" 
+                                   class="w-full bg-slate-900 border border-white/10 rounded-2xl pl-12 pr-4 py-5 text-3xl font-black text-white focus:ring-4 transition-all placeholder-slate-800"
+                                   :class="type === 'income' ? 'focus:ring-emerald-500/20 focus:border-emerald-500/50' : 'focus:ring-red-500/20 focus:border-red-500/50'"
+                                   required placeholder="0" autofocus>
+                            <input type="hidden" name="amount" :value="amount">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Catatan Transaksi</label>
+                        <textarea name="notes" rows="2" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-blue-500/50 transition-all placeholder-slate-700" 
+                                  required placeholder="Berikan keterangan singkat untuk histori transaksi..."></textarea>
+                    </div>
                 </div>
                 
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Catatan</label>
-                    <textarea name="description" rows="2" class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required placeholder="Contoh: Input saldo awal hari..."></textarea>
-                </div>
-                
-                <div class="pt-4 mt-6 border-t border-slate-700">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 uppercase tracking-widest text-sm">
-                        Simpan Saldo
+                <!-- Action Button -->
+                <div class="pt-2">
+                    <button type="submit" class="w-full font-black py-5 rounded-2xl transition-all shadow-xl uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 active:scale-[0.98]"
+                            :class="type === 'income' ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/20'">
+                        <i :class="type === 'income' ? 'fas fa-save' : 'fas fa-minus-circle'"></i>
+                        <span x-text="type === 'income' ? 'Simpan Saldo' : 'Kurangi Saldo'"></span>
                     </button>
+                    <p class="text-[9px] text-center text-slate-600 mt-4 uppercase tracking-widest font-black opacity-50">Sistem Pencatatan Histori Otomatis Aktif</p>
                 </div>
             </div>
         </form>
@@ -1001,6 +1076,10 @@
                 if (document.getElementById('valSaldoLaci')) document.getElementById('valSaldoLaci').innerText = 'Rp ' + data.summary.saldoLaciFmt;
                 if (document.getElementById('valSaldoBankSynced')) document.getElementById('valSaldoBankSynced').innerText = 'Rp ' + data.summary.saldoBankSyncedFmt;
 
+                // Update Adjustment Stats
+                if (document.getElementById('valAdjIn')) document.getElementById('valAdjIn').innerText = '+ Rp ' + data.summary.totalAdjInFmt;
+                if (document.getElementById('valAdjOut')) document.getElementById('valAdjOut').innerText = '- Rp ' + data.summary.totalAdjOutFmt;
+
                 // Update Insights
                 document.getElementById('valAvgIncome').innerText = 'Rp ' + data.insights.avgIncomeFmt;
                 
@@ -1071,6 +1150,21 @@
                 // Update Chart
                 initChart(data.chart.labels, data.chart.income, data.chart.expense);
 
+                // Animation for balance update
+                const laciCard = document.getElementById('valSaldoLaci');
+                const bankCard = document.getElementById('valSaldoBankSynced');
+                
+                if(laciCard) {
+                    laciCard.classList.remove('animate-balance-update');
+                    void laciCard.offsetWidth; // Trigger reflow
+                    laciCard.classList.add('animate-balance-update');
+                }
+                if(bankCard) {
+                    bankCard.classList.remove('animate-balance-update');
+                    void bankCard.offsetWidth; // Trigger reflow
+                    bankCard.classList.add('animate-balance-update');
+                }
+
                 // Update Transactions HTML
                 document.getElementById('transactionsContainer').innerHTML = data.transactions;
                 
@@ -1133,7 +1227,14 @@
             if (customStart.value && customEnd.value) {
                 fetchData(1);
             } else {
-                alert('Silakan pilih rentang tanggal mulai dan akhir.');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Rentang Tanggal Kosong',
+                    text: 'Silakan pilih rentang tanggal mulai dan akhir.',
+                    background: '#1e293b',
+                    color: '#f8fafc',
+                    confirmButtonColor: '#3b82f6'
+                });
             }
         });
 
@@ -1154,12 +1255,22 @@
             txItems.forEach(item => {
                 const type = item.dataset.type; // income/expense
                 const category = item.dataset.category;
+                const transactionCategory = item.dataset.transactionCategory;
                 const text = item.innerText.toLowerCase();
                 
                 let matchesFilter = activeFilter === 'all';
                 
                 if (activeFilter === 'income' || activeFilter === 'expense') {
                     matchesFilter = type === activeFilter;
+                } else if (activeFilter === 'adjustment') {
+                    // Penyesuaian Kas: Show only outgoing adjustments (reductions), exclude transfers
+                    matchesFilter = (transactionCategory === 'adjustment' && type === 'expense' && category !== 'Transfer Internal');
+                } else if (activeFilter === 'Input Saldo Manual') {
+                    // Input Saldo: Show only incoming entries
+                    matchesFilter = (category === 'Input Saldo Manual' && type === 'income');
+                } else if (activeFilter === 'Transfer Internal') {
+                    // Transfer: Show only incoming entries (targets)
+                    matchesFilter = (category === 'Transfer Internal' && type === 'income');
                 } else if (activeFilter !== 'all') {
                     matchesFilter = category === activeFilter;
                 }

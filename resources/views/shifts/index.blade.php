@@ -7,90 +7,24 @@
 @section('content')
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     {{-- Form Buka/Tutup Shift --}}
-    <div class="lg:col-span-1">
+    <div class="lg:col-span-1" x-data="{ showOpenModal: {{ request('open') ? 'true' : 'false' }} }">
         <div class="card p-6 sticky top-24">
             @if(!$activeShift)
-                <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2"><i class="fas fa-door-open text-blue-400"></i> Buka Shift Baru</h3>
-                <form action="{{ route('shifts.open') }}" method="POST">
-                    @csrf
-                    <div class="space-y-5">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Kasir <span class="text-slate-500">(opsional, default: Anda)</span></label>
-                            <select name="user_id" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-all">
-                                <option value="">— Saya Sendiri —</option>
-                                @foreach($users as $u)
-                                    @if($u->id !== auth()->id())
-                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role }})</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
-                        <div x-data="{ 
-                            method: 'sync',
-                            laciBalance: {{ $laciBalance }},
-                            manualValue: '',
-                            formattedManual: '',
-                            initValue() {
-                                this.updateValue();
-                            },
-                            updateManual() {
-                                let val = this.formattedManual.replace(/\D/g, '');
-                                this.manualValue = val;
-                                this.formattedManual = val ? parseInt(val).toLocaleString('id-ID') : '';
-                                if(this.method === 'manual') this.$refs.openingInput.value = this.manualValue;
-                            },
-                            updateValue() {
-                                if(this.method === 'sync') {
-                                    this.$refs.openingInput.value = this.laciBalance;
-                                } else {
-                                    this.$refs.openingInput.value = this.manualValue;
-                                }
-                            }
-                        }" x-init="initValue()">
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Uang Kas Awal (Rp) <span class="text-red-400">*</span></label>
-                            
-                            <div class="grid grid-cols-2 gap-3 mb-4">
-                                <label class="cursor-pointer group">
-                                    <input type="radio" x-model="method" value="sync" @change="updateValue()" class="hidden">
-                                    <div class="p-3 border rounded-xl transition-all flex flex-col items-center gap-1"
-                                         :class="method === 'sync' ? 'bg-blue-500/20 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-700 text-slate-500 group-hover:border-slate-500'">
-                                        <i class="fas fa-sync-alt text-sm"></i>
-                                        <span class="text-[10px] font-bold uppercase">Sync dari Laci</span>
-                                    </div>
-                                </label>
-                                <label class="cursor-pointer group">
-                                    <input type="radio" x-model="method" value="manual" @change="updateValue()" class="hidden">
-                                    <div class="p-3 border rounded-xl transition-all flex flex-col items-center gap-1"
-                                         :class="method === 'manual' ? 'bg-blue-500/20 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-700 text-slate-500 group-hover:border-slate-500'">
-                                        <i class="fas fa-keyboard text-sm"></i>
-                                        <span class="text-[10px] font-bold uppercase">Input Manual</span>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <div class="relative">
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                                <input type="hidden" name="opening_cash" x-ref="openingInput">
-                                
-                                <template x-if="method === 'sync'">
-                                    <input type="text" :value="parseInt(laciBalance).toLocaleString('id-ID')" readonly class="w-full bg-slate-800/80 border border-blue-500/30 rounded-xl pl-12 pr-4 py-3 text-blue-400 font-black text-lg cursor-not-allowed shadow-inner" placeholder="0">
-                                </template>
-                                
-                                <template x-if="method === 'manual'">
-                                    <input type="text" x-model="formattedManual" @input="updateManual()" class="w-full bg-slate-900/50 border border-blue-500 rounded-xl pl-12 pr-4 py-3 text-white font-black text-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-inner" required placeholder="0">
-                                </template>
-                            </div>
-                            <p x-show="method === 'sync'" class="mt-2 text-[10px] text-slate-500 italic flex items-center gap-1">
-                                <i class="fas fa-info-circle"></i> Mengambil saldo tersinkronisasi saat ini di laci.
-                            </p>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Catatan Pembukaan</label>
-                            <textarea name="notes" rows="3" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-inner"></textarea>
-                        </div>
-                        <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center justify-center gap-2"><i class="fas fa-play"></i> BUKA SHIFT</button>
+                <div class="text-center py-8">
+                    <div class="w-20 h-20 bg-blue-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-blue-500/20 shadow-lg shadow-blue-500/5">
+                        <i class="fas fa-door-open text-blue-400 text-3xl"></i>
                     </div>
-                </form>
+                    <h3 class="text-xl font-black text-white mb-2 uppercase italic poppins tracking-tight">Shift Belum Dibuka</h3>
+                    <p class="text-slate-500 text-sm mb-8 font-medium">Buka shift untuk mulai mencatat transaksi hari ini.</p>
+                    
+                    <button @click="showOpenModal = true" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 group">
+                        <i class="fas fa-plus-circle group-hover:rotate-90 transition-transform duration-500"></i> 
+                        BUKA SHIFT BARU
+                    </button>
+                </div>
+
+                {{-- Modal Redesign --}}
+                @include('components.modals.buka-shift')
             @else
                 <h3 class="text-lg font-bold text-white mb-5 flex items-center gap-2"><i class="fas fa-door-closed text-red-400"></i> Tutup Shift Aktif</h3>
                 
@@ -190,10 +124,10 @@
                 <form method="GET" class="flex flex-col gap-4">
                     <div class="flex flex-wrap items-center gap-3">
                         <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-white/5">
-                            <input type="date" name="date_from" value="{{ request('date_from', now()->startOfMonth()->format('Y-m-d')) }}" 
+                            <input type="date" name="date_from" value="{{ is_array(request('date_from')) ? now()->startOfMonth()->format('Y-m-d') : request('date_from', now()->startOfMonth()->format('Y-m-d')) }}" 
                                    class="bg-transparent border-none text-[11px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
                             <span class="text-slate-600 text-[10px] font-black">S/D</span>
-                            <input type="date" name="date_to" value="{{ request('date_to', now()->format('Y-m-d')) }}" 
+                            <input type="date" name="date_to" value="{{ is_array(request('date_to')) ? now()->format('Y-m-d') : request('date_to', now()->format('Y-m-d')) }}" 
                                    class="bg-transparent border-none text-[11px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
                         </div>
 

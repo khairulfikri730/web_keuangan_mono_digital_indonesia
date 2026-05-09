@@ -9,37 +9,59 @@
 
     {{-- FILTER BAR MODERN --}}
     <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative z-40">
-        <form method="GET" class="flex flex-col md:flex-row gap-4 items-end md:items-center w-full">
-            <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="col-span-1 md:col-span-2 flex items-center gap-2">
+        <form method="GET" id="filter-form" class="flex flex-col gap-4 w-full">
+            {{-- PERIOD SELECTOR --}}
+            <div class="flex items-center gap-2 mb-2">
+                <div class="flex flex-wrap items-center gap-1 p-1 bg-slate-900/50 rounded-xl w-fit border border-slate-700/30">
+                    @php
+                        $currentPeriod = request('period', 'today');
+                    @endphp
+                    @foreach(['today' => 'HARI', 'yesterday' => 'KMRN', 'week' => 'MINGGU', 'month' => 'BULAN', 'year' => 'TAHUN', 'custom' => 'CUSTOM'] as $key => $label)
+                    <button type="button" 
+                            onclick="setQuickPeriod('{{ $key }}')"
+                            class="px-4 py-1.5 text-[10px] font-black rounded-lg transition-all duration-300 {{ ($currentPeriod == $key) ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800' }}">
+                        {{ $label }}
+                    </button>
+                    @endforeach
+                    <input type="hidden" name="period" id="period_input" value="{{ $currentPeriod }}">
+                </div>
+                <div class="h-px flex-1 bg-gradient-to-r from-slate-700/50 to-transparent"></div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 items-end md:items-center w-full">
+                <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-4" x-show="'{{ $currentPeriod }}' === 'custom' || window.showCustomDates" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                    <div class="col-span-1 md:col-span-2 flex items-center gap-2">
                     <div class="w-full relative">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="far fa-calendar-alt"></i> Dari Tanggal</label>
-                        <input type="date" name="date_from" value="{{ request('date_from') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner">
+                        <input type="date" name="date_from" value="{{ is_array(request('date_from')) ? '' : request('date_from') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner">
                     </div>
                     <span class="text-slate-500 font-bold self-end mb-2">-</span>
                     <div class="w-full relative">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="far fa-calendar-check"></i> Sampai Tanggal</label>
-                        <input type="date" name="date_to" value="{{ request('date_to') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner">
+                        <input type="date" name="date_to" value="{{ is_array(request('date_to')) ? '' : request('date_to') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner">
+                    </div>
                     </div>
                 </div>
                 
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="fas fa-traffic-light"></i> Status Shift</label>
-                    <select name="status" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner appearance-none">
-                        <option value="">Semua Status</option>
-                        <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Aktif (Berjalan)</option>
-                        <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Selesai (Ditutup)</option>
-                    </select>
-                </div>
+                <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="fas fa-traffic-light"></i> Status Shift</label>
+                        <select name="status" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner appearance-none">
+                            <option value="">Semua Status</option>
+                            <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Aktif (Berjalan)</option>
+                            <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Selesai (Ditutup)</option>
+                        </select>
+                    </div>
 
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="fas fa-user-tag"></i> Kasir Bertugas</label>
-                    <select name="user_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner appearance-none">
-                        <option value="">Semua Kasir</option>
-                        @foreach($users as $u)
-                        <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
-                        @endforeach
-                    </select>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="fas fa-user-tag"></i> Kasir Bertugas</label>
+                        <select name="user_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner appearance-none">
+                            <option value="">Semua Kasir</option>
+                            @foreach($users as $u)
+                            <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -93,10 +115,13 @@
                 <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 shrink-0 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors shadow-inner">
                     <i class="fas fa-chart-line text-xl"></i>
                 </div>
+                @php
+                    $salesLabel = 'Penjualan ' . ($currentPeriod == 'today' ? 'Hari Ini' : ($currentPeriod == 'yesterday' ? 'Kemarin' : ($currentPeriod == 'week' ? 'Minggu Ini' : ($currentPeriod == 'month' ? 'Bulan Ini' : ($currentPeriod == 'year' ? 'Tahun Ini' : 'Periode Terpilih')))));
+                @endphp
                 <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Penjualan Hari Ini</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">{{ $salesLabel }}</p>
                     <h3 class="text-xl font-black text-purple-400">Rp {{ number_format($totalSalesToday, 0, ',', '.') }}</h3>
-                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Semua transaksi sukses hari ini</p>
+                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Semua transaksi sukses di periode ini</p>
                 </div>
             </div>
         </div>
@@ -127,8 +152,8 @@
             {{-- CURRENT SHIFT CARD (REALTIME) --}}
             @if($activeShift)
             @php
-                $currentExpected = $activeShift->opening_cash + \App\Models\Transaction::where('shift_id', $activeShift->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-                $currentSales = \App\Models\Transaction::where('shift_id', $activeShift->id)->where('status', 'completed')->sum('total');
+                $currentExpected = $activeShift->opening_cash + \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $activeShift->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+                $currentSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $activeShift->id)->where('status', 'completed')->sum('total');
             @endphp
             <div class="bg-gradient-to-br from-blue-900/40 to-slate-800 rounded-2xl p-6 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -162,8 +187,8 @@
                     <a href="{{ route('pos.index') }}" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors shadow-sm text-xs flex items-center justify-center gap-2">
                         <i class="fas fa-cash-register"></i> Ke POS
                     </a>
-                    <button @click="showCloseModal = true" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20 text-xs flex items-center justify-center gap-2">
-                        <i class="fas fa-lock"></i> Tutup Shift
+                    <button @click="showCloseModal = true" class="flex-1 py-3 bg-gradient-to-r from-red-600 to-rose-500 hover:from-rose-500 hover:to-red-600 text-white font-black rounded-xl transition-all shadow-xl shadow-red-500/20 hover:shadow-red-500/40 hover:scale-[1.02] active:scale-95 text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
+                        <i class="fas fa-lock text-[10px]"></i> Tutup Shift
                     </button>
                 </div>
             </div>
@@ -174,8 +199,9 @@
                 </div>
                 <h3 class="font-black text-white mb-1">Tidak Ada Shift Aktif</h3>
                 <p class="text-xs text-slate-400 mb-6">Belum ada kasir yang membuka shift saat ini.</p>
-                <button @click="showOpenModal = true" class="py-2.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 text-xs flex items-center justify-center gap-2">
-                    <i class="fas fa-key"></i> Buka Shift Baru
+                <button @click="showOpenModal = true" class="py-4 px-10 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black rounded-2xl transition-all shadow-xl shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 group uppercase tracking-[0.1em] text-xs">
+                    <i class="fas fa-plus-circle group-hover:rotate-90 transition-transform duration-500 text-lg"></i> 
+                    BUKA SHIFT BARU
                 </button>
             </div>
             @endif
@@ -263,7 +289,12 @@
                             </div>
                             <div>
                                 <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Penjualan</p>
-                                <p class="text-sm font-black text-emerald-400 mt-0.5">Rp {{ number_format($s->total_sales, 0, ',', '.') }}</p>
+                                @php
+                                    $rowSales = $s->status === 'open' 
+                                        ? \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('status', 'completed')->sum('total')
+                                        : $s->total_sales;
+                                @endphp
+                                <p class="text-sm font-black text-emerald-400 mt-0.5">Rp {{ number_format($rowSales, 0, ',', '.') }}</p>
                             </div>
                         </div>
 
@@ -379,9 +410,17 @@
                                     <span class="text-xs font-medium text-slate-400">Cash</span>
                                     <span class="text-sm font-bold text-emerald-400" x-text="'Rp '+Number(detailData.cash_sales).toLocaleString('id-ID')"></span>
                                 </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-xs font-medium text-slate-400">Transfer/QRIS/Debit</span>
-                                    <span class="text-sm font-bold text-emerald-400" x-text="'Rp '+Number(detailData.bank_sales).toLocaleString('id-ID')"></span>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">QRIS</span>
+                                    <span class="text-sm font-bold text-white" x-text="'Rp '+Number(detailData.qris_sales).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                                    <span class="text-xs font-medium text-slate-400">Transfer</span>
+                                    <span class="text-sm font-bold text-white" x-text="'Rp '+Number(detailData.transfer_sales).toLocaleString('id-ID')"></span>
+                                </div>
+                                <div class="flex justify-between items-center" x-show="detailData.debit_sales > 0">
+                                    <span class="text-xs font-medium text-slate-400">Debit</span>
+                                    <span class="text-sm font-bold text-white" x-text="'Rp '+Number(detailData.debit_sales).toLocaleString('id-ID')"></span>
                                 </div>
                             </div>
                         </div>
@@ -488,8 +527,12 @@
                                             <span class="text-[10px] font-bold text-slate-400" x-text="'Rp '+Number(detailData?.total_sales||0).toLocaleString('id-ID')"></span>
                                         </div>
                                         <div class="flex justify-between items-center">
-                                            <span class="text-[10px] font-medium text-slate-500">Masuk Rekening (Transfer/QRIS)</span>
-                                            <span class="text-[10px] font-bold text-blue-400/80" x-text="'Rp '+Number(detailData?.bank_sales||0).toLocaleString('id-ID')"></span>
+                                            <span class="text-[10px] font-medium text-slate-500">QRIS</span>
+                                            <span class="text-[10px] font-bold text-blue-400/80" x-text="'Rp '+Number(detailData?.qris_sales||0).toLocaleString('id-ID')"></span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-[10px] font-medium text-slate-500">Transfer</span>
+                                            <span class="text-[10px] font-bold text-blue-400/80" x-text="'Rp '+Number(detailData?.transfer_sales||0).toLocaleString('id-ID')"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -534,59 +577,25 @@
 
     {{-- MODAL TUTUP SHIFT --}}
     @if($activeShift)
-    <div x-show="showCloseModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div @click.away="showCloseModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6">
-            <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fas fa-lock text-red-400"></i> Tutup Shift</h3>
-            <p class="text-xs text-slate-400 mb-5">Masukkan jumlah uang fisik di laci kasir.</p>
-            <form action="{{ route('shifts.close', $activeShift) }}" method="POST">
-                @csrf
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Uang Fisik di Laci (Rp)</label>
-                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                            <input type="number" name="closing_cash" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20" placeholder="Hitung uang fisik">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Catatan (opsional)</label>
-                        <textarea name="notes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-red-500"></textarea>
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" @click="showCloseModal=false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm">Batal</button>
-                        <button type="submit" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-red-500/20"><i class="fas fa-lock mr-1"></i>Tutup Shift</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+        @include('components.modals.tutup-shift')
     @endif
 
     {{-- MODAL BUKA SHIFT --}}
-    <div x-show="showOpenModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div @click.away="showOpenModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6">
-            <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fas fa-door-open text-blue-400"></i> Buka Shift Baru</h3>
-            <p class="text-xs text-slate-400 mb-5">Masukkan jumlah modal kas awal di laci.</p>
-            <form action="{{ route('shifts.open') }}" method="POST">
-                @csrf
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Awal (Rp)</label>
-                        <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
-                            <input type="number" name="opening_cash" required min="0" value="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                        </div>
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" @click="showOpenModal=false" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl text-sm">Batal</button>
-                        <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20"><i class="fas fa-play mr-1"></i>Buka Shift</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    @include('components.modals.buka-shift')
 
 </div>
 
 <script>
+function setQuickPeriod(p) {
+    document.getElementById('period_input').value = p;
+    if (p === 'custom') {
+        window.showCustomDates = true;
+        // Kita tidak langsung submit jika custom, agar user bisa pilih tanggal
+        return;
+    }
+    document.getElementById('filter-form').submit();
+}
+
 function shiftDashboardApp() {
     return {
         isModalOpen: false,
@@ -594,7 +603,7 @@ function shiftDashboardApp() {
         detailLoading: false,
         detailData: null,
         showCloseModal: false,
-        showOpenModal: false,
+        showOpenModal: {{ request('open') ? 'true' : 'false' }},
         showEditModal: false,
 
         editOpening: 0,

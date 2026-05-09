@@ -29,19 +29,19 @@
 
         <div class="flex flex-col lg:flex-row gap-4 pt-4 border-t border-white/5">
             <form method="GET" class="flex-1 flex flex-wrap items-center gap-3">
-                @if(request('status')) <input type="hidden" name="status" value="{{ request('status') }}"> @endif
+                @if(request('status') && !is_array(request('status'))) <input type="hidden" name="status" value="{{ request('status') }}"> @endif
                 
                 <div class="flex items-center gap-2 bg-slate-900/60 p-1 rounded-xl border border-white/5">
-                    <input type="date" name="date_from" value="{{ request('date_from') }}" 
+                    <input type="date" name="date_from" value="{{ is_array(request('date_from')) ? '' : request('date_from') }}" 
                            class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
                     <span class="text-slate-600 text-[10px] font-black">S/D</span>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}" 
+                    <input type="date" name="date_to" value="{{ is_array(request('date_to')) ? '' : request('date_to') }}" 
                            class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
                 </div>
 
                 <div class="relative group flex-1 max-w-sm">
                     <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[10px] group-focus-within:text-blue-400 transition-colors"></i>
-                    <input type="text" name="search" value="{{ request('search') }}" 
+                    <input type="text" name="search" value="{{ is_array(request('search')) ? '' : request('search') }}" 
                            class="w-full bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-[11px] text-white font-bold placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all" 
                            placeholder="Cari No. Invoice atau Client...">
                 </div>
@@ -120,6 +120,9 @@
                                 <a href="{{ route('invoices.show', $invoice) }}" class="w-8 h-8 rounded-lg bg-slate-700/50 hover:bg-blue-600 text-slate-300 hover:text-white flex items-center justify-center transition-all" title="Lihat & Kelola Pembayaran">
                                     <i class="fas fa-eye text-xs"></i>
                                 </a>
+                                <a href="{{ route('invoices.edit', $invoice) }}" class="w-8 h-8 rounded-lg bg-slate-700/50 hover:bg-amber-600 text-slate-300 hover:text-white flex items-center justify-center transition-all" title="Edit Invoice">
+                                    <i class="fas fa-pencil-alt text-xs"></i>
+                                </a>
                                 <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="w-8 h-8 rounded-lg bg-slate-700/50 hover:bg-emerald-600 text-slate-300 hover:text-white flex items-center justify-center transition-all" title="Download PDF">
                                     <i class="fas fa-download text-xs"></i>
                                 </a>
@@ -164,19 +167,19 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6 shadow-xl border-l-blue-500/50">
             <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Total Piutang</p>
-            <h3 class="text-2xl font-black text-white">Rp {{ number_format($invoices->sum('total_amount'), 0, ',', '.') }}</h3>
+            <h3 class="text-2xl font-black text-white">Rp {{ number_format($totalPiutang, 0, ',', '.') }}</h3>
         </div>
         <div class="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6 shadow-xl border-l-emerald-500/50">
             <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Total Dibayar</p>
-            <h3 class="text-2xl font-black text-white">Rp {{ number_format($invoices->sum('paid_amount'), 0, ',', '.') }}</h3>
+            <h3 class="text-2xl font-black text-white">Rp {{ number_format($totalDibayar, 0, ',', '.') }}</h3>
         </div>
         <div class="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6 shadow-xl border-l-red-500/50">
             <p class="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Total Sisa Tagihan</p>
-            <h3 class="text-2xl font-black text-white">Rp {{ number_format($invoices->sum('total_amount') - $invoices->sum('paid_amount'), 0, ',', '.') }}</h3>
+            <h3 class="text-2xl font-black text-white">Rp {{ number_format($totalSisa, 0, ',', '.') }}</h3>
         </div>
         <div class="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6 shadow-xl border-l-amber-500/50">
             <p class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Invoice Menunggu</p>
-            <h3 class="text-2xl font-black text-white">{{ $invoices->where('status', 'pending')->count() }}</h3>
+            <h3 class="text-2xl font-black text-white">{{ $invoiceMenunggu }}</h3>
         </div>
     </div>
 </div>

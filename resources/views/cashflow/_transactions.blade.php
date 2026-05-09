@@ -20,13 +20,27 @@
                 @php $currentDate = $txDate; @endphp
             @endif
 
-            <div class="relative flex flex-col md:flex-row md:items-center gap-5 group p-5 bg-slate-800/20 border border-white/5 hover:bg-slate-800/60 rounded-[1.5rem] transition-premium md:pl-20 tx-item shadow-sm hover:shadow-xl" data-type="{{ $c->type }}" data-category="{{ $c->category }}">
+            <div class="relative flex flex-col md:flex-row md:items-center gap-5 group p-5 bg-slate-800/20 border border-white/5 hover:bg-slate-800/60 rounded-[1.5rem] transition-premium md:pl-20 tx-item shadow-sm hover:shadow-xl" data-type="{{ $c->type }}" data-category="{{ $c->category }}" data-transaction-category="{{ $c->transaction_category }}">
                 <!-- Dot Marker -->
-                <div class="hidden md:flex absolute left-[1.85rem] w-4 h-4 rounded-full border-[3px] border-[#0f172a] {{ $c->type == 'income' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' }} z-10 transition-transform group-hover:scale-125"></div>
+                @php
+                    $dotColor = $c->transaction_category == 'adjustment' ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : ($c->type == 'income' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]');
+                @endphp
+                <div class="hidden md:flex absolute left-[1.85rem] w-4 h-4 rounded-full border-[3px] border-[#0f172a] {{ $dotColor }} z-10 transition-transform group-hover:scale-125"></div>
 
                 <div class="flex items-center gap-5 flex-1">
-                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-premium {{ $c->type == 'income' ? 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white' : 'bg-red-500/10 text-red-400 group-hover:bg-red-500 group-hover:text-white' }} shadow-inner">
-                        <i class="fas {{ $c->type == 'income' ? 'fa-arrow-down' : 'fa-arrow-up' }} text-xl"></i>
+                    @php
+                        $iconBg = $c->transaction_category == 'adjustment' ? 'bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-white' : ($c->type == 'income' ? 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white' : 'bg-red-500/10 text-red-400 group-hover:bg-red-500 group-hover:text-white');
+                        
+                        $icon = ($c->type == 'income' ? 'fa-arrow-down' : 'fa-arrow-up');
+                        if ($c->transaction_category == 'adjustment') {
+                            if (str_contains(strtolower($c->category), 'audit')) $icon = 'fa-shield-alt';
+                            elseif (str_contains(strtolower($c->category), 'transfer')) $icon = 'fa-exchange-alt';
+                            elseif (str_contains(strtolower($c->category), 'koreksi') || str_contains(strtolower($c->category), 'manual')) $icon = 'fa-sliders-h';
+                            else $icon = 'fa-balance-scale';
+                        }
+                    @endphp
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-premium {{ $iconBg }} shadow-inner">
+                        <i class="fas {{ $icon }} text-xl"></i>
                     </div>
                     <div class="min-w-0">
                         <p class="text-base font-black text-white tracking-tight">{{ $c->category }}</p>
@@ -45,21 +59,22 @@
                                 
                                 // Category Specific Badges
                                 $catBadge = '';
-                                if ($c->category == 'Penjualan') {
+                                if ($c->transaction_category == 'adjustment') {
+                                    $catBadge = '<span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-lg shadow-amber-900/20"><i class="fas fa-shield-check mr-1.5"></i>ADJUSTMENT</span>';
+                                } elseif ($c->category == 'Penjualan') {
                                     $catBadge = '<span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fas fa-shopping-cart mr-1.5"></i>Penjualan</span>';
-                                } elseif ($c->category == 'Input Saldo Manual') {
-                                    $catBadge = '<span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20"><i class="fas fa-plus-circle mr-1.5"></i>Manual</span>';
                                 } elseif ($c->category == 'Transfer Internal') {
                                     $catBadge = '<span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"><i class="fas fa-exchange-alt mr-1.5"></i>Transfer</span>';
-                                } elseif ($c->category == 'Modal Awal Kasir') {
-                                    $catBadge = '<span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="fas fa-door-open mr-1.5"></i>Modal Awal</span>';
                                 }
                             @endphp
                             {!! $catBadge !!}
-                            <span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest border {{ $badgeColor }}">{{ $sourceBadge }}</span>
-                            @if($c->worksheet)
-                                <span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest bg-slate-800 text-slate-500 border border-white/5" title="Cabang / Worksheet"><i class="fas fa-store-alt mr-1.5"></i>{{ $c->worksheet->name }}</span>
-                            @endif
+                             <span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest {{ $c->type == 'income' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'bg-red-600 text-white shadow-lg shadow-red-900/20' }}">
+                                 {{ $c->type == 'income' ? 'Masuk' : 'Keluar' }}
+                             </span>
+                             <span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest border {{ $badgeColor }}">{{ $sourceBadge }}</span>
+                             @if($c->worksheet)
+                                 <span class="px-2 py-0.5 rounded-lg text-[9px] uppercase font-black tracking-widest bg-slate-800 text-slate-500 border border-white/5" title="Cabang / Worksheet"><i class="fas fa-store-alt mr-1.5"></i>{{ $c->worksheet->name }}</span>
+                             @endif
                         </div>
                     </div>
                 </div>

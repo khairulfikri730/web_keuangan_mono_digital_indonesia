@@ -10,7 +10,7 @@ class Cashflow extends Model
     use HasFactory, \App\Traits\BelongsToWorksheet;
 
     protected $fillable = [
-        'worksheet_id', 'user_id', 'shift_id', 'type', 'category', 'description',
+        'worksheet_id', 'user_id', 'shift_id', 'type', 'transaction_category', 'category', 'description',
         'amount', 'reference', 'reference_id', 'reference_type', 'source', 'bank_sync_status', 'transaction_date', 'notes',
     ];
 
@@ -31,12 +31,17 @@ class Cashflow extends Model
 
     public function scopeIncome($query)
     {
-        return $query->where('type', 'income');
+        return $query->where('transaction_category', 'income');
     }
 
     public function scopeExpense($query)
     {
-        return $query->where('type', 'expense');
+        return $query->where('transaction_category', 'expense');
+    }
+
+    public function scopeAdjustment($query)
+    {
+        return $query->where('transaction_category', 'adjustment');
     }
 
     public function scopePendingBank($query)

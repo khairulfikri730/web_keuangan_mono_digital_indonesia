@@ -25,7 +25,7 @@
                 <p class="text-sm text-red-300/70">Buka shift terlebih dahulu agar kasir bisa beroperasi.</p>
             </div>
             @if(auth()->user()->isOwner())
-            <a href="{{ route('shifts.index') }}" class="ml-auto btn-primary whitespace-nowrap">Buka Shift</a>
+            <a href="{{ route('shifts.index', ['open' => 1]) }}" class="ml-auto btn-primary whitespace-nowrap">Buka Shift</a>
             @endif
         </div>
     @endif

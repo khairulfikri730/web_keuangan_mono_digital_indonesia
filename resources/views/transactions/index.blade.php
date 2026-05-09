@@ -108,22 +108,9 @@
                 </button>
             </div>
 
-            {{-- Date Filter --}}
-            <form id="dateFilterForm" method="GET" class="flex items-center gap-2">
-                @foreach(request()->except(['date_from', 'date_to', 'page']) as $key => $val)
-                    @if($val) <input type="hidden" name="{{ $key }}" value="{{ $val }}"> @endif
-                @endforeach
-                <div class="flex items-center gap-2 bg-slate-900/60 p-1 rounded-xl border border-white/5">
-                    <input type="date" name="date_from" value="{{ request('date_from', now()->format('Y-m-d')) }}" 
-                           class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
-                    <span class="text-slate-600 text-[10px] font-black">S/D</span>
-                    <input type="date" name="date_to" value="{{ request('date_to', now()->format('Y-m-d')) }}" 
-                           class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
-                    <button type="submit" class="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-500 transition-all">
-                        <i class="fas fa-search text-xs"></i>
-                    </button>
-                </div>
-            </form>
+            <div class="flex items-center gap-2">
+                {{-- Date filter removed as per user request --}}
+            </div>
         </div>
 
         @if(request('type') !== 'expense')
@@ -173,10 +160,10 @@
 
             <form method="GET" class="relative group">
                 @foreach(request()->except(['search','page']) as $key => $val)
-                    @if($val) <input type="hidden" name="{{ $key }}" value="{{ $val }}"> @endif
+                    @if($val && !is_array($val)) <input type="hidden" name="{{ $key }}" value="{{ $val }}"> @endif
                 @endforeach
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs group-focus-within:text-blue-400 transition-colors"></i>
-                <input type="text" name="search" value="{{ request('search') }}" 
+                <input type="text" name="search" value="{{ is_array(request('search')) ? '' : request('search') }}" 
                        class="bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none w-64 transition-all" 
                        placeholder="Cari Invoice atau Pelanggan...">
             </form>
@@ -242,16 +229,23 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-4">
-                                    <div class="max-w-[200px]">
+                                    <div class="max-w-[250px]">
                                         @php $itemCount = $model->items->count(); @endphp
-                                        <p class="text-xs font-medium text-slate-400 truncate">
-                                            @if($itemCount > 0)
-                                                {{ $model->items->first()->product_name }}
-                                                @if($itemCount > 1) <span class="text-[10px] text-slate-600"> +{{ $itemCount - 1 }} lainnya</span> @endif
-                                            @else
-                                                -
-                                            @endif
-                                        </p>
+                                        @if($itemCount > 0)
+                                            @php $firstItem = $model->items->first(); @endphp
+                                            <p class="text-xs font-medium text-slate-300 flex items-center gap-1 flex-wrap">
+                                                <span>{{ $firstItem->product_name }}</span>
+                                                @if($firstItem->is_custom_price)
+                                                    <span class="bg-orange-100 text-orange-600 border border-orange-200 text-[8px] font-black px-1 py-0.5 rounded uppercase" title="Harga Khusus">Khusus</span>
+                                                @endif
+                                            </p>
+                                            <p class="text-[10px] text-slate-500 mt-0.5">
+                                                {{ $firstItem->quantity }}x @ Rp {{ number_format($firstItem->is_custom_price ? $firstItem->custom_price : $firstItem->price, 0, ',', '.') }}
+                                                @if($itemCount > 1) <span class="text-slate-400 ml-1 font-bold">+{{ $itemCount - 1 }} lainnya</span> @endif
+                                            </p>
+                                        @else
+                                            <p class="text-xs font-medium text-slate-400 truncate">-</p>
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="px-4 py-4 text-center">
@@ -287,7 +281,9 @@
                                             <a href="{{ route('transactions.show', $model) }}" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Edit"><i class="fas fa-pencil text-xs"></i></a>
                                         @endif
                                         {{-- Print --}}
-                                        <button @click="doPrint('{{ $model->id }}')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Print"><i class="fas fa-print text-xs"></i></button>
+                                        <button @click="doPrint('{{ $model->id }}')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Print Struk POS"><i class="fas fa-print text-xs"></i></button>
+                                        {{-- Invoice Generator --}}
+                                        <a href="{{ route('invoices.create', ['transaction_id' => $model->id]) }}" class="w-8 h-8 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 flex items-center justify-center transition-all" title="Buat Invoice (Official)"><i class="fas fa-file-invoice text-xs"></i></a>
                                         {{-- Hapus --}}
                                         @if(auth()->user()->isOwner())
                                             <form action="{{ route('transactions.cancel', $model) }}" method="POST" class="inline">@csrf
@@ -323,8 +319,13 @@
                                         @foreach($model->items as $item)
                                         <div class="flex justify-between text-sm">
                                             <div>
-                                                <p class="font-bold text-slate-800">{{ $item->product_name }}</p>
-                                                <p class="text-slate-400 text-xs">{{ $item->quantity }}x @ Rp {{ number_format($item->price, 0, ',', '.') }}</p>
+                                                <div class="flex items-center gap-1.5">
+                                                    <p class="font-bold text-slate-800">{{ $item->product_name }}</p>
+                                                    @if($item->is_custom_price)
+                                                        <span class="bg-orange-100 text-orange-600 border border-orange-200 text-[8px] font-black px-1.5 py-0.5 rounded uppercase" title="Harga Khusus">Khusus</span>
+                                                    @endif
+                                                </div>
+                                                <p class="text-slate-400 text-xs">{{ $item->quantity }}x @ Rp {{ number_format($item->is_custom_price ? $item->custom_price : $item->price, 0, ',', '.') }}</p>
                                             </div>
                                             <p class="font-bold text-slate-700">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</p>
                                         </div>

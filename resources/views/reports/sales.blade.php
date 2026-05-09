@@ -54,12 +54,12 @@
                 <div class="col-span-1 md:col-span-2 flex items-center gap-3">
                     <div class="w-full relative group">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block"><i class="far fa-calendar-alt mr-1"></i> Tanggal Awal</label>
-                        <input type="date" id="date_from" name="date_from" value="{{ request('date_from', $dateFrom->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0f172a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all placeholder-slate-500/60 group-hover:shadow-sm">
+                        <input type="date" id="date_from" name="date_from" value="{{ is_array(request('date_from')) ? ($dateFrom ? $dateFrom->format('Y-m-d') : '') : request('date_from', $dateFrom->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0f172a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all placeholder-slate-500/60 group-hover:shadow-sm">
                     </div>
                     <span class="text-slate-600 font-black self-end mb-3">-</span>
                     <div class="w-full relative group">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block"><i class="far fa-calendar-check mr-1"></i> Tanggal Akhir</label>
-                        <input type="date" id="date_to" name="date_to" value="{{ request('date_to', $dateTo->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0f172a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all placeholder-slate-500/60 group-hover:shadow-sm">
+                        <input type="date" id="date_to" name="date_to" value="{{ is_array(request('date_to')) ? ($dateTo ? $dateTo->format('Y-m-d') : '') : request('date_to', $dateTo->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0f172a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all placeholder-slate-500/60 group-hover:shadow-sm">
                     </div>
                 </div>
                 

@@ -222,12 +222,32 @@
     </div>
 
     {{-- SECTION: AI INSIGHTS --}}
-    @if(in_array('ai_insights', $meta['sections']) && isset($ai_insights))
+    @if(isset($ai_insights) && is_array($ai_insights) && count($ai_insights))
     <div class="section-header uppercase">Insight Bisnis Otomatis</div>
-    <div class="insight-box">
+    <div class="insight-box" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
         @foreach($ai_insights as $insight)
-            <div class="insight-item">{{ $insight }}</div>
+            @if(is_array($insight))
+                @php
+                    $borderColor = '#3b82f6'; // default info/blue
+                    if(($insight['type'] ?? '') == 'success') $borderColor = '#10b981';
+                    if(($insight['type'] ?? '') == 'warning') $borderColor = '#f59e0b';
+                    if(($insight['type'] ?? '') == 'danger') $borderColor = '#ef4444';
+                @endphp
+                <div class="insight-item" style="margin-bottom: 15px; padding: 12px 15px; background: white; border-left: 4px solid {{ $borderColor }}; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="font-size: 10px; font-weight: 900; color: #1e293b; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">{{ $insight['title'] ?? 'Analisa Sistem' }}</div>
+                    <div style="font-size: 9px; color: #64748b; line-height: 1.4;">{{ $insight['text'] ?? ($insight['description'] ?? '-') }}</div>
+                </div>
+            @else
+                <div class="insight-item" style="margin-bottom: 10px; padding: 10px 15px; background: white; border-left: 4px solid #10b981; border-radius: 4px; font-size: 9px; color: #334155;">
+                    {{ $insight }}
+                </div>
+            @endif
         @endforeach
+    </div>
+    @else
+    <div class="section-header uppercase">Insight Bisnis Otomatis</div>
+    <div class="insight-box" style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; border-radius: 12px; text-align: center; color: #94a3b8; font-style: italic;">
+        Tidak ada analisa insight tersedia untuk periode ini.
     </div>
     @endif
 

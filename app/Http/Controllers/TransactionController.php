@@ -13,18 +13,30 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
+    protected $financialService;
+
+    public function __construct(\App\Services\FinancialReportService $financialService)
+    {
+        $this->financialService = $financialService;
+    }
+
     public function index(Request $request)
     {
         $users = \App\Models\User::all();
         $worksheetId = session('active_worksheet_id');
 
+        // --- Strict Date Filter (Today Only) ---
+        $dateFrom = today()->toDateString();
+        $dateTo = today()->toDateString();
+
         // --- Filter by status pill ---
-        $statusFilter = $request->status; // 'piutang', 'lunas', or null
+        $sParam = $request->status;
+        $statusFilter = is_array($sParam) ? null : $sParam; // 'piutang', 'lunas', or null
 
         // --- Build transaction items ---
         $txQuery = Transaction::with(['user', 'items'])
-            ->when($request->date_from, fn($q) => $q->whereDate('created_at', '>=', $request->date_from))
-            ->when($request->date_to, fn($q) => $q->whereDate('created_at', '<=', $request->date_to))
+            ->whereDate('created_at', '>=', $dateFrom)
+            ->whereDate('created_at', '<=', $dateTo)
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->payment_method, fn($q) => $q->where('payment_method', $request->payment_method))
             ->when($statusFilter === 'piutang', fn($q) => $q->where('status', 'pending'))
@@ -37,10 +49,10 @@ class TransactionController extends Controller
 
         // --- Build expense items ---
         $expenseQuery = Cashflow::with('user')
-            ->where('type', 'expense')
+            ->where('transaction_category', 'expense')
             ->whereNull('reference')
-            ->when($request->date_from, fn($q) => $q->whereDate('transaction_date', '>=', $request->date_from))
-            ->when($request->date_to, fn($q) => $q->whereDate('transaction_date', '<=', $request->date_to))
+            ->whereDate('transaction_date', '>=', $dateFrom)
+            ->whereDate('transaction_date', '<=', $dateTo)
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->search, fn($q) => $q->where('description', 'like', "%{$request->search}%"))
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
@@ -86,7 +98,7 @@ class TransactionController extends Controller
 
         // --- Pill filter counts ---
         $baseTx = Transaction::when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
-        $baseExp = Cashflow::where('type', 'expense')->whereNull('reference')
+        $baseExp = Cashflow::where('transaction_category', 'expense')->whereNull('reference')
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
 
         $countPenjualan = (clone $baseTx)->count();
@@ -107,7 +119,7 @@ class TransactionController extends Controller
         $saldoLaciAwal = 0;
         if ($activeShift) {
             $cashSalesInShift = Transaction::where('shift_id', $activeShift->id)->completed()->where('payment_method', 'cash')->sum('total');
-            $cashExpInShift = Cashflow::where('shift_id', $activeShift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+            $cashExpInShift = Cashflow::where('shift_id', $activeShift->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
             $saldoLaciAwal = (float) $activeShift->opening_cash;
             $saldoLaci = $saldoLaciAwal + $cashSalesInShift - $cashExpInShift;
         }
@@ -118,14 +130,11 @@ class TransactionController extends Controller
         $bankExpense = (clone $baseBank)->where('type', 'expense')->sum('amount');
         $saldoBank = $bankIncome - $bankExpense;
 
-        $todayTotalSales = (clone $baseTx)->completed()->whereDate('created_at', today())->sum('total');
-        $todayExpenses = (clone $baseExp)->whereDate('transaction_date', today())
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            })
-            ->sum('amount');
-        $todayNet = $todayTotalSales - $todayExpenses;
+        // --- Stats from Unified Service ---
+        $todaySummary = $this->financialService->getSummary(\Carbon\Carbon::parse($dateFrom), \Carbon\Carbon::parse($dateTo), $worksheetId);
+        $todayTotalSales = $todaySummary->total_income;
+        $todayExpenses = $todaySummary->total_expense;
+        $todayNet = $todaySummary->net_profit;
         $totalPiutang = (clone $baseTx)->piutang()->get()->sum(fn($t) => $t->total - $t->paid_so_far);
 
         $todayQris = (clone $baseTx)->completed()->whereDate('created_at', today())->where('payment_method', 'qris')->sum('total');
@@ -283,7 +292,9 @@ class TransactionController extends Controller
         Cashflow::create([
             'user_id' => auth()->id(),
             'shift_id' => $transaction->shift_id,
+            'worksheet_id' => $transaction->worksheet_id,
             'type' => 'expense',
+            'transaction_category' => 'expense',
             'category' => 'Refund / Retur',
             'description' => 'Refund POS - Batal ' . $transaction->invoice_number,
             'amount' => $transaction->total,

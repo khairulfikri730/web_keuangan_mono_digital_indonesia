@@ -15,7 +15,8 @@ class ProductController extends Controller
         $query = Product::with('category');
 
         // Filter by product type (tab)
-        $productType = $request->get('product_type', 'finished');
+        $ptParam = $request->get('product_type', 'finished');
+        $productType = is_array($ptParam) ? 'finished' : $ptParam;
         $query->where('product_type', $productType);
 
         // Search

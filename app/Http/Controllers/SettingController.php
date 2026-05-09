@@ -14,7 +14,10 @@ class SettingController extends Controller
             'store_footer', 'currency', 'tax_rate', 'store_logo',
             'active_payment_methods',
             'bank_name', 'bank_account', 'bank_holder', 'qris_image',
-            'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines'
+            'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines',
+            'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
+            'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
+            'custom_price_require_reason', 'custom_price_access'
         ]);
         $worksheets = \App\Models\Worksheet::all();
         return view('settings.index', compact('settings', 'worksheets'));
@@ -40,12 +43,24 @@ class SettingController extends Controller
             'printer_auto_print' => 'nullable|string',
             'printer_font_small' => 'nullable|string',
             'printer_feed_lines' => 'nullable|integer|min:0|max:15',
+            'printer_name' => 'nullable|string|max:100',
+            'printer_connection' => 'nullable|string|in:windows,usb,network',
+            'drawer_auto_open' => 'nullable|string',
+            'drawer_pulse_pin' => 'nullable|string|in:0,1',
+            'custom_price_enabled' => 'nullable|string',
+            'custom_price_allow_hpp' => 'nullable|string',
+            'custom_price_show_badge' => 'nullable|string',
+            'custom_price_require_reason' => 'nullable|string',
+            'custom_price_access' => 'nullable|string|in:all,admin_owner,owner',
         ]);
 
         $keys = [
             'store_name', 'store_address', 'store_phone', 'store_email', 'store_footer', 
             'currency', 'tax_rate', 'bank_name', 'bank_account', 'bank_holder',
-            'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines'
+            'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines',
+            'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
+            'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
+            'custom_price_require_reason', 'custom_price_access'
         ];
         foreach ($keys as $key) {
             Setting::set($key, $request->input($key));
@@ -65,5 +80,20 @@ class SettingController extends Controller
         }
 
         return back()->with('success', 'Pengaturan berhasil disimpan!');
+    }
+
+    public function testDrawer()
+    {
+        try {
+            $printerService = app(\App\Services\PrinterService::class);
+            $result = $printerService->openDrawer(null, true);
+            
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

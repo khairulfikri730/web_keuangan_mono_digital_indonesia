@@ -10,7 +10,8 @@ class StockController extends Controller
 {
     public function index(Request $request)
     {
-        $stockType = $request->stock_type; // 'habis_pakai', 'unlimited', or null
+        $stParam = $request->stock_type;
+        $stockType = is_array($stParam) ? 'finished' : $stParam; // 'habis_pakai', 'unlimited', or null
 
         $stocklessProductIds = Product::where('product_kind', 'unlimited')
             ->orWhere('product_kind', 'service')

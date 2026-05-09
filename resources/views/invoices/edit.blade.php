@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Buat Invoice — MONOFRAME')
+@section('title', 'Edit Invoice — MONOFRAME')
 
-@section('page-title', 'Buat Invoice Baru')
+@section('page-title', 'Edit Invoice: ' . $invoice->invoice_number)
 
 @section('content')
-<div class="h-full pb-10" x-data="invoiceGenerator()">
+<div class="h-full pb-10" x-data="invoiceEditor()">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {{-- LEFT COLUMN: FORM (7/12) --}}
@@ -154,8 +154,8 @@
                         <i class="fas fa-hand-holding-dollar"></i>
                     </div>
                     <div>
-                        <h3 class="text-sm font-black text-white uppercase tracking-widest">DP & Diskon</h3>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Pengaturan pembayaran awal</p>
+                        <h3 class="text-sm font-black text-white uppercase tracking-widest">DP & Pembayaran</h3>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Pengaturan pembayaran awal & diskon</p>
                     </div>
                 </div>
 
@@ -183,7 +183,7 @@
                         <div>
                             <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Nominal DP (Rp)</label>
                             <div class="mt-14"></div>
-                            <input type="number" x-model.number="initialPayment" @input="calculateFromAmount()" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-black focus:outline-none focus:border-cyan-500 transition-all">
+                            <input type="number" x-model.number="paidAmount" @input="calculateFromAmount()" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-black focus:outline-none focus:border-cyan-500 transition-all">
                         </div>
                     </div>
 
@@ -203,6 +203,15 @@
                                 <option value="tunai">TUNAI</option>
                                 <option value="transfer">TRANSFER BANK</option>
                                 <option value="qris">QRIS</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Status Invoice</label>
+                            <select x-model="invoiceStatus" class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-blue-500 transition-all cursor-pointer uppercase font-black">
+                                <option value="pending">🟡 PENDING / MENUNGGU</option>
+                                <option value="partial">🔵 DP DIBAYAR</option>
+                                <option value="paid">🟢 LUNAS</option>
+                                <option value="overdue">🔴 JATUH TEMPO</option>
                             </select>
                         </div>
                     </div>
@@ -338,18 +347,14 @@
                                             <span class="text-2xl font-black text-slate-900" x-text="formatCurrency(total)"></span>
                                         </div>
                                         
-                                        <div x-show="initialPayment > 0" x-transition class="space-y-4 pt-4 border-t border-slate-100">
+                                        <div x-show="paidAmount > 0" x-transition class="space-y-4 pt-4 border-t border-slate-100">
                                             <div class="flex justify-between text-[15px] font-black text-emerald-600">
-                                                <span>JUMLAH DIBAYAR</span>
-                                                <span x-text="formatCurrency(initialPayment)"></span>
-                                            </div>
-                                            <div class="flex justify-between text-[15px]">
-                                                <span class="text-[13px] font-black text-slate-500 uppercase tracking-widest">METODE PEMBAYARAN</span>
-                                                <span class="text-[14px] font-black text-slate-900 uppercase" x-text="paymentMethod"></span>
+                                                <span>TOTAL DIBAYAR</span>
+                                                <span x-text="formatCurrency(paidAmount)"></span>
                                             </div>
                                             <div class="flex justify-between text-[15px]">
                                                 <span class="text-[13px] font-black text-slate-500 uppercase tracking-widest">SISA TAGIHAN</span>
-                                                <span class="text-2xl font-black text-red-500" x-text="formatCurrency(total - initialPayment)"></span>
+                                                <span class="text-2xl font-black text-red-500" x-text="formatCurrency(total - paidAmount)"></span>
                                             </div>
                                         </div>
                                     </div>
@@ -367,16 +372,13 @@
 
                 {{-- STICKY ACTIONS --}}
                 <div class="bg-slate-800/95 backdrop-blur-xl border-t border-slate-700/50 p-6 shadow-2xl">
-                    <button @click="submitAndDownload()" :disabled="isSubmitting" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 mb-4">
-                        <i class="fas fa-file-pdf"></i> Download PDF Invoice
+                    <button @click="updateInvoice()" :disabled="isSubmitting" class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 mb-4">
+                        <i class="fas fa-save"></i> Simpan Perubahan
                     </button>
                     <div class="flex gap-3">
-                        <button @click="submitInvoice()" :disabled="isSubmitting" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-600 transition-all">
-                            <i class="fas fa-save mr-2"></i> Simpan
-                        </button>
-                        <button @click="resetForm()" class="flex-1 bg-slate-900/50 hover:bg-slate-800 text-slate-400 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-700 transition-all">
-                            <i class="fas fa-undo mr-2"></i> Reset
-                        </button>
+                        <a href="{{ route('invoices.index') }}" class="flex-1 bg-slate-900/50 hover:bg-slate-800 text-slate-400 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-700 transition-all text-center">
+                            <i class="fas fa-arrow-left mr-2"></i> Batal
+                        </a>
                     </div>
                 </div>
             </div>
@@ -386,44 +388,38 @@
 
 @push('scripts')
 <script>
-    function invoiceGenerator() {
+    function invoiceEditor() {
         return {
             isSubmitting: false,
             mobilePreviewOpen: false,
-            invoiceNumber: '{{ $invoiceNumber }}',
-            date: '{{ $transaction ? $transaction->created_at->format('Y-m-d') : date('Y-m-d') }}',
-            dueDate: '',
+            invoiceNumber: '{{ $invoice->invoice_number }}',
+            date: '{{ $invoice->date->format('Y-m-d') }}',
+            dueDate: '{{ $invoice->due_date ? $invoice->due_date->format('Y-m-d') : '' }}',
             business: {
-                name: '{{ \App\Models\Setting::get('store_name', 'MONOFRAME STUDIO') }}',
-                email: 'monoframestudio01@gmail.com',
-                phone: '082323426600',
-                address: 'Jl. Srigunting No.6, Air Tawar Bar., Kec. Padang Utara, Kota Padang, Sumatera Barat 25132'
+                name: '{{ $invoice->business_name }}',
+                email: '{{ $invoice->business_email }}',
+                phone: '{{ $invoice->business_phone }}',
+                address: '{{ $invoice->business_address }}'
             },
             client: {
-                name: '{{ $transaction ? $transaction->customer_name : '' }}',
-                company: '',
-                phone: '{{ $transaction ? $transaction->customer_phone : '' }}',
-                email: '',
-                address: ''
+                name: '{{ $invoice->client_name }}',
+                company: '{{ $invoice->client_company }}',
+                phone: '{{ $invoice->client_phone }}',
+                email: '{{ $invoice->client_email }}',
+                address: '{{ $invoice->client_address }}'
             },
-            items: [
-                @if($transaction && $transaction->items->count() > 0)
-                    @foreach($transaction->items as $item)
-                    { name: '{{ str_replace("'", "\\'", $item->product_name) }}', quantity: {{ $item->quantity }}, price: {{ $item->price }} },
-                    @endforeach
-                @else
-                    { name: '', quantity: 1, price: 0 }
-                @endif
-            ],
+            items: @json($invoice->items->map(fn($i) => ['name' => $i->name, 'quantity' => $i->quantity, 'price' => $i->price])),
             
-            discountType: 'fixed',
-            discountValue: {{ $transaction ? $transaction->discount : 0 }},
+            discountType: '{{ $invoice->discount_type }}',
+            discountValue: {{ $invoice->discount_value }},
             
-            useDP: {{ $transaction && $transaction->isPiutang() ? 'true' : 'false' }},
-            dpPercent: 0,
-            initialPayment: {{ $transaction ? $transaction->paid_so_far : 0 }},
-            paymentMethod: '{{ $transaction ? $transaction->payment_method : 'transfer' }}',
-            notes: '{{ $transaction ? str_replace(["\r", "\n"], " ", $transaction->notes) : 'Terima kasih telah menggunakan layanan MONOFRAME STUDIO.' }}',
+            useDP: {{ $invoice->paid_amount > 0 ? 'true' : 'false' }},
+            dpPercent: {{ $invoice->total_amount > 0 ? round(($invoice->paid_amount / $invoice->total_amount) * 100) : 0 }},
+            paidAmount: {{ $invoice->paid_amount }},
+            
+            paymentMethod: '{{ $invoice->payments->first()->payment_method ?? 'transfer' }}',
+            invoiceStatus: '{{ $invoice->status }}',
+            notes: '{{ str_replace(["\r", "\n"], " ", $invoice->notes) }}',
 
             addItem() {
                 this.items.push({ name: '', quantity: 1, price: 0 });
@@ -452,25 +448,29 @@
 
             get progress() {
                 if (this.total <= 0) return 0;
-                return Math.min(100, Math.round((this.initialPayment / this.total) * 100));
+                return Math.min(100, Math.round((this.paidAmount / this.total) * 100));
             },
 
             get status() {
-                if (this.initialPayment >= this.total && this.total > 0) return 'paid';
-                if (this.initialPayment > 0) return 'partial';
+                if (this.paidAmount >= this.total && this.total > 0) return 'paid';
+                if (this.paidAmount > 0) return 'partial';
                 return 'pending';
             },
 
             get statusLabel() {
+                if (this.invoiceStatus !== '{{ $invoice->status }}') {
+                    // If manually changed
+                    const labels = {
+                        'paid': 'Lunas',
+                        'partial': 'DP Diterima',
+                        'pending': 'Pending',
+                        'overdue': 'Jatuh Tempo'
+                    };
+                    return labels[this.invoiceStatus];
+                }
                 if (this.status === 'paid') return 'Lunas';
                 if (this.status === 'partial') return 'DP ' + this.progress + '% Diterima';
                 return 'Pending';
-            },
-
-            get statusBadgeIcon() {
-                if (this.status === 'paid') return '🟢';
-                if (this.status === 'partial') return '🔵';
-                return '🟡';
             },
 
             applyDPPercent(p) {
@@ -479,12 +479,12 @@
             },
 
             calculateFromPercent() {
-                this.initialPayment = Math.round((this.dpPercent / 100) * this.total);
+                this.paidAmount = Math.round((this.dpPercent / 100) * this.total);
             },
 
             calculateFromAmount() {
                 if (this.total > 0) {
-                    this.dpPercent = Math.round((this.initialPayment / this.total) * 100);
+                    this.dpPercent = Math.round((this.paidAmount / this.total) * 100);
                 }
             },
 
@@ -497,20 +497,14 @@
                 return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
             },
 
-            resetForm() {
-                if(confirm('Reset semua data form?')) {
-                    location.reload();
-                }
-            },
-
-            async submitInvoice(redirect = true) {
+            async updateInvoice() {
                 if (!this.client.name) return Toast.fire({ icon: 'error', title: 'Nama Client harus diisi!' });
                 if (this.items.some(i => !i.name)) return Toast.fire({ icon: 'error', title: 'Nama semua item harus diisi!' });
 
                 this.isSubmitting = true;
                 
                 try {
-                    const response = await fetch('{{ route("invoices.store") }}', {
+                    const response = await fetch('{{ route("invoices.update", $invoice) }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -518,6 +512,7 @@
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
+                            _method: 'PUT',
                             invoice_number: this.invoiceNumber,
                             date: this.date,
                             due_date: this.dueDate,
@@ -535,8 +530,9 @@
                             discount_value: this.discountValue,
                             discount: this.discount,
                             total_amount: this.total,
-                            initial_payment: this.initialPayment,
+                            initial_payment: this.paidAmount,
                             payment_method: this.paymentMethod,
+                            status: this.invoiceStatus,
                             notes: this.notes,
                             items: this.items
                         })
@@ -545,25 +541,14 @@
                     const data = await response.json();
                     
                     if (response.ok) {
-                        if (redirect) {
-                            window.location.href = '{{ route("invoices.index") }}';
-                        }
-                        return data.id; 
+                        window.location.href = '{{ route("invoices.index") }}';
                     } else {
-                        Toast.fire({ icon: 'error', title: data.message || 'Gagal menyimpan invoice.' });
+                        Toast.fire({ icon: 'error', title: data.message || 'Gagal memperbarui invoice.' });
                         this.isSubmitting = false;
                     }
                 } catch (e) {
                     Toast.fire({ icon: 'error', title: 'Terjadi kesalahan sistem.' });
                     this.isSubmitting = false;
-                }
-                return null;
-            },
-
-            async submitAndDownload() {
-                const id = await this.submitInvoice(false);
-                if (id) {
-                    window.location.href = `/invoices/${id}/pdf`;
                 }
             }
         }

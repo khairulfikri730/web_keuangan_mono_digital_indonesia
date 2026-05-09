@@ -49,7 +49,7 @@
                     <i class="far fa-clock text-blue-400"></i> <span></span>
                 </div>
                 
-                <a href="{{ route('shifts.index') }}" x-show="!activeShift && products.length > 0" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/30 flex items-center gap-2">
+                <a href="{{ route('shifts.index', ['open' => 1]) }}" x-show="!activeShift && products.length > 0" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/30 flex items-center gap-2">
                     <i class="fas fa-play"></i> <span class="hidden sm:inline">Buka Shift</span>
                 </a>
                 {{-- Jika ada shift aktif: tampilkan 2 tombol Cash Out & Tutup Shift --}}
@@ -65,7 +65,7 @@
         </div>
 
         {{-- SHIFT BANNER & BEP INFO --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 shrink-0">
+        <div class="mb-4 shrink-0">
             {{-- Shift Status --}}
             <div :class="activeShift ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-100 border-amber-300 text-amber-800'" class="border px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
                 <div class="flex items-center gap-3">
@@ -78,7 +78,7 @@
                     </div>
                 </div>
                 <template x-if="!activeShift && products.length > 0">
-                    <a href="{{ route('shifts.index') }}" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg shadow-amber-500/30">
+                    <a href="{{ route('shifts.index', ['open' => 1]) }}" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg shadow-amber-500/30">
                         Buka Shift
                     </a>
                 </template>
@@ -92,23 +92,6 @@
                     </button>
                 </div>
                 @endif
-            </div>
-
-            {{-- BEP Analysis Card --}}
-            <div class="bg-white border border-slate-200 px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-                        <i class="fas fa-chart-line text-lg"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimasi Balik Modal</p>
-                        <p class="text-sm font-black text-slate-800" x-text="bepMonths + ' Bulan Lagi'">-- Bulan Lagi</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pemasukan Bulan Ini</p>
-                    <p class="text-xs font-bold text-emerald-600" x-text="formatRp(monthlyRevenue)">Rp 0</p>
-                </div>
             </div>
         </div>
 
@@ -271,9 +254,14 @@
                     <template x-for="(item, index) in activeWorksheet.cart" :key="item.product_id + '-' + index">
                         <div class="flex gap-4 group">
                             <div class="flex-1">
-                                <h4 class="text-sm font-black text-slate-800" x-text="item.name"></h4>
+                                <div class="flex items-center gap-1">
+                                    <h4 class="text-sm font-black text-slate-800" x-text="item.name"></h4>
+                                    <template x-if="item.is_custom_price">
+                                        <span class="bg-orange-100 text-orange-600 border border-orange-200 text-[8px] font-black px-1.5 py-0.5 rounded uppercase ml-1" title="Harga Khusus">Khusus</span>
+                                    </template>
+                                </div>
                                 <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.price)"></span>
+                                    <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
                                     <span class="text-[10px] text-slate-300">×</span>
                                     <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5">
                                         <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
@@ -283,7 +271,7 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <p class="text-sm font-black text-slate-800" x-text="formatRp((item.price * item.quantity) - item.discount)"></p>
+                                <p class="text-sm font-black text-slate-800" x-text="formatRp(((item.is_custom_price ? item.custom_price : item.price) * item.quantity) - item.discount)"></p>
                                 <button @click="removeItem(index)" class="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase tracking-tighter mt-1">Hapus</button>
                             </div>
                         </div>
@@ -852,10 +840,14 @@
                     <span class="font-black text-slate-800">Rp {{ number_format($activeShift->opening_cash, 0, ',', '.') }}</span>
                 </div>
                 @php
-                    $closeCashSales = \App\Models\Transaction::where('shift_id', $activeShift->id)->completed()->where('payment_method', 'cash')->sum('total');
-                    $closeCashExp   = \App\Models\Cashflow::where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_cash')->sum('amount');
-                    $closeTotalTrx  = \App\Models\Transaction::where('shift_id', $activeShift->id)->completed()->count();
-                    $closeTotalSales= \App\Models\Transaction::where('shift_id', $activeShift->id)->completed()->sum('total');
+                    $closeCashSales = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->where('payment_method', 'cash')->sum('total');
+                    $closeQrisSales = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->where('payment_method', 'qris')->sum('total');
+                    $closeTransferSales = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->where('payment_method', 'transfer')->sum('total');
+                    $closeDebitSales = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->where('payment_method', 'debit')->sum('total');
+                    
+                    $closeCashExp   = \App\Models\Cashflow::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_cash')->sum('amount');
+                    $closeTotalTrx  = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->count();
+                    $closeTotalSales= \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->sum('total');
                     $closeExpected  = $activeShift->opening_cash + $closeCashSales - $closeCashExp;
                 @endphp
                 <div class="flex justify-between">
@@ -866,6 +858,26 @@
                     <span class="text-slate-500 font-medium">Total Penjualan</span>
                     <span class="font-black text-emerald-600">Rp {{ number_format($closeTotalSales, 0, ',', '.') }}</span>
                 </div>
+                
+                {{-- Breakdown --}}
+                <div class="space-y-1 ml-4 border-l-2 border-slate-100 pl-3 py-1">
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-slate-400 font-medium">Tunai</span>
+                        <span class="font-bold text-slate-600">Rp {{ number_format($closeCashSales, 0, ',', '.') }}</span>
+                    </div>
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-slate-400 font-medium">QRIS</span>
+                        <span class="font-bold text-slate-600">Rp {{ number_format($closeQrisSales, 0, ',', '.') }}</span>
+                    </div>
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-slate-400 font-medium">Transfer</span>
+                        <span class="font-bold text-slate-600">Rp {{ number_format($closeTransferSales, 0, ',', '.') }}</span>
+                    </div>
+                    <div x-show="{{ $closeDebitSales }} > 0" class="flex justify-between text-[11px]">
+                        <span class="text-slate-400 font-medium">Debit</span>
+                        <span class="font-bold text-slate-600">Rp {{ number_format($closeDebitSales, 0, ',', '.') }}</span>
+                    </div>
+                </div>
                 <div class="flex justify-between">
                     <span class="text-slate-500 font-medium">Pengeluaran Tunai</span>
                     <span class="font-black text-red-500">Rp {{ number_format($closeCashExp, 0, ',', '.') }}</span>
@@ -873,7 +885,7 @@
             </div>
 
             {{-- Expected Cash --}}
-            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex justify-between items-center">
+            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex justify-between items-center" id="expected-cash-container" data-expected="{{ $closeExpected }}">
                 <div>
                     <p class="text-xs font-black text-blue-600 uppercase tracking-wider">Expected Cash</p>
                     <p class="text-xs text-blue-500 mt-0.5">Modal + Tunai Masuk - Pengeluaran</p>
@@ -893,7 +905,7 @@
                            placeholder="Hitung uang di laci..."
                            oninput="formatTutupShift(this)">
                     <input type="hidden" name="closing_cash" id="closing_cash_raw" required>
-                    <p class="text-xs text-slate-400 mt-1.5 font-medium">
+                    <p class="text-xs text-slate-400 mt-1.5 font-medium min-h-[1.25rem] flex items-center" id="shift-diff-note">
                         <i class="fas fa-info-circle text-blue-400 mr-1"></i>
                         Selisih akan dihitung otomatis setelah menutup shift.
                     </p>
@@ -918,6 +930,94 @@
         </div>
     </div>
 </div>
+
+    {{-- MODAL CUSTOM HARGA (HARGA KHUSUS) --}}
+    <template x-teleport="body">
+        <div x-show="showCustomPriceModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+            <div @click.away="showCustomPriceModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden">
+                {{-- Header --}}
+                <div class="bg-gradient-to-r from-orange-500 to-amber-600 p-8 text-white relative">
+                    <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fas fa-tags text-7xl"></i></div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                <i class="fas fa-tags text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-black">Harga Khusus</h3>
+                                <p class="text-[10px] font-bold text-orange-100 uppercase tracking-widest mt-0.5 opacity-80" x-text="customPriceProduct ? customPriceProduct.name : ''"></p>
+                            </div>
+                        </div>
+                        <button @click="showCustomPriceModal = false" class="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-all">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-8 space-y-6">
+                    {{-- Input Harga Jual --}}
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Harga Jual Baru (Rp)</label>
+                        <div class="relative">
+                            <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">Rp</span>
+                            <input type="text" 
+                                   :value="customPriceInput"
+                                   @input="customPriceInput = formatInput($event.target.value); customPriceInputRaw = parseInput($event.target.value)"
+                                   class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-14 pr-5 py-4 text-2xl font-black text-orange-600 outline-none focus:border-orange-500 focus:bg-white transition-all shadow-inner"
+                                   placeholder="0">
+                        </div>
+                    </div>
+
+                    {{-- Input HPP (Optional) --}}
+                    <div x-show="customPriceAllowHPP">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
+                            <span>Modal / HPP (Rp)</span>
+                            <span class="text-[8px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full">Opsional</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</span>
+                            <input type="text" 
+                                   :value="customHppInput"
+                                   @input="customHppInput = formatInput($event.target.value); customHppInputRaw = parseInput($event.target.value)"
+                                   class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-4 py-3 text-lg font-bold text-slate-700 outline-none focus:border-orange-500 focus:bg-white transition-all"
+                                   placeholder="0">
+                        </div>
+                    </div>
+
+                    {{-- Estimasi Profit Preview --}}
+                    <div class="bg-orange-50 border border-orange-100 rounded-xl p-3 flex justify-between items-center">
+                        <span class="text-[10px] font-black text-orange-600 uppercase">Estimasi Profit / Item</span>
+                        <span class="text-sm font-black text-orange-700" x-text="formatRp(customPriceInputRaw - (customPriceAllowHPP ? customHppInputRaw : (customPriceProduct ? customPriceProduct.cost_price : 0)))"></span>
+                    </div>
+
+                    {{-- Input Alasan --}}
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
+                            <span>Alasan Perubahan</span>
+                            <span class="text-[8px] px-2 py-0.5 rounded-full" :class="customPriceRequireReason ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-500'" x-text="customPriceRequireReason ? 'Wajib' : 'Opsional'"></span>
+                        </label>
+                        <textarea x-model="customPriceReason" rows="2"
+                                  class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3 text-sm font-bold text-slate-700 outline-none focus:border-orange-500 transition-all resize-none"
+                                  placeholder="Tulis alasan ubah harga..."></textarea>
+                    </div>
+
+                    {{-- Error Message --}}
+                    <template x-if="customPriceError">
+                        <div class="bg-red-50 border border-red-100 text-red-500 p-3 rounded-xl text-[10px] font-bold flex items-center gap-2">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span x-text="customPriceError"></span>
+                        </div>
+                    </template>
+
+                    {{-- Button --}}
+                    <button @click="applyCustomPrice()" 
+                            class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/20 flex items-center justify-center gap-3 text-sm uppercase tracking-widest active:scale-95">
+                        <i class="fas fa-check-circle"></i> Terapkan Harga
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
 
     {{-- MODAL CASH OUT (MODERNIZED) --}}
     <template x-teleport="body">
@@ -1091,12 +1191,25 @@
                             <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Pilih Koneksi</label>
                             <div class="space-y-3">
                                 <button @click="scanDevices('bluetooth')" class="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group">
-                                    <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fab fa-bluetooth-b text-lg"></i></div>
-                                    <div class="text-left flex-1">
-                                        <p class="text-sm font-black text-slate-800">Bluetooth</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Untuk printer portable / wireless</p>
+                                    <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                                        <i class="fab fa-bluetooth-b text-xl"></i>
                                     </div>
-                                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500"></i>
+                                    <div class="text-left flex-1">
+                                        <p class="text-sm font-black text-slate-800">Bluetooth Printer</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Cari perangkat bluetooth terdekat</p>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-all"></i>
+                                </button>
+
+                                <button @click="connectionMethod = 'server_escpos'; printerStatus = 'connected'; printerName = 'Server Side ESC/POS'; savePrinterSettings()" class="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group">
+                                    <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                                        <i class="fas fa-server text-xl"></i>
+                                    </div>
+                                    <div class="text-left flex-1">
+                                        <p class="text-sm font-black text-slate-800">Server Side ESC/POS</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Gunakan Driver Server (Drawer RJ11)</p>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-all"></i>
                                 </button>
                                 <button @click="scanDevices('usb_serial')" class="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl flex items-center gap-4 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group">
                                     <div class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fas fa-microchip text-lg"></i></div>
@@ -1335,6 +1448,28 @@ function formatTutupShift(input) {
     let formatted = raw ? parseInt(raw, 10).toLocaleString('id-ID') : '';
     input.value = formatted;
     document.getElementById('closing_cash_raw').value = raw || '';
+
+    // Calculate Diff Real-time
+    const container = document.getElementById('expected-cash-container');
+    const diffEl = document.getElementById('shift-diff-note');
+    if (!container || !diffEl) return;
+
+    const expected = parseInt(container.dataset.expected || 0);
+    const actual = parseInt(raw || 0);
+    const diff = actual - expected;
+
+    if (raw) {
+        let diffFmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(diff));
+        if (diff === 0) {
+            diffEl.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-1"></i> <span class="text-emerald-600 font-bold">Uang pas (Sesuai)</span>';
+        } else if (diff > 0) {
+            diffEl.innerHTML = '<i class="fas fa-plus-circle text-blue-500 mr-1"></i> <span class="text-blue-600 font-bold">Selisih Lebih: ' + diffFmt + '</span>';
+        } else {
+            diffEl.innerHTML = '<i class="fas fa-minus-circle text-red-500 mr-1"></i> <span class="text-red-600 font-bold">Selisih Kurang: ' + diffFmt + '</span>';
+        }
+    } else {
+        diffEl.innerHTML = '<i class="fas fa-info-circle text-blue-400 mr-1"></i> Selisih akan dihitung otomatis setelah menutup shift.';
+    }
 }
 
 // ---- Cash Out helpers ----
@@ -1388,6 +1523,13 @@ function closeCashOut() {
             activeShift: {{ $activeShift ? 'true' : 'false' }},
             taxRate: parseFloat('{{ $settings["tax_rate"] ?? 0 }}') || 0,
             rawMethods: @json(json_decode($settings['active_payment_methods'] ?? '["cash"]', true) ?: ['cash']),
+            
+            // Custom Price Settings
+            customPriceEnabled: {{ ($settings['custom_price_enabled'] ?? '0') == '1' ? 'true' : 'false' }},
+            customPriceAllowHPP: {{ ($settings['custom_price_allow_hpp'] ?? '0') == '1' ? 'true' : 'false' }},
+            customPriceShowBadge: {{ ($settings['custom_price_show_badge'] ?? '1') == '1' ? 'true' : 'false' }},
+            customPriceRequireReason: {{ ($settings['custom_price_require_reason'] ?? '0') == '1' ? 'true' : 'false' }},
+            customPriceAccess: '{{ $settings['custom_price_access'] ?? "all" }}',
             
             // BEP Analysis Data
             totalCapital: {{ $totalCapital ?? 0 }},
@@ -1464,6 +1606,83 @@ function closeCashOut() {
             cashOutError: '',
             expenseCategories: @json($expenseCategories),
 
+            // Custom Price Modal States
+            showCustomPriceModal: false,
+            customPriceProduct: null,
+            customPriceInput: '',
+            customPriceInputRaw: 0,
+            customHppInput: '',
+            customHppInputRaw: 0,
+            customPriceReason: '',
+            customPriceError: '',
+
+            openCustomPrice(product) {
+                if(!this.customPriceEnabled) return;
+                // Check access
+                let userRole = '{{ auth()->user()->role ?? "cashier" }}';
+                if(this.customPriceAccess === 'owner' && userRole !== 'owner') {
+                    Toast.fire({ icon: 'error', title: 'Akses ditolak. Hanya owner yang bisa ubah harga.' });
+                    return;
+                }
+                if(this.customPriceAccess === 'admin_owner' && !['admin', 'owner'].includes(userRole)) {
+                    Toast.fire({ icon: 'error', title: 'Akses ditolak. Hanya admin/owner yang bisa ubah harga.' });
+                    return;
+                }
+                
+                this.customPriceProduct = product;
+                this.customPriceInputRaw = product.is_promo && product.discount_price > 0 ? parseFloat(product.discount_price) : parseFloat(product.price);
+                this.customPriceInput = this.formatInput(this.customPriceInputRaw);
+                this.customHppInputRaw = parseFloat(product.cost_price || 0);
+                this.customHppInput = this.formatInput(this.customHppInputRaw);
+                this.customPriceReason = '';
+                this.customPriceError = '';
+                this.showCustomPriceModal = true;
+            },
+
+            applyCustomPrice() {
+                if(this.customPriceInputRaw < 0) {
+                    this.customPriceError = 'Harga tidak boleh negatif';
+                    return;
+                }
+                if(this.customPriceAllowHPP && this.customHppInputRaw > this.customPriceInputRaw) {
+                    this.customPriceError = 'Modal (HPP) tidak boleh lebih besar dari harga jual';
+                    return;
+                }
+                if(this.customPriceRequireReason && this.customPriceReason.trim() === '') {
+                    this.customPriceError = 'Alasan wajib diisi';
+                    return;
+                }
+
+                // Add to cart with custom price
+                let w = this.activeWorksheet;
+                let product = this.customPriceProduct;
+                let isUnlimited = !!(product.is_stockless);
+                
+                // For custom price, we always add as a separate line item if reason/price differs
+                // Or we can just add a new item object
+                if(isUnlimited || product.stock > 0) {
+                    w.cart.push({
+                        product_id: product.id,
+                        name: product.name,
+                        price: product.price, // original price
+                        quantity: 1,
+                        stock: product.stock,
+                        discount: 0,
+                        is_stockless: isUnlimited,
+                        is_custom_price: true,
+                        custom_price: this.customPriceInputRaw,
+                        custom_hpp: this.customPriceAllowHPP ? this.customHppInputRaw : null,
+                        custom_price_reason: this.customPriceReason.trim(),
+                    });
+                    
+                    // Reduce stock temporarily in view? We already handle that globally by checking total cart qty
+                    Toast.fire({ icon: 'success', title: 'Produk ditambahkan dengan harga khusus' });
+                    this.showCustomPriceModal = false;
+                } else {
+                    Toast.fire({ icon: 'error', title: 'Stok produk ini sudah habis!' });
+                }
+            },
+
             openCashOut() {
                 this.showCashOutModal = true;
                 this.cashOutMainCategory = '';
@@ -1517,8 +1736,21 @@ function closeCashOut() {
                         let data = await res.json();
                         if (data.success) {
                             this.showCashOutModal = false;
-                            alert('Cash Out berhasil dicatat!');
-                            window.location.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: 'Cash Out berhasil dicatat ke sistem.',
+                                background: '#1e293b',
+                                color: '#f8fafc',
+                                confirmButtonColor: '#f97316',
+                                customClass: {
+                                    popup: 'rounded-[2.5rem] border border-emerald-500/20 shadow-2xl shadow-emerald-500/10',
+                                    title: 'text-2xl font-black tracking-tight',
+                                    htmlContainer: 'text-slate-400 font-medium'
+                                }
+                            }).then(() => {
+                                window.location.reload();
+                            });
                         } else {
                             this.cashOutError = data.error || data.message || 'Terjadi kesalahan pada server.';
                         }
@@ -1716,21 +1948,44 @@ function closeCashOut() {
 
             addToCart(product) {
                 if(!this.activeShift) {
-                    alert('Buka shift terlebih dahulu!');
+                    Swal.fire({
+                        title: 'Shift Belum Dibuka',
+                        text: 'Buka shift terlebih dahulu untuk mulai mencatat transaksi.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Buka Shift Sekarang',
+                        cancelButtonText: 'Nanti saja',
+                        background: '#1e293b',
+                        color: '#f8fafc',
+                        confirmButtonColor: '#10b981',
+                        cancelButtonColor: '#334155',
+                        customClass: {
+                            popup: 'rounded-3xl border border-slate-700',
+                            confirmButton: 'rounded-xl font-bold px-6 py-2.5',
+                            cancelButton: 'rounded-xl font-bold px-6 py-2.5'
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = "{{ route('shifts.index', ['open' => 1]) }}";
+                        }
+                    });
                     return;
                 }
                 let w = this.activeWorksheet;
-                let exist = w.cart.find(i => i.product_id === product.id);
+                let exist = w.cart.find(i => i.product_id === product.id && !i.is_custom_price);
                 let isUnlimited = !!(product.is_stockless);
                 
+                // Calculate total quantity of this product in cart (including custom priced items)
+                let totalInCart = w.cart.filter(i => i.product_id === product.id).reduce((sum, item) => sum + item.quantity, 0);
+
                 if(exist) {
-                    if(isUnlimited || exist.quantity < product.stock) {
+                    if(isUnlimited || totalInCart < product.stock) {
                         exist.quantity++;
                     } else {
-                        alert('Stok tidak mencukupi! Sisa stok: ' + product.stock);
+                        Toast.fire({ icon: 'warning', title: 'Stok tidak mencukupi! Sisa stok: ' + product.stock });
                     }
                 } else {
-                    if(isUnlimited || product.stock > 0) {
+                    if(isUnlimited || totalInCart < product.stock) {
                         let finalPrice = (product.is_promo && product.discount_price > 0) 
                             ? parseFloat(product.discount_price) 
                             : parseFloat(product.price);
@@ -1745,7 +2000,7 @@ function closeCashOut() {
                             is_stockless: isUnlimited
                         });
                     } else {
-                        alert('Stok produk ini sudah habis!');
+                        Toast.fire({ icon: 'error', title: 'Stok produk ini sudah habis!' });
                     }
                 }
                 this.lastAddedId = product.id;
@@ -1756,11 +2011,14 @@ function closeCashOut() {
                 let item = this.activeWorksheet.cart[index];
                 let newQty = item.quantity + delta;
                 let isUnlimited = !!(item.is_stockless);
+                
+                let totalInCartOther = this.activeWorksheet.cart.filter((i, idx) => i.product_id === item.product_id && idx !== index).reduce((sum, i) => sum + i.quantity, 0);
+
                 if(newQty > 0) {
-                    if(isUnlimited || newQty <= item.stock) {
+                    if(isUnlimited || (newQty + totalInCartOther) <= item.stock) {
                         item.quantity = newQty;
                     } else {
-                        alert('Stok tidak mencukupi! Sisa stok: ' + item.stock);
+                        Toast.fire({ icon: 'warning', title: 'Stok tidak mencukupi!' });
                     }
                 }
             },
@@ -1771,7 +2029,10 @@ function closeCashOut() {
 
             get currentSubtotal() {
                 if(!this.activeWorksheet) return 0;
-                return this.activeWorksheet.cart.reduce((sum, item) => sum + ((item.price * item.quantity) - item.discount), 0);
+                return this.activeWorksheet.cart.reduce((sum, item) => {
+                    let price = item.is_custom_price ? item.custom_price : item.price;
+                    return sum + ((price * item.quantity) - item.discount);
+                }, 0);
             },
 
             get currentDiscountValue() {
@@ -1789,11 +2050,31 @@ function closeCashOut() {
 
             openPayment() {
                 if(!this.activeShift) {
-                    alert('Shift belum dibuka!');
+                    Swal.fire({
+                        title: 'Shift Belum Dibuka',
+                        text: 'Buka shift terlebih dahulu untuk mulai mencatat transaksi.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Buka Shift Sekarang',
+                        cancelButtonText: 'Nanti saja',
+                        background: '#1e293b',
+                        color: '#f8fafc',
+                        confirmButtonColor: '#10b981',
+                        cancelButtonColor: '#334155',
+                        customClass: {
+                            popup: 'rounded-3xl border border-slate-700',
+                            confirmButton: 'rounded-xl font-bold px-6 py-2.5',
+                            cancelButton: 'rounded-xl font-bold px-6 py-2.5'
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = "{{ route('shifts.index', ['open' => 1]) }}";
+                        }
+                    });
                     return;
                 }
                 if (this.activeWorksheet.cart.length === 0) {
-                    alert('Keranjang masih kosong!');
+                    Toast.fire({ icon: 'info', title: 'Keranjang masih kosong!' });
                     return;
                 }
                 this.paymentTiming = 'now';
@@ -1810,7 +2091,7 @@ function closeCashOut() {
                 let isPiutang = this.paymentTiming === 'later';
                 let method = isPiutang ? 'piutang' : this.paymentMethod;
                 if(!isPiutang && method === 'cash' && this.paidAmount < this.currentTotal) {
-                    return alert('Jumlah bayar kurang!');
+                    return Toast.fire({ icon: 'warning', title: 'Jumlah bayar kurang!' });
                 }
                 this.isProcessing = true;
                 let finalNotes = w.notes;
@@ -1839,13 +2120,22 @@ function closeCashOut() {
                         this.receiptData = { invoice: data.invoice_number, change: data.change, transaction_id: data.transaction.id };
                         this.showReceiptModal = true;
                         this.fetchProducts();
+
+                        // Notifikasi Printer/Drawer
+                        if (data.printer_status) {
+                            if (data.printer_status.success) {
+                                Toast.fire({ icon: 'success', title: data.printer_status.message });
+                            } else {
+                                Toast.fire({ icon: 'warning', title: data.printer_status.message });
+                            }
+                        }
                         
                         // Auto Print
                         if (this.autoPrint) {
                             this.doPrint(data.transaction.id);
                         }
-                    } else { alert(data.error || 'Gagal checkout'); }
-                } catch(e) { alert('Kesalahan koneksi'); }
+                    } else { Toast.fire({ icon: 'error', title: data.error || 'Gagal checkout' }); }
+                } catch(e) { Toast.fire({ icon: 'error', title: 'Kesalahan koneksi' }); }
                 finally { this.isProcessing = false; }
             },
 
@@ -1953,8 +2243,8 @@ function closeCashOut() {
                     });
                     const data = await res.json();
                     if(data.success) { this.posGroups = data.posGroups; this.showGroupManagerModal = false; }
-                    else { alert('Gagal simpan'); }
-                } catch(e) { alert('Kesalahan koneksi'); }
+                    else { Toast.fire({ icon: 'error', title: 'Gagal simpan' }); }
+                } catch(e) { Toast.fire({ icon: 'error', title: 'Kesalahan koneksi' }); }
                 this.isSavingGroup = false;
             },
 
@@ -2272,6 +2562,29 @@ function closeCashOut() {
 
             async doPrint(transactionId) {
                 if (!transactionId) return;
+
+                // Priority: Server Side ESC/POS (for RJ11 Drawer support)
+                if (this.connectionMethod === 'server_escpos') {
+                    try {
+                        const res = await fetch(`/pos/print-receipt/${transactionId}`, {
+                            method: 'POST',
+                            headers: { 
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json' 
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            Toast.fire({ icon: 'success', title: data.message });
+                        } else {
+                            Toast.fire({ icon: 'warning', title: data.message });
+                        }
+                        return;
+                    } catch (e) {
+                        console.error("Server Print Error:", e);
+                        Toast.fire({ icon: 'error', title: 'Gagal menghubungi printer server.' });
+                    }
+                }
 
                 if (this.connectionMethod === 'usb_direct' && this.printerHandle) {
                     try {

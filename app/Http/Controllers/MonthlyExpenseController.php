@@ -20,9 +20,9 @@ class MonthlyExpenseController extends Controller
 
     public function index(Request $request)
     {
-        $filter = $request->filter ?? 'today';
-        $start = $request->start;
-        $end = $request->end;
+        $filter = $request->filter ?? $request->period ?? 'month';
+        $start = $request->start ?? $request->date_from;
+        $end = $request->end ?? $request->date_to;
         
         $now = now();
         switch ($filter) {
@@ -114,13 +114,8 @@ class MonthlyExpenseController extends Controller
             ->get();
 
         // 3. Full System Expense Breakdown (for the interactive modal)
-        $fullBreakdown = Cashflow::where('type', 'expense')
+        $fullBreakdown = Cashflow::where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom, $dateTo])
-            ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            })
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
             ->selectRaw('category, SUM(amount) as total, COUNT(*) as count')
             ->groupBy('category')
@@ -128,13 +123,8 @@ class MonthlyExpenseController extends Controller
             ->get();
 
         // Also get the top 10 individual system expenses
-        $topSystemExpenses = Cashflow::where('type', 'expense')
+        $topSystemExpenses = Cashflow::where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom, $dateTo])
-            ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            })
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
             ->latest('amount')
             ->limit(10)
@@ -192,7 +182,8 @@ class MonthlyExpenseController extends Controller
             'user_id' => auth()->id(),
             'worksheet_id' => $worksheetId,
             'type' => 'expense',
-            'category' => 'expense', 
+            'transaction_category' => 'expense',
+            'category' => 'Pengeluaran Bulanan', 
             'description' => 'Pengeluaran (' . $request->expense_type . '): ' . $request->expense_name,
             'source' => $source,
             'bank_sync_status' => 'synced',

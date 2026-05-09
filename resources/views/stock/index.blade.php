@@ -26,8 +26,8 @@
             <div class="relative w-full sm:w-72">
                 <form action="{{ route('stock.index') }}" method="GET" id="searchForm">
                     <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" name="search" value="{{ request('search') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-11 pr-4 py-2.5 text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm font-medium shadow-inner" placeholder="Cari catatan mutasi...">
-                    <input type="hidden" name="type" value="{{ request('type') }}">
+                    <input type="text" name="search" value="{{ is_array(request('search')) ? '' : request('search') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-11 pr-4 py-2.5 text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm font-medium shadow-inner" placeholder="Cari catatan mutasi...">
+                    <input type="hidden" name="type" value="{{ is_array(request('type')) ? '' : request('type') }}">
                 </form>
             </div>
             <button @click="openModal()" class="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center gap-2">

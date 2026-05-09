@@ -28,8 +28,10 @@ class ReportController extends Controller
 
     public function sales(Request $request)
     {
-        $dateFrom = $request->date_from ? Carbon::parse($request->date_from) : now();
-        $dateTo = $request->date_to ? Carbon::parse($request->date_to) : now();
+        $dfParam = $request->date_from;
+        $dtParam = $request->date_to;
+        $dateFrom = ($dfParam && !is_array($dfParam)) ? Carbon::parse($dfParam) : now();
+        $dateTo = ($dtParam && !is_array($dtParam)) ? Carbon::parse($dtParam) : now();
 
         $baseQuery = Transaction::completed()
             ->whereBetween('created_at', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
@@ -98,8 +100,10 @@ class ReportController extends Controller
 
     public function financial(Request $request)
     {
-        $month = $request->month ?? now()->month;
-        $year = $request->year ?? now()->year;
+        $mParam = $request->month;
+        $yParam = $request->year;
+        $month = ($mParam && !is_array($mParam)) ? $mParam : now()->month;
+        $year = ($yParam && !is_array($yParam)) ? $yParam : now()->year;
         
         $dateFrom = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $dateTo = $dateFrom->copy()->endOfMonth();
@@ -145,14 +149,9 @@ class ReportController extends Controller
             ->groupBy('payment_method')
             ->get();
 
-        $expenseDetails = Cashflow::where('type', 'expense')
+        $expenseDetails = Cashflow::where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom, $dateTo])
             ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
-            ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            })
             ->selectRaw('category, SUM(amount) as total')
             ->groupBy('category')
             ->orderByDesc('total')
@@ -192,8 +191,11 @@ class ReportController extends Controller
 
     public function shifts(Request $request)
     {
-        $dateFrom = $request->date_from ? Carbon::parse($request->date_from)->startOfDay() : now()->startOfMonth();
-        $dateTo = $request->date_to ? Carbon::parse($request->date_to)->endOfDay() : now()->endOfDay();
+        $dfParam = is_array($request->date_from) ? null : $request->date_from;
+        $dtParam = is_array($request->date_to) ? null : $request->date_to;
+        
+        $dateFrom = $dfParam ? Carbon::parse($dfParam)->startOfDay() : now()->startOfMonth();
+        $dateTo = $dtParam ? Carbon::parse($dtParam)->endOfDay() : now()->endOfDay();
         
         $worksheetId = session('active_worksheet_id');
 
@@ -216,7 +218,9 @@ class ReportController extends Controller
 
         $totalDiscrepancy = 0;
         foreach ($closedShifts as $s) {
-            $expected = $s->opening_cash + Transaction::where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+            $cashSales = Transaction::where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+            $cashExpenses = Cashflow::where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+            $expected = $s->opening_cash + $cashSales - $cashExpenses;
             $totalDiscrepancy += ($s->closing_cash - $expected);
         }
 
@@ -232,10 +236,12 @@ class ReportController extends Controller
 
         $activeShift = Shift::with('opener')->where('status', 'open')->latest()->first();
         $users = \App\Models\User::all();
+        $laciBalance = (float) Cashflow::where('source', 'pos_cash')
+            ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
         return view('reports.shifts', compact(
             'shifts', 'activeShiftsCount', 'totalClosingCash', 'totalSalesToday', 'totalDiscrepancy',
-            'highestShift', 'avgDiscrepancy', 'bestCashier', 'activeShift', 'users'
+            'highestShift', 'avgDiscrepancy', 'bestCashier', 'activeShift', 'users', 'laciBalance'
         ));
     }
 
@@ -401,9 +407,8 @@ class ReportController extends Controller
                 ->groupBy('payment_method')->get();
         }
         if (in_array('category_analysis', $sections)) {
-            $data['expense_categories'] = Cashflow::where('type', 'expense')
+            $data['expense_categories'] = Cashflow::where('transaction_category', 'expense')
                 ->whereBetween('transaction_date', [$dateFrom, $dateTo])
-                ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
                 ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->selectRaw('category, SUM(amount) as total')
                 ->groupBy('category')->orderByDesc('total')->get();

@@ -253,8 +253,232 @@
                         </div>
                     </label>
                 </div>
+
+                <div class="border-t border-slate-700/50 pt-8 mt-4">
+                    <label class="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <i class="fas fa-microchip"></i> Hardware & Direct Print (RJ11 Drawer)
+                    </label>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Printer (Sesuai Control Panel)</label>
+                            <input type="text" name="printer_name" value="{{ $settings['printer_name'] ?? 'POS-58' }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner transition-all" placeholder="Contoh: POS-58 atau XP-80">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Jenis Koneksi</label>
+                            <select name="printer_connection" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner transition-all">
+                                <option value="windows" {{ ($settings['printer_connection'] ?? 'windows') == 'windows' ? 'selected' : '' }}>Windows Print Connector (Shared)</option>
+                                <option value="usb" {{ ($settings['printer_connection'] ?? '') == 'usb' ? 'selected' : '' }}>Direct USB / COM Port</option>
+                                <option value="network" {{ ($settings['printer_connection'] ?? '') == 'network' ? 'selected' : '' }}>Network / IP Address</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Auto Open Drawer --}}
+                        <label class="flex items-center justify-between p-5 bg-slate-900/50 border border-slate-700 rounded-2xl cursor-pointer hover:border-blue-500/50 transition-all group shadow-lg shadow-indigo-500/5">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                    <i class="fas fa-door-open"></i>
+                                </div>
+                                <div>
+                                    <span class="text-sm font-bold text-slate-200 block italic">Auto Open Cash Drawer</span>
+                                    <span class="text-[10px] text-indigo-500/80 font-black uppercase tracking-widest">Trigger via RJ11 Kabel</span>
+                                </div>
+                            </div>
+                            <div class="relative inline-flex items-center cursor-pointer">
+                                <input type="hidden" name="drawer_auto_open" value="0">
+                                <input type="checkbox" name="drawer_auto_open" value="1" class="sr-only peer" {{ ($settings['drawer_auto_open'] ?? '0') == '1' ? 'checked' : '' }}>
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </div>
+                        </label>
+
+                        {{-- Pulse Pin --}}
+                        <div>
+                            <div class="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-700 w-full">
+                                <div class="flex items-center px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pulse Pin:</div>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="drawer_pulse_pin" value="0" class="sr-only peer" {{ ($settings['drawer_pulse_pin'] ?? '0') == '0' ? 'checked' : '' }}>
+                                    <div class="py-2.5 text-center rounded-xl text-xs font-black uppercase tracking-widest transition-all peer-checked:bg-indigo-600 peer-checked:text-white text-slate-500">Pin 0</div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="drawer_pulse_pin" value="1" class="sr-only peer" {{ ($settings['drawer_pulse_pin'] ?? '') == '1' ? 'checked' : '' }}>
+                                    <div class="py-2.5 text-center rounded-xl text-xs font-black uppercase tracking-widest transition-all peer-checked:bg-indigo-600 peer-checked:text-white text-slate-500">Pin 1</div>
+                                </label>
+                            </div>
+                            <p class="text-[9px] text-slate-600 mt-2 italic px-2">Blueprint BP-ECO58D biasanya menggunakan Pin 0</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t border-slate-700/30 flex justify-start">
+                        <button type="button" onclick="testCashDrawer()" class="flex items-center gap-3 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold rounded-xl border border-indigo-500/30 transition-all hover:scale-105 active:scale-95 group">
+                            <i class="fas fa-plug text-sm group-hover:rotate-12 transition-transform"></i>
+                            <span class="text-xs uppercase tracking-widest">Test Buka Laci (Pulse)</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
+
+        {{-- Section: Pengaturan Harga Fleksibel --}}
+        <div class="card overflow-hidden border border-slate-700/80 shadow-xl mt-6">
+            <div class="p-6 border-b border-slate-700 bg-slate-800/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Pengaturan Harga Fleksibel</h3>
+                        <p class="text-xs text-slate-400">Izinkan kasir untuk merubah harga produk pada saat transaksi</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 lg:p-8 space-y-8">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{-- Master Toggle --}}
+                    <label class="flex items-center justify-between p-5 bg-slate-900/50 border border-slate-700 rounded-2xl cursor-pointer hover:border-orange-500/50 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-400 transition-colors">
+                                <i class="fas fa-toggle-on"></i>
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200 block">Aktifkan Harga Khusus</span>
+                                <span class="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Kasir bisa ubah harga jual di POS</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="custom_price_enabled" value="0">
+                            <input type="checkbox" name="custom_price_enabled" value="1" class="sr-only peer" {{ ($settings['custom_price_enabled'] ?? '0') == '1' ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        </div>
+                    </label>
+
+                    {{-- Allow HPP Custom --}}
+                    <label class="flex items-center justify-between p-5 bg-slate-900/50 border border-slate-700 rounded-2xl cursor-pointer hover:border-orange-500/50 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-400 transition-colors">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200 block">Izinkan HPP Custom</span>
+                                <span class="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Kasir bisa tentukan modal (HPP) khusus</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="custom_price_allow_hpp" value="0">
+                            <input type="checkbox" name="custom_price_allow_hpp" value="1" class="sr-only peer" {{ ($settings['custom_price_allow_hpp'] ?? '0') == '1' ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        </div>
+                    </label>
+
+                    {{-- Show Badge --}}
+                    <label class="flex items-center justify-between p-5 bg-slate-900/50 border border-slate-700 rounded-2xl cursor-pointer hover:border-orange-500/50 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-400 transition-colors">
+                                <i class="fas fa-certificate"></i>
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200 block">Tampilkan Tombol</span>
+                                <span class="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Badge Harga Khusus di grid produk</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="custom_price_show_badge" value="0">
+                            <input type="checkbox" name="custom_price_show_badge" value="1" class="sr-only peer" {{ ($settings['custom_price_show_badge'] ?? '1') == '1' ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        </div>
+                    </label>
+
+                    {{-- Require Reason --}}
+                    <label class="flex items-center justify-between p-5 bg-slate-900/50 border border-slate-700 rounded-2xl cursor-pointer hover:border-orange-500/50 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-400 transition-colors">
+                                <i class="fas fa-comment-dots"></i>
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200 block">Wajib Isi Alasan</span>
+                                <span class="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Wajibkan isi alasan ubah harga</span>
+                            </div>
+                        </div>
+                        <div class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="custom_price_require_reason" value="0">
+                            <input type="checkbox" name="custom_price_require_reason" value="1" class="sr-only peer" {{ ($settings['custom_price_require_reason'] ?? '0') == '1' ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        </div>
+                    </label>
+                </div>
+
+                {{-- Access Role --}}
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Hak Akses Fitur Harga Khusus</label>
+                    <select name="custom_price_access" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 shadow-inner transition-all">
+                        <option value="all" {{ ($settings['custom_price_access'] ?? 'all') == 'all' ? 'selected' : '' }}>Semua Kasir & Admin</option>
+                        <option value="admin_owner" {{ ($settings['custom_price_access'] ?? '') == 'admin_owner' ? 'selected' : '' }}>Hanya Admin & Owner</option>
+                        <option value="owner" {{ ($settings['custom_price_access'] ?? '') == 'owner' ? 'selected' : '' }}>Hanya Owner</option>
+                    </select>
+                </div>
+                
+            </div>
+        </div>
+
+        @push('scripts')
+        <script>
+            function testCashDrawer() {
+                Swal.fire({
+                    title: 'Testing Cash Drawer...',
+                    text: 'Pastikan printer terhubung dan drawer tersambung via RJ11',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Trigger Pulse',
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#334155',
+                    background: '#1e293b',
+                    color: '#f8fafc'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch("{{ route('settings.test-drawer') }}", {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    title: 'Berhasil!',
+                                    text: data.message,
+                                    icon: 'success',
+                                    background: '#1e293b',
+                                    color: '#f8fafc'
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Gagal!',
+                                    text: data.message,
+                                    icon: 'error',
+                                    background: '#1e293b',
+                                    color: '#f8fafc'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                title: 'Error Sistem!',
+                                text: 'Terjadi kesalahan pada server atau printer offline.',
+                                icon: 'error',
+                                background: '#1e293b',
+                                color: '#f8fafc'
+                            });
+                        });
+                    }
+                });
+            }
+        </script>
+        @endpush
 
         {{-- Footer Save Button --}}
         <div class="flex justify-end pt-4">

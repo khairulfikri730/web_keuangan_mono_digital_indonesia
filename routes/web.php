@@ -47,6 +47,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
         Route::get('/products', [PosController::class, 'getProducts'])->name('products');
         Route::post('/checkout', [PosController::class, 'checkout'])->name('checkout');
+        Route::post('/print-receipt/{transaction}', [PosController::class, 'printReceipt'])->name('print-receipt');
         Route::get('/receipt/{transaction}', [PosController::class, 'receipt'])->name('receipt');
         Route::get('/receipt-test', [PosController::class, 'testReceipt'])->name('receipt.test');
         Route::post('/expense', [PosController::class, 'storeExpense'])->name('expense');
@@ -109,6 +110,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/sync-bank', [CashflowController::class, 'syncBank'])->name('sync-bank');
         Route::post('/sync-laci', [CashflowController::class, 'syncLaci'])->name('sync-laci');
         Route::put('/{cashflow}', [CashflowController::class, 'update'])->name('update');
+        Route::post('/quick-store', [CashflowController::class, 'storeQuick'])->name('quick-store');
         Route::delete('/{cashflow}', [CashflowController::class, 'destroy'])->name('destroy');
     });
 
@@ -190,6 +192,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('permission:settings')->group(function () {
             Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
             Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+            Route::post('/settings/test-drawer', [SettingController::class, 'testDrawer'])->name('settings.test-drawer');
         });
     });
 });

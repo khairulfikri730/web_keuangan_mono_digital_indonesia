@@ -27,26 +27,42 @@ class FinancialReportService
             $incomeQuery->where('worksheet_id', $worksheetId);
         }
         
-        $totalIncome = $incomeQuery->sum('total');
-
-        // 2. EXPENSE CALCULATION (From Cashflow with strict filters)
-        $expenseQuery = Cashflow::where('type', 'expense')
+        $posIncome = $incomeQuery->sum('total');
+        
+        // Include manual income from Cashflow that is not from POS (reference is null)
+        $manualIncome = Cashflow::where('transaction_category', 'income')
+            ->whereNull('reference')
             ->whereBetween('transaction_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
-            ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            });
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->sum('amount');
+            
+        $totalIncome = $posIncome + $manualIncome;
+ 
+        $expenseQuery = Cashflow::where('transaction_category', 'expense')
+            ->whereBetween('transaction_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()]);
 
         if ($worksheetId && $worksheetId !== 'all') {
             $expenseQuery->where('worksheet_id', $worksheetId);
         }
 
-        $totalExpense = $expenseQuery->sum('amount');
+        $cashflowExpense = $expenseQuery->sum('amount');
 
+        // Include MonthlyUsage that might not be synced to Cashflow yet (legacy or failed sync)
+        $monthlyUsageExpense = \App\Models\MonthlyUsage::whereBetween('expense_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->whereNotExists(function($query) {
+                $query->select(DB::raw(1))
+                      ->from('cashflows')
+                      ->whereRaw('cashflows.reference_id = monthly_usages.id')
+                      ->where('cashflows.reference_type', "MonthlyUsage");
+            })
+            ->sum('usage_amount');
+
+        $totalExpense = $cashflowExpense + $monthlyUsageExpense;
+ 
         // 3. NET PROFIT
         $netProfit = $totalIncome - $totalExpense;
-
+ 
         return (object) [
             'total_income' => $totalIncome,
             'total_expense' => $totalExpense,
@@ -56,7 +72,7 @@ class FinancialReportService
             'worksheet_id' => $worksheetId
         ];
     }
-
+ 
     /**
      * Get all-time net profit for ROI calculation
      */
@@ -67,21 +83,21 @@ class FinancialReportService
             $incomeQuery->where('worksheet_id', $worksheetId);
         }
         $totalIncome = $incomeQuery->sum('total');
+ 
+        $cashflowExpense = Cashflow::where('transaction_category', 'expense')
+            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->sum('amount');
 
-        $expenseQuery = Cashflow::where('type', 'expense')
-            ->whereNotIn('category', ['Transfer Internal', 'Refund / Retur', 'Transfer Bank'])
-            ->where(function($q) {
-                $q->where('category', 'not like', '%Transfer%')
-                  ->where('description', 'not like', '%Transfer%');
-            });
-            
-        if ($worksheetId && $worksheetId !== 'all') {
-            $expenseQuery->where('worksheet_id', $worksheetId);
-        }
-        
-        $totalExpense = $expenseQuery->sum('amount');
+        $monthlyUsageExpense = \App\Models\MonthlyUsage::when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->whereNotExists(function($query) {
+                $query->select(DB::raw(1))
+                      ->from('cashflows')
+                      ->whereRaw('cashflows.reference_id = monthly_usages.id')
+                      ->where('cashflows.reference_type', "MonthlyUsage");
+            })
+            ->sum('usage_amount');
 
-        return $totalIncome - $totalExpense;
+        return $totalIncome - ($cashflowExpense + $monthlyUsageExpense);
     }
 
     /**
