@@ -210,16 +210,16 @@
     {{-- Mobile Cart Overlay Backdrop --}}
     <div x-show="mobileCartOpen" x-transition.opacity @click="mobileCartOpen = false" x-cloak class="fixed inset-0 bg-slate-900/60 z-[140] lg:hidden"></div>
 
-    <div class="fixed inset-y-0 right-0 z-[150] w-[360px] max-w-[90vw] lg:relative lg:w-[420px] flex flex-col bg-white shadow-2xl lg:shadow-[-10px_0_30px_rgba(0,0,0,0.02)] h-full border-l border-slate-100 shrink-0 overflow-hidden transition-transform duration-300 lg:translate-x-0" :class="mobileCartOpen ? 'translate-x-0' : 'translate-x-full'">
+    <div class="fixed inset-y-0 right-0 z-[150] w-full sm:w-[420px] max-w-full lg:relative flex flex-col bg-white shadow-2xl lg:shadow-[-10px_0_30px_rgba(0,0,0,0.02)] h-[100dvh] lg:h-full border-l border-slate-100 shrink-0 overflow-hidden transition-transform duration-300 lg:translate-x-0" :class="mobileCartOpen ? 'translate-x-0' : 'translate-x-full'">
         
         {{-- PANEL HEADER --}}
-        <div class="p-6 border-b border-slate-100 bg-white shrink-0">
-            <div class="flex justify-between items-start mb-1">
-                <h3 class="text-lg font-black text-slate-800 tracking-tight">Pesanan Saat Ini</h3>
-                <div class="flex gap-2">
+        <div class="p-4 sm:p-6 border-b border-slate-100 bg-white shrink-0">
+            <div class="flex justify-between items-start mb-1 gap-2">
+                <button @click="mobileCartOpen = false" class="lg:hidden w-8 h-8 shrink-0 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors flex items-center justify-center border border-slate-200"><i class="fas fa-arrow-left text-xs"></i></button>
+                <h3 class="text-lg font-black text-slate-800 tracking-tight flex-1">Pesanan Saat Ini</h3>
+                <div class="flex gap-2 shrink-0">
                     <button @click="showPrinterSettings = true" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-print text-xs"></i></button>
                     <button class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-cog text-xs"></i></button>
-                    <button @click="mobileCartOpen = false" class="lg:hidden w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:text-red-700 transition-colors flex items-center justify-center border border-red-100"><i class="fas fa-times text-xs"></i></button>
                 </div>
             </div>
             <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -245,7 +245,7 @@
         </div>
 
         {{-- CART AREA --}}
-        <div class="flex-1 overflow-y-auto p-6 scrollbar-hide space-y-4">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide space-y-4">
             
             {{-- TAB: PESANAN SAAT INI --}}
             <div x-show="cartView === 'active'" class="flex flex-col">
@@ -266,7 +266,7 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
-                                    <span class="text-[10px] text-slate-300">Ã—</span>
+                                    <span class="text-[10px] text-slate-300">Ãƒâ€”</span>
                                     <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5">
                                         <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
                                         <span class="text-xs font-black text-slate-800 w-5 text-center" x-text="item.quantity"></span>
@@ -291,7 +291,7 @@
         </div>
 
         {{-- ORDER INFO & ACTION AREA --}}
-        <div class="p-6 bg-slate-50/50 border-t border-slate-100 shrink-0 space-y-5">
+        <div class="p-4 sm:p-6 bg-slate-50/50 border-t border-slate-100 shrink-0 space-y-5">
             
             {{-- DATA PELANGGAN --}}
             <div class="space-y-3">
@@ -648,7 +648,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-qrcode text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">QR Code belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko â†’ Gambar QRIS</p>
+                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko Ã¢â€ â€™ Gambar QRIS</p>
                             </div>
                             @endif
                         </div>
@@ -676,7 +676,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-building-columns text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">Info rekening belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko â†’ Info Rekening Transfer</p>
+                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko Ã¢â€ â€™ Info Rekening Transfer</p>
                             </div>
                             @endif
                         </div>
@@ -1284,7 +1284,7 @@
                                     <div class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fas fa-microchip text-lg"></i></div>
                                     <div class="text-left flex-1">
                                         <p class="text-sm font-black text-slate-800">USB (Serial)</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB â€” Pilih COM Port</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB Ã¢â‚¬â€ Pilih COM Port</p>
                                     </div>
                                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500"></i>
                                 </button>
@@ -1469,7 +1469,7 @@
                                 </div>
                             </div>
                             
-                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' â€” font ' + fontSize"></p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' Ã¢â‚¬â€ font ' + fontSize"></p>
                         </div>
                     </div>
                 </div>
@@ -1584,6 +1584,7 @@ function closeCashOut() {
         console.log("Registering posApp data...");
         
         Alpine.data('posApp', () => ({
+            mobileCartOpen: false,
             // Init Data Backend
             categories: @json($categories),
             products: @json($products),
@@ -1606,9 +1607,9 @@ function closeCashOut() {
             monthlyRevenue: {{ $monthlyRevenue ?? 0 }},
 
             get bepMonths() {
-                if (this.monthlyRevenue <= 0) return 'âˆž';
+                if (this.monthlyRevenue <= 0) return 'Ã¢Ë†Å¾';
                 let months = this.totalCapital / this.monthlyRevenue;
-                return isFinite(months) ? Math.ceil(months) : 'âˆž';
+                return isFinite(months) ? Math.ceil(months) : 'Ã¢Ë†Å¾';
             },
 
             // Multi-Worksheet Logic
@@ -2798,5 +2799,6 @@ function closeCashOut() {
 </script>
 @endpush
 @endsection
+
 
 
