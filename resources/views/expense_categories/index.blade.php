@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('content')
 <div class="p-6 sm:p-10 min-h-screen bg-[#0f172a]" x-data="{ 
@@ -53,7 +53,7 @@
 
     <!-- ADD MODAL -->
     <div x-show="showAddModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
-        <div class="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl" @click.away="showAddModal = false">
+        <div class="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide " @click.away="showAddModal = false">
             <div class="p-6 border-b border-white/5">
                 <h3 class="text-lg font-black text-white">Tambah Jenis Biaya</h3>
             </div>
@@ -82,7 +82,7 @@
 
     <!-- EDIT MODAL -->
     <div x-show="showEditModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
-        <div class="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl" @click.away="showEditModal = false">
+        <div class="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide " @click.away="showEditModal = false">
             <div class="p-6 border-b border-white/5">
                 <h3 class="text-lg font-black text-white">Edit Jenis Biaya</h3>
             </div>
@@ -115,3 +115,5 @@
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 @endsection
+
+

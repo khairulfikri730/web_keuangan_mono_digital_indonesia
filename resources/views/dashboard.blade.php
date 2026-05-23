@@ -32,7 +32,7 @@
 
     {{-- Stats Cards --}}
     {{-- Stats Cards --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div class="stat-card hover:scale-105 hover:shadow-xl hover:shadow-emerald-900/20 transition-all duration-300 relative overflow-hidden group">
             <div class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
             <div class="w-14 h-14 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
@@ -75,7 +75,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {{-- Chart --}}
         <div class="lg:col-span-2 card p-6 shadow-lg shadow-blue-900/5 relative overflow-hidden group">
             <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all pointer-events-none"></div>
@@ -118,7 +118,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {{-- Recent Transactions --}}
         <div class="card p-5">
             <div class="flex items-center justify-between mb-4">

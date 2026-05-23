@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Transaksi')
 @section('page-title', 'Riwayat Transaksi')
@@ -351,7 +351,7 @@
                             
                             {{-- Detail Transaksi Modal (Santai Scale Style) --}}
                             <div id="detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto max-h-[90vh] overflow-y-auto scrollbar-hide ">
                                     <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
                                         <h3 class="text-lg font-black text-slate-800">Detail Transaksi</h3>
                                         <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
@@ -429,7 +429,7 @@
                                     pelunasanAmount: {{ $model->remaining }},
                                     get kembalian() { return Math.max(0, this.pelunasanAmount - {{ $model->remaining }}) }
                                  }">
-                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto max-h-[90vh] overflow-y-auto scrollbar-hide ">
                                     {{-- Header --}}
                                     <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
                                         <h3 class="text-lg font-black text-slate-800">Detail Pelunasan</h3>
@@ -736,3 +736,5 @@
     }
 </script>
 @endpush
+
+

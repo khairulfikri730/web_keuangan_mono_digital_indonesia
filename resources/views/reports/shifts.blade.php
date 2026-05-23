@@ -452,7 +452,7 @@
 
     {{-- MODAL DETAIL SHIFT --}}
     <div x-show="isModalOpen" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div @click.away="closeModal()" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-[#1e293b] rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
+        <div @click.away="closeModal()" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-[#1e293b] rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col max-h-[90vh] max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="p-6 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50 shrink-0">
                 <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fas fa-file-invoice text-blue-400"></i> Detail Shift</h3>
                 <button @click="closeModal()" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-slate-400 hover:text-white transition-colors flex items-center justify-center"><i class="fas fa-times"></i></button>
@@ -597,7 +597,7 @@
 
     {{-- MODAL EDIT SHIFT --}}
     <div x-show="showEditModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-        <div @click.away="showEditModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6">
+        <div @click.away="showEditModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6 max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fas fa-edit text-blue-400"></i> Edit Shift</h3>
             <p class="text-xs text-slate-400 mb-5">Perbarui data kas awal dan akhir shift.</p>
             <form :action="'/shifts/' + activeShiftId" method="POST">
@@ -902,4 +902,6 @@ function confirmDelete(id) {
 }
 </script>
 @endsection
+
+
 

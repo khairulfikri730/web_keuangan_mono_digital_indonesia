@@ -1,6 +1,6 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
-@section('title', 'Detail Invoice — MONOFRAME')
+@section('title', 'Detail Invoice â€” MONOFRAME')
 
 @section('page-title')
     <div class="flex items-center gap-2">
@@ -113,7 +113,7 @@
                         </div>
                         <div>
                             <p class="text-sm font-black text-white">Rp {{ number_format($payment->amount, 0, ',', '.') }}</p>
-                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{{ $payment->payment_date->format('d M Y') }} · {{ $payment->payment_method }}</p>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{{ $payment->payment_date->format('d M Y') }} Â· {{ $payment->payment_method }}</p>
                         </div>
                     </div>
                     @if($payment->notes)
@@ -204,7 +204,7 @@
 {{-- MODAL: CATAT PEMBAYARAN --}}
 <div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'add-payment') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center p-4" style="display: none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm" @click="show = false"></div>
-    <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md z-10 overflow-hidden">
+    <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-8 py-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/30">
             <h3 class="text-lg font-black text-white uppercase tracking-widest">Catat Pembayaran</h3>
             <button @click="show = false" class="text-slate-400 hover:text-white transition-colors">
@@ -249,3 +249,5 @@
     </div>
 </div>
 @endsection
+
+

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Cashflow Dashboard')
 @section('page-title', 'Arus Kas')
@@ -123,8 +123,8 @@
     </div>
 
     <!-- 2. SUMMARY STRIP (PREMIUM CARDS) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8" style="position: relative; z-index: 1;">
-        <!-- Modal Investasi → redirect ke capitals dengan auto-open edit modal -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8" style="position: relative; z-index: 1;">
+        <!-- Modal Investasi â†’ redirect ke capitals dengan auto-open edit modal -->
         <div onclick="window.location.href='{{ route('capitals.index') }}?action=edit_latest'" class="glass-card grad-blue rounded-[2.5rem] p-7 transition-premium group relative overflow-hidden cursor-pointer block hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(59,130,246,0.4)]">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-premium"></div>
             <div class="flex justify-between items-start mb-4">
@@ -247,7 +247,7 @@
                 </div>
                 <div class="text-right">
                     <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Saldo Bank</span>
-                    <span class="inline-block mt-1 text-[8px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest">✓ Synced</span>
+                    <span class="inline-block mt-1 text-[8px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest">âœ“ Synced</span>
                 </div>
             </div>
             <h3 class="text-2xl font-black text-white tracking-tight transition-all duration-500" id="valSaldoBankSynced">Rp {{ number_format($saldoBankSynced, 0, ',', '.') }}</h3>
@@ -257,7 +257,7 @@
             </div>
         </div>
 
-        <!-- Adjustment Kas → buka modal khusus -->
+        <!-- Adjustment Kas â†’ buka modal khusus -->
         <div onclick="openModalAdjKas()" class="glass-card grad-amber rounded-[2.5rem] p-7 transition-premium group relative overflow-hidden bg-slate-900/40 border-amber-500/20 cursor-pointer hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(245,158,11,0.35)]">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-premium"></div>
             <div class="flex justify-between items-start mb-4">
@@ -289,7 +289,7 @@
     </div>
 
     <!-- 2.5 ACTION COMMAND CENTER -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <!-- Unified Sync Status -->
         <div class="lg:col-span-2 bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
             <div class="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl"></div>
@@ -299,7 +299,7 @@
                         <span class="w-2 h-4 bg-blue-500 rounded-full"></span>
                         Status Sinkronisasi Kas
                     </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <!-- Laci Item -->
                         <div class="flex items-center gap-4 group/item">
                             <div class="w-14 h-14 rounded-2xl {{ $pendingLaciCount > 0 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' }} border flex items-center justify-center text-2xl transition-premium shadow-lg">
@@ -346,7 +346,7 @@
                         <i class="fas fa-paper-plane"></i>
                     </div>
                     <h4 class="text-xl font-black text-white tracking-tighter leading-none mb-2">Pindahkan Uang</h4>
-                    <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-80">Setoran Laci → Bank</p>
+                    <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-80">Setoran Laci â†’ Bank</p>
                 </div>
                 <button onclick="document.getElementById('transferModal').classList.remove('hidden')" 
                     class="w-full mt-8 py-4 bg-white text-blue-700 rounded-2xl font-black text-xs uppercase tracking-widest transition-premium shadow-xl hover:shadow-white/20 active:scale-95">
@@ -357,7 +357,7 @@
     </div>
 
     <!-- 2.6 INCOME BREAKDOWN -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <!-- Pemasukan QRIS/Bank -->
         <div class="bg-[#111827] border border-slate-800 rounded-[1.5rem] p-6 flex justify-between items-center shadow-lg transition-colors hover:bg-slate-800/80">
             <div>
@@ -407,7 +407,7 @@
             </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
             <!-- Omzet -->
             <div>
                 <div class="flex justify-between items-center mb-2">
@@ -747,7 +747,7 @@
                 </div>
                 
                 <!-- Filter Pills -->
-                <div class="flex bg-[#0F172A] border border-slate-700 rounded-full p-1 shrink-0 overflow-x-auto scrollbar-hide max-w-full">
+                <div class="flex bg-[#0F172A] border border-slate-700 rounded-full p-1 shrink-0 overflow-x-auto scrollbar-hide max-w-full max-h-[90vh] overflow-y-auto scrollbar-hide ">
                     <button class="filter-btn active px-3 py-1 text-xs font-medium rounded-full bg-slate-700 text-white transition-all whitespace-nowrap" data-filter="all">Semua</button>
                     <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="Penjualan">Penjualan</button>
                     <button class="filter-btn px-3 py-1 text-xs font-medium rounded-full text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap" data-filter="Input Saldo Manual">Input Saldo</button>
@@ -774,7 +774,7 @@
 
 {{-- Modal Transfer --}}
 <div id="transferModal" x-data="{ amount: '', amountFormatted: '', formatCurrency(value) { let val = value.toString().replace(/[^0-9]/g, ''); if(val) { val = parseInt(val, 10).toString(); return val.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); } return ''; } }" class="fixed inset-0 bg-[#0F172A]/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#111827] rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl transform scale-100 transition-transform">
+    <div class="bg-[#111827] rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl transform scale-100 transition-transform max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-bold text-white"><i class="fas fa-exchange-alt text-blue-400 mr-2"></i> Pindahkan Uang</h3>
             <button onclick="document.getElementById('transferModal').classList.add('hidden')" class="text-slate-400 hover:text-white transition-colors">
@@ -788,8 +788,8 @@
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Arah Transfer</label>
                     <select name="direction" class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
-                        <option value="laci_to_bank">Laci (Kasir) → Bank Rekening</option>
-                        <option value="bank_to_laci">Bank Rekening → Laci (Kasir)</option>
+                        <option value="laci_to_bank">Laci (Kasir) â†’ Bank Rekening</option>
+                        <option value="bank_to_laci">Bank Rekening â†’ Laci (Kasir)</option>
                     </select>
                 </div>
                 
@@ -846,7 +846,7 @@
         document.getElementById('editForm').action = '/cashflow/' + data.id;
     }
 }" @open-edit.window="openEdit($event.detail)" class="fixed inset-0 bg-[#0F172A]/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#111827] rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl transform scale-100 transition-transform">
+    <div class="bg-[#111827] rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl transform scale-100 transition-transform max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-bold text-white">Edit Transaksi</h3>
             <button onclick="document.getElementById('editModal').classList.add('hidden')" class="text-slate-400 hover:text-white transition-colors">
@@ -946,7 +946,7 @@
         document.getElementById('addModal').classList.remove('hidden');
     }
 }" @open-add-modal.window="openAdd($event.detail)" class="fixed inset-0 bg-[#0F172A]/90 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
-    <div class="bg-[#111827] rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden transform transition-all duration-500"
+    <div class="bg-[#111827] rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden transform transition-all duration-500 max-h-[90vh] overflow-y-auto scrollbar-hide "
          :class="type === 'income' ? 'shadow-emerald-500/10' : 'shadow-red-500/10'">
         
         <!-- Modal Header -->
@@ -1090,7 +1090,7 @@
 
 {{-- Modal Analysis --}}
 <div id="analysisModal" class="fixed inset-0 bg-[#0F172A]/80 backdrop-blur-xl z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-white/10 rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl transform transition-premium">
+    <div class="bg-slate-800 border border-white/10 rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl transform transition-premium max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
@@ -1721,7 +1721,7 @@
 <div id="modalAdjKas" class="fixed inset-0 z-[90] hidden" aria-modal="true" role="dialog">
     <div class="fixed inset-0 bg-slate-950/85 backdrop-blur-lg" onclick="closeModalAdjKas()"></div>
     <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div id="adjKasCard" class="bg-[#0d1526] border border-white/10 rounded-[2.5rem] w-full max-w-md shadow-[0_0_80px_-10px_rgba(245,158,11,0.25)] overflow-hidden">
+        <div id="adjKasCard" class="bg-[#0d1526] border border-white/10 rounded-[2.5rem] w-full max-w-md shadow-[0_0_80px_-10px_rgba(245,158,11,0.25)] overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="relative px-8 pt-8 pb-5 overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-br from-amber-500/8 to-transparent pointer-events-none"></div>
                 <div class="relative flex items-center justify-between">
@@ -1957,7 +1957,7 @@ async function submitAdjKas(event) {
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-md" onclick="document.getElementById('modalTargetBEP').classList.add('hidden')"></div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-slate-800 rounded-[2.5rem] border border-white/10 shadow-2xl sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-slate-800 rounded-[2.5rem] border border-white/10 shadow-2xl sm:my-8 sm:align-middle sm:max-w-md sm:w-full max-h-[90vh] overflow-y-auto scrollbar-hide ">
                 <form action="{{ route('cashflow.update-target') }}" method="POST">
                     @csrf
                     <div class="p-10">
@@ -2005,7 +2005,7 @@ async function submitAdjKas(event) {
 
     <!-- MODAL TARGET OMZET/PROFIT/TRANSAKSI -->
     <div id="targetModal" class="fixed inset-0 bg-[#0F172A]/90 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden transform transition-all duration-500 relative">
+        <div class="bg-slate-800 rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden transform transition-all duration-500 relative max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <button type="button" onclick="document.getElementById('targetModal').classList.add('hidden')" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all flex items-center justify-center z-20">
                 <i class="fas fa-times"></i>
             </button>
@@ -2018,7 +2018,7 @@ async function submitAdjKas(event) {
                             <i class="fas fa-bullseye text-xl"></i>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-black text-white tracking-tighter italic uppercase leading-none">Target Bulanan</h3>
+                            <h3 class="text-xl sm:text-2xl font-black text-white tracking-tighter italic uppercase leading-none">Target Bulanan</h3>
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Konfigurasi Target Perusahaan</p>
                         </div>
                     </div>
@@ -2078,3 +2078,5 @@ async function submitAdjKas(event) {
 
 @endpush
 @endsection
+
+

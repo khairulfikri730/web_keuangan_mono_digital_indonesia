@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'POS Kasir')
 @section('page-title', 'POS Kasir')
@@ -207,7 +207,10 @@
     </div>
 
     {{-- RIGHT PANEL: ORDER PANEL (CLEAN & TIDY) --}}
-    <div class="w-full lg:w-[420px] flex flex-col bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] z-10 h-full border-l border-slate-100 shrink-0 overflow-hidden">
+    {{-- Mobile Cart Overlay Backdrop --}}
+    <div x-show="mobileCartOpen" x-transition.opacity @click="mobileCartOpen = false" x-cloak class="fixed inset-0 bg-slate-900/60 z-[140] lg:hidden"></div>
+
+    <div class="fixed inset-y-0 right-0 z-[150] w-[360px] max-w-[90vw] lg:relative lg:w-[420px] flex flex-col bg-white shadow-2xl lg:shadow-[-10px_0_30px_rgba(0,0,0,0.02)] h-full border-l border-slate-100 shrink-0 overflow-hidden transition-transform duration-300 lg:translate-x-0" :class="mobileCartOpen ? 'translate-x-0' : 'translate-x-full'">
         
         {{-- PANEL HEADER --}}
         <div class="p-6 border-b border-slate-100 bg-white shrink-0">
@@ -216,6 +219,7 @@
                 <div class="flex gap-2">
                     <button @click="showPrinterSettings = true" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-print text-xs"></i></button>
                     <button class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-cog text-xs"></i></button>
+                    <button @click="mobileCartOpen = false" class="lg:hidden w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:text-red-700 transition-colors flex items-center justify-center border border-red-100"><i class="fas fa-times text-xs"></i></button>
                 </div>
             </div>
             <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -262,7 +266,7 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
-                                    <span class="text-[10px] text-slate-300">×</span>
+                                    <span class="text-[10px] text-slate-300">Ã—</span>
                                     <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5">
                                         <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
                                         <span class="text-xs font-black text-slate-800 w-5 text-center" x-text="item.quantity"></span>
@@ -405,6 +409,16 @@
                 </button>
             </div>
         </div>
+    </div>
+    
+    {{-- MOBILE FLOATING CART BUTTON --}}
+    <button @click="mobileCartOpen = true" class="lg:hidden fixed bottom-6 right-6 z-[130] bg-emerald-500 text-white rounded-full px-5 py-3.5 shadow-xl shadow-emerald-500/30 flex items-center gap-3 active:scale-95 transition-all">
+        <div class="relative">
+            <i class="fas fa-shopping-cart text-lg"></i>
+            <span x-show="activeWorksheet && activeWorksheet.cart.length > 0" class="absolute -top-3 -right-3 bg-rose-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-emerald-500" x-text="activeWorksheet ? activeWorksheet.cart.reduce((s,i) => s+i.quantity, 0) : 0"></span>
+        </div>
+        <span class="font-black text-sm" x-text="formatRp(currentTotal)"></span>
+    </button>
 
 
     {{-- MODAL LAYOUT EDITOR (DRAG & DROP) --}}
@@ -555,7 +569,7 @@
     {{-- MODAL PEMBAYARAN --}}
     <template x-teleport="body">
         <div x-show="showPaymentModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-        <div @click.away="showPaymentModal = false" class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 transform transition-all max-h-[90vh] overflow-y-auto scrollbar-hide">
+        <div @click.away="showPaymentModal = false" class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 transform transition-all max-h-[90vh] overflow-y-auto scrollbar-hide ">
             
             {{-- Header --}}
             <div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
@@ -634,7 +648,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-qrcode text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">QR Code belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko → Gambar QRIS</p>
+                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko â†’ Gambar QRIS</p>
                             </div>
                             @endif
                         </div>
@@ -662,7 +676,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-building-columns text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">Info rekening belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko → Info Rekening Transfer</p>
+                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko â†’ Info Rekening Transfer</p>
                             </div>
                             @endif
                         </div>
@@ -744,7 +758,7 @@
     {{-- MODAL SUKSES (RECEIPT) --}}
     <template x-teleport="body">
         <div x-show="showReceiptModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl border border-slate-200 text-center transform transition-all relative overflow-hidden">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl border border-slate-200 text-center transform transition-all relative overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="absolute -top-10 -right-10 w-40 h-40 bg-emerald-50 rounded-full opacity-50"></div>
             <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-50 rounded-full opacity-50"></div>
             
@@ -777,7 +791,7 @@
     {{-- MODAL TAMBAH GRUP --}}
     <template x-teleport="body">
         <div x-show="showAddGroupModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
-        <div @click.away="closeAddGroupModal()" @keydown.escape.window="closeAddGroupModal()" class="bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700 transform transition-all overflow-hidden">
+        <div @click.away="closeAddGroupModal()" @keydown.escape.window="closeAddGroupModal()" class="bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700 transform transition-all overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80">
                 <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fas fa-layer-group text-blue-400"></i> Tambah Group Produk</h3>
                 <button @click="closeAddGroupModal()" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
@@ -798,7 +812,7 @@
     {{-- MODAL PENGELUARAN / EXPENSE --}}
     <template x-teleport="body">
         <div x-show="showExpenseModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-        <div @click.away="showExpenseModal = false" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200">
+        <div @click.away="showExpenseModal = false" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-lg font-black text-slate-800"><i class="fas fa-arrow-down text-orange-500 mr-2"></i>Catat Pengeluaran</h2>
                 <button @click="showExpenseModal = false" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200"><i class="fas fa-times"></i></button>
@@ -837,7 +851,7 @@
 
 {{-- ====================== MODAL TUTUP SHIFT ====================== --}}
 <div id="modal-tutup-shift" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         {{-- Header --}}
         <div class="bg-gradient-to-r from-red-500 to-rose-600 p-6 text-white">
             <div class="flex items-center justify-between mb-1">
@@ -979,7 +993,7 @@
     {{-- MODAL CUSTOM HARGA (HARGA KHUSUS) --}}
     <template x-teleport="body">
         <div x-show="showCustomPriceModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-            <div @click.away="showCustomPriceModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden">
+            <div @click.away="showCustomPriceModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
                 {{-- Header --}}
                 <div class="bg-gradient-to-r from-orange-500 to-amber-600 p-8 text-white relative">
                     <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fas fa-tags text-7xl"></i></div>
@@ -1067,7 +1081,7 @@
     {{-- MODAL CASH OUT (MODERNIZED) --}}
     <template x-teleport="body">
         <div x-show="showCashOutModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-            <div @click.away="showCashOutModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden">
+            <div @click.away="showCashOutModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
                 {{-- Header --}}
                 <div class="bg-gradient-to-r from-orange-500 to-amber-600 p-8 text-white relative">
                     <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fas fa-cash-register text-7xl"></i></div>
@@ -1167,7 +1181,7 @@
     {{-- MODAL PENGATURAN PRINTER (PREMIUM UI) --}}
     <template x-teleport="body">
         <div x-show="showPrinterSettings" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[201] flex items-center justify-center p-4">
-            <div @click.away="showPrinterSettings = false" class="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div @click.away="showPrinterSettings = false" class="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] max-h-[90vh] overflow-y-auto scrollbar-hide ">
                 
                 {{-- Header --}}
                 <div class="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -1270,7 +1284,7 @@
                                     <div class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fas fa-microchip text-lg"></i></div>
                                     <div class="text-left flex-1">
                                         <p class="text-sm font-black text-slate-800">USB (Serial)</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB — Pilih COM Port</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB â€” Pilih COM Port</p>
                                     </div>
                                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500"></i>
                                 </button>
@@ -1455,7 +1469,7 @@
                                 </div>
                             </div>
                             
-                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' — font ' + fontSize"></p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' â€” font ' + fontSize"></p>
                         </div>
                     </div>
                 </div>
@@ -1592,9 +1606,9 @@ function closeCashOut() {
             monthlyRevenue: {{ $monthlyRevenue ?? 0 }},
 
             get bepMonths() {
-                if (this.monthlyRevenue <= 0) return '∞';
+                if (this.monthlyRevenue <= 0) return 'âˆž';
                 let months = this.totalCapital / this.monthlyRevenue;
-                return isFinite(months) ? Math.ceil(months) : '∞';
+                return isFinite(months) ? Math.ceil(months) : 'âˆž';
             },
 
             // Multi-Worksheet Logic
@@ -2784,3 +2798,5 @@ function closeCashOut() {
 </script>
 @endpush
 @endsection
+
+

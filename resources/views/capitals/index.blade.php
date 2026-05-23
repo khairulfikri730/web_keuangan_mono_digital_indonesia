@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('title', 'Modal Usaha')
 @section('page-title', 'Manajemen Modal Usaha')
 
@@ -26,7 +26,7 @@
             <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
                 <div>
                     <h3 class="text-lg font-black text-white"><i class="fas fa-wallet text-emerald-400 mr-2"></i> Rp {{ number_format($capital->total_amount, 0, ',', '.') }}</h3>
-                    <p class="text-xs text-slate-400 mt-1">Tanggal: {{ $capital->date->format('d M Y') }} · {{ $capital->is_detailed ? 'Detail Terlampir' : 'Hanya Total' }}</p>
+                    <p class="text-xs text-slate-400 mt-1">Tanggal: {{ $capital->date->format('d M Y') }} Â· {{ $capital->is_detailed ? 'Detail Terlampir' : 'Hanya Total' }}</p>
                 </div>
                 <div class="flex gap-2">
                     <button type="button" @click="openEditModal({{ $capital->id }})" class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all border border-blue-500/20" title="Edit Data">
@@ -97,7 +97,7 @@
     <!-- Modal Form (Add & Edit) -->
     <div x-show="showModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4">
         <div x-show="showModal" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="showModal = false"></div>
-        <div x-show="showModal" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-4xl z-10 overflow-hidden">
+        <div x-show="showModal" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-4xl z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
                 <h3 class="text-lg font-black text-white flex items-center gap-2">
                     <i :class="isEdit ? 'fas fa-edit text-blue-400' : 'fas fa-plus-circle text-emerald-400'"></i>
@@ -191,7 +191,7 @@
     <!-- Modal Import Excel -->
     <div x-show="showImportModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4">
         <div x-show="showImportModal" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="showImportModal = false"></div>
-        <div x-show="showImportModal" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md z-10 overflow-hidden">
+        <div x-show="showImportModal" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
                 <h3 class="text-lg font-black text-white flex items-center gap-2">
                     <i class="fas fa-file-import text-blue-400"></i> Import Modal via Excel
@@ -315,4 +315,6 @@
     });
 </script>
 @endpush
+
+
 

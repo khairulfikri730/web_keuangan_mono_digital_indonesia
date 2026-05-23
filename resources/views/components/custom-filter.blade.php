@@ -1,4 +1,4 @@
-@props([
+﻿@props([
     'period' => null,
     'dateFrom' => null,
     'dateTo' => null,
@@ -26,11 +26,11 @@
     $selectedDate = $dateFromVal;
 @endphp
 
-<div x-data="customFilterApp()" class="flex flex-wrap items-center gap-3 w-fit select-none relative">
+<div x-data="customFilterApp()" class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 w-full sm:w-fit select-none relative">
     {{-- Card Selector --}}
     <div class="relative">
         <div @click="calendarOpen = !calendarOpen" 
-             class="bg-slate-800 hover:bg-slate-700/80 border border-slate-700/85 rounded-2xl px-5 py-3.5 flex items-center gap-4 cursor-pointer transition-premium shadow-lg min-w-[220px]">
+             class="bg-slate-800 hover:bg-slate-700/80 border border-slate-700/85 rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-premium shadow-lg w-full sm:min-w-[220px]">
             <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400">
                 <i class="far fa-calendar-alt text-lg"></i>
             </div>
@@ -52,7 +52,7 @@
              x-transition:leave="transition ease-in duration-150"
              x-transition:leave-start="opacity-100 scale-100 translate-y-0"
              x-transition:leave-end="opacity-0 scale-95 -translate-y-2"
-             class="absolute left-0 mt-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl z-[99] w-80"
+             class="absolute left-0 mt-2 bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-2xl z-[99] w-[calc(100vw-2rem)] sm:w-80 max-w-[320px]"
              x-cloak>
             
             {{-- Calendar Header --}}
@@ -131,19 +131,19 @@
     </div>
 
     {{-- Pill Selector --}}
-    <div class="flex bg-slate-900/50 rounded-full p-1 border border-slate-800/80 w-fit">
+    <div class="flex overflow-x-auto custom-scrollbar bg-slate-900/50 rounded-full p-1 border border-slate-800/80 w-full sm:w-fit max-w-full max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <button type="button" @click="setPeriod('hari')" 
-                class="px-5 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-300"
+                class="px-5 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-300 shrink-0"
                 :class="period === 'hari' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'">
             Hari
         </button>
         <button type="button" @click="setPeriod('minggu')" 
-                class="px-5 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-300"
+                class="px-5 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-300 shrink-0"
                 :class="period === 'minggu' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'">
             Minggu
         </button>
         <button type="button" @click="setPeriod('bulan')" 
-                class="px-5 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-300"
+                class="px-5 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-300 shrink-0"
                 :class="period === 'bulan' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'">
             Bulan
         </button>
@@ -338,3 +338,5 @@ function customFilterApp() {
     };
 }
 </script>
+
+

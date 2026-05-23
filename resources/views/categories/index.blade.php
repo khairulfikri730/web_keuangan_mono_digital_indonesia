@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Kategori Produk')
 @section('page-title', 'Kategori Produk')
@@ -103,7 +103,7 @@
 
     {{-- MODAL TAMBAH / EDIT --}}
     <div x-show="showModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div @click.away="closeModal()" x-show="showModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-4" x-transition:enter-end="opacity-100 scale-100 translate-y-0" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 transform overflow-hidden flex flex-col">
+        <div @click.away="closeModal()" x-show="showModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-4" x-transition:enter-end="opacity-100 scale-100 translate-y-0" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 transform overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto scrollbar-hide ">
             
             <div class="p-6 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50">
                 <h3 class="text-xl font-black text-white" x-text="isEdit ? 'Edit Kategori' : 'Kategori Baru'"></h3>
@@ -219,3 +219,5 @@ function categoryApp() {
 }
 </script>
 @endsection
+
+

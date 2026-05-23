@@ -1,4 +1,4 @@
-{{-- Premium Redesign Buka Shift Modal --}}
+﻿{{-- Premium Redesign Buka Shift Modal --}}
 <div x-data="{ 
         physicCash: {{ (int)$laciBalance }}, 
         systemCash: {{ (int)$laciBalance }},
@@ -25,7 +25,7 @@
     {{-- Backdrop Blur --}}
     <div class="absolute inset-0 bg-navy-900/60 backdrop-blur-md" @click="showOpenModal = false"></div>
 
-    <div class="glass-modal rounded-[2.5rem] overflow-hidden flex flex-col w-full max-w-lg lg:max-w-xl max-h-[95vh] shadow-2xl border border-white/5 relative z-10">
+    <div class="glass-modal rounded-[2.5rem] overflow-hidden flex flex-col w-full max-w-lg lg:max-w-xl max-h-[95vh] shadow-2xl border border-white/5 relative z-10 max-h-[90vh] overflow-y-auto scrollbar-hide ">
         
         <!-- Decoration Glows -->
         <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-600/10 blur-[80px] rounded-full pointer-events-none"></div>
@@ -44,7 +44,7 @@
         <!-- MODAL CONTENT (Scrollable) -->
         <div class="px-8 py-4 overflow-y-auto custom-scrollbar space-y-6">
             
-            <!-- SECTION 1 — AUTO SYNC INFO -->
+            <!-- SECTION 1 â€” AUTO SYNC INFO -->
             <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-5 flex items-center gap-5 group hover:bg-emerald-500/10 transition-all duration-300 neon-border-green">
                 <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/10 group-hover:scale-110 transition-transform">
                     <i class="fas fa-sync-alt animate-spin-slow"></i>
@@ -54,7 +54,7 @@
                         <h4 class="text-xs font-black text-emerald-400 uppercase tracking-[0.15em]">Disinkronkan dari Shift Terakhir</h4>
                         <span class="bg-emerald-500 text-[8px] font-black px-2 py-0.5 rounded-full text-emerald-950 uppercase tracking-tighter">Sinkron Laci Aktif</span>
                     </div>
-                    <p class="text-sm font-bold text-white truncate">{{ auth()->user()->name }} • {{ now()->translatedFormat('d M Y') }} • {{ now()->format('H:i') }}</p>
+                    <p class="text-sm font-bold text-white truncate">{{ auth()->user()->name }} â€¢ {{ now()->translatedFormat('d M Y') }} â€¢ {{ now()->format('H:i') }}</p>
                     <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                         <i class="fas fa-check-circle text-emerald-500"></i> Sinkronisasi laci kasir otomatis
                     </p>
@@ -66,7 +66,7 @@
                 <input type="hidden" name="opening_cash" :value="physicCash">
                 
                 <div class="space-y-6">
-                    <!-- SECTION 2 — PILIH KASIR (MULTI) -->
+                    <!-- SECTION 2 â€” PILIH KASIR (MULTI) -->
                     @if(auth()->user()->isOwner())
                     <div class="space-y-2" x-data="{ selectedUsers: [{{ auth()->id() }}] }">
                         <div class="flex items-center justify-between">
@@ -111,7 +111,7 @@
                     @endif
 
 
-                    <!-- SECTION 3 — KAS AWAL SISTEM -->
+                    <!-- SECTION 3 â€” KAS AWAL SISTEM -->
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Kas Awal Sistem (Auto Sync)</label>
                         <div class="relative bg-slate-900/80 border border-white/5 rounded-2xl px-5 py-4 flex items-center justify-between shadow-inner">
@@ -123,7 +123,7 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 4 — INPUT UANG FISIK -->
+                    <!-- SECTION 4 â€” INPUT UANG FISIK -->
                     <div class="space-y-2 pt-2">
                         <label class="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
                             Uang Fisik di Laci Saat Ini
@@ -141,7 +141,7 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 5 — VALIDASI SELISIH -->
+                    <!-- SECTION 5 â€” VALIDASI SELISIH -->
                     <div x-show="diff != 0" 
                          x-transition:enter="transition ease-out duration-300"
                          x-transition:enter-start="opacity-0 -translate-y-2"
@@ -165,7 +165,7 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 5.5 — WAKTU BUKA SHIFT (Opsional / Testing) -->
+                    <!-- SECTION 5.5 â€” WAKTU BUKA SHIFT (Opsional / Testing) -->
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Waktu Buka Shift (Opsional)</label>
                         <div class="relative">
@@ -179,7 +179,7 @@
                         <p class="text-[9px] text-slate-600 ml-2 italic">Kosongkan untuk menggunakan waktu sekarang. Isi hanya jika ingin backdate shift.</p>
                     </div>
 
-                    <!-- SECTION 6 — CATATAN -->
+                    <!-- SECTION 6 â€” CATATAN -->
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Catatan Pembukaan</label>
                         <div class="relative">
@@ -194,7 +194,7 @@
             </form>
         </div>
 
-        <!-- SECTION 7 — ACTION BUTTONS -->
+        <!-- SECTION 7 â€” ACTION BUTTONS -->
         <div class="p-8 space-y-4 bg-slate-900/50 border-t border-white/10">
             <div class="flex gap-4">
                 <button @click="showOpenModal = false" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] transition-all active:scale-95 border border-white/5">
@@ -249,3 +249,5 @@
         }
     </style>
 </div>
+
+

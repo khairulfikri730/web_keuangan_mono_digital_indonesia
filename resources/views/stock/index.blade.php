@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Manajemen Stok')
 @section('page-title', 'Gudang & Stok')
@@ -158,7 +158,7 @@
                     <div class="flex items-center gap-2 mt-1">
                         @if($m->product && $m->product->category)
                             <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{{ $m->product->category->name }}</span>
-                            <span class="text-slate-600">•</span>
+                            <span class="text-slate-600">â€¢</span>
                         @endif
                         @if($m->product && $m->product->is_stockless)
                             <span class="text-xs font-medium text-blue-400"><i class="fas fa-infinity text-[10px] mr-1"></i> Unlimited</span>
@@ -200,7 +200,7 @@
                 <p class="text-xs font-bold text-slate-300 mb-1 line-clamp-1"><i class="fas fa-comment-alt text-[10px] text-slate-500 mr-1"></i> {{ $m->notes }}</p>
                 <div class="flex items-center md:justify-end gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     <span><i class="far fa-clock mr-1"></i> {{ $m->created_at->diffForHumans() }}</span>
-                    <span>•</span>
+                    <span>â€¢</span>
                     <span><i class="far fa-user mr-1"></i> {{ $m->user->name }}</span>
                 </div>
             </div>
@@ -253,7 +253,7 @@
 
     {{-- MODAL PENYESUAIAN STOK --}}
     <div x-show="isModalOpen" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div @click.away="closeModal()" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-4" x-transition:enter-end="opacity-100 scale-100 translate-y-0" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 transform overflow-hidden flex flex-col">
+        <div @click.away="closeModal()" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-4" x-transition:enter-end="opacity-100 scale-100 translate-y-0" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 transform overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto scrollbar-hide ">
             
             <div class="p-6 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50 relative overflow-hidden">
                 <div class="absolute inset-0 opacity-20 pointer-events-none" style="background: radial-gradient(circle at top right, #3b82f6, transparent 70%);"></div>
@@ -322,3 +322,5 @@ function stockApp() {
 }
 </script>
 @endsection
+
+

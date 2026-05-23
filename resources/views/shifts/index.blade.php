@@ -222,7 +222,7 @@
                                         
                                         {{-- Inline Edit Modal --}}
                                         <div x-show="showEdit" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 text-left">
-                                            <div @click.away="showEdit = false" class="bg-[#1e293b] rounded-3xl w-full max-w-sm shadow-2xl border border-slate-700 p-6">
+                                            <div @click.away="showEdit = false" class="bg-[#1e293b] rounded-3xl w-full max-w-sm shadow-2xl border border-slate-700 p-6 max-h-[90vh] overflow-y-auto scrollbar-hide ">
                                                 <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2"><i class="fas fa-edit text-blue-400"></i> Edit Shift</h3>
                                                 <form action="{{ route('shifts.update', $s->id) }}" method="POST">
                                                     @csrf @method('PUT')
@@ -345,4 +345,6 @@ function confirmDelete(id) {
 @endpush
 @endif
 @endsection
+
+
 
