@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'KasirPro') â€” {{ \App\Models\Setting::get('store_name', 'KasirPro') }}</title>
+    <title>@yield('title', 'KasirPro') Ã¢â‚¬â€ {{ \App\Models\Setting::get('store_name', 'KasirPro') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -308,7 +308,7 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-xs font-bold text-white truncate">{{ $p->name }}</p>
-                                        <p class="text-[10px] text-red-400 font-bold">STOK HABIS Â· {{ $p->stock }} tersisa</p>
+                                        <p class="text-[10px] text-red-400 font-bold">STOK HABIS Ã‚Â· {{ $p->stock }} tersisa</p>
                                     </div>
                                 </a>
                                 @endforeach
@@ -319,7 +319,7 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-xs font-bold text-white truncate">{{ $p->name }}</p>
-                                        <p class="text-[10px] text-amber-400 font-bold">STOK MENIPIS Â· {{ $p->stock }}/{{ $p->min_stock }} (min)</p>
+                                        <p class="text-[10px] text-amber-400 font-bold">STOK MENIPIS Ã‚Â· {{ $p->stock }}/{{ $p->min_stock }} (min)</p>
                                     </div>
                                 </a>
                                 @endforeach
@@ -347,7 +347,7 @@
         </div>
 
         {{-- Page Content --}}
-        <main class="flex-1 px-4 sm:px-6 pb-8 pt-4 w-full max-w-full overflow-x-hidden">
+                        <main class="flex-1 px-4 sm:px-6 @if(request()->routeIs('pos.*')) py-0 flex flex-col h-full @else pb-8 pt-4 @endif w-full max-w-full overflow-x-hidden">
             {{-- Big Worksheet Selector --}}
             @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
             @unless(request()->routeIs('pos.*'))
@@ -571,5 +571,7 @@
     @stack('scripts')
 </body>
 </html>
+
+
 
 

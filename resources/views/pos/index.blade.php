@@ -5,7 +5,8 @@
 
 @push('styles')
 <style>
-    .pos-height { height: 100vh; }
+        body { background-color: #f1f5f9 !important; overflow: hidden; }
+        body { background-color: #f1f5f9 !important; overflow: hidden; }
     /* Scrollbar minimal */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -15,7 +16,7 @@
 @section('content')
 
 
-<div x-data="posApp()" class="pos-height flex flex-col lg:flex-row bg-slate-100 -mx-6 -mt-4 text-slate-800 font-sans">
+<div x-data="posApp()" class="flex-1 h-full max-h-full overflow-hidden flex flex-col lg:flex-row bg-slate-100 -mx-6 -mt-4 text-slate-800 font-sans">
     
     {{-- MAIN CONTENT (TENGAH) --}}
     <div class="flex-1 flex flex-col h-full bg-slate-100 border-r border-slate-200 p-4 lg:p-6">
@@ -435,7 +436,7 @@
                 <span class="text-base font-black leading-none" x-text="formatRp(currentTotal)"></span>
             </div>
         </div>
-        <div class="flex items-center gap-2 font-bold text-xs bg-white/20 hover:bg-white/30 transition-colors px-4 py-2.5 rounded-xl">
+        <div class="flex items-center gap-2 font-bold text-xs bg-white/20 hover:bg-white/30 transition-colors px-4 py-2.5 rounded-xl shrink-0">
             Lihat Pesanan <i class="fas fa-arrow-right text-[10px]"></i>
         </div>
     </div>
@@ -2819,6 +2820,10 @@ function closeCashOut() {
 </script>
 @endpush
 @endsection
+
+
+
+
 
 
 
