@@ -22,7 +22,7 @@
     <div class="flex-1 flex flex-col h-full bg-slate-100 border-r border-slate-200 p-4 lg:p-6">
         
         {{-- HEADER BAR --}}
-        <div class="flex items-center gap-4 mb-4 bg-white p-3 rounded-2xl shadow-sm border border-slate-200 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-4 mb-4 bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-100 shrink-0">
             <h2 class="text-xl font-black text-slate-800 hidden md:block px-2">POS Kasir</h2>
             
             <div class="relative flex-1">
@@ -99,15 +99,15 @@
 
         {{-- FILTER KATEGORI (CHIPS) --}}
         <div class="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide shrink-0" id="category-buttons">
-            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-slate-800 text-white shadow-lg border-slate-800 active' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all">
+            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-slate-800 text-white shadow-lg border-slate-800 active' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'" class="category-btn px-4 sm:px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all">
                 Semua
             </button>
             
             {{-- SPECIAL FILTERS (PROMO & BEST SELLER) --}}
-            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white shadow-lg border-rose-500 active' : 'bg-white border-rose-200 text-rose-500 hover:bg-rose-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white shadow-lg border-rose-500 active' : 'bg-white border-rose-200 text-rose-500 hover:bg-rose-50'" class="category-btn px-4 sm:px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
                 <i class="fas fa-fire"></i> Promo
             </button>
-            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white shadow-lg border-amber-500 active' : 'bg-white border-amber-200 text-amber-500 hover:bg-amber-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white shadow-lg border-amber-500 active' : 'bg-white border-amber-200 text-amber-500 hover:bg-amber-50'" class="category-btn px-4 sm:px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
                 <i class="fas fa-star"></i> Terlaris
             </button>
 
@@ -266,7 +266,7 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
-                                    <span class="text-[10px] text-slate-300">Ãƒâ€”</span>
+                                    <span class="text-[10px] text-slate-300">ÃƒÆ’Ã¢â‚¬â€</span>
                                     <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5">
                                         <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
                                         <span class="text-xs font-black text-slate-800 w-5 text-center" x-text="item.quantity"></span>
@@ -411,14 +411,22 @@
         </div>
     </div>
     
-    {{-- MOBILE FLOATING CART BUTTON --}}
-    <button @click="mobileCartOpen = true" class="lg:hidden fixed bottom-6 right-6 z-[130] bg-emerald-500 text-white rounded-full px-5 py-3.5 shadow-xl shadow-emerald-500/30 flex items-center gap-3 active:scale-95 transition-all">
-        <div class="relative">
-            <i class="fas fa-shopping-cart text-lg"></i>
-            <span x-show="activeWorksheet && activeWorksheet.cart.length > 0" class="absolute -top-3 -right-3 bg-rose-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-emerald-500" x-text="activeWorksheet ? activeWorksheet.cart.reduce((s,i) => s+i.quantity, 0) : 0"></span>
+    {{-- MOBILE FIXED BOTTOM CART BAR --}}
+    <div x-show="activeWorksheet && activeWorksheet.cart.length > 0" x-cloak class="lg:hidden fixed bottom-0 left-0 right-0 z-[130] bg-emerald-500 text-white shadow-[0_-10px_20px_rgba(16,185,129,0.2)] px-5 py-4 flex items-center justify-between cursor-pointer active:bg-emerald-600 transition-colors" @click="mobileCartOpen = true">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <i class="fas fa-shopping-bag text-2xl opacity-90"></i>
+                <span class="absolute -top-1.5 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm" x-text="activeWorksheet ? activeWorksheet.cart.reduce((s,i) => s+i.quantity, 0) : 0"></span>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[10px] font-medium text-emerald-100 uppercase tracking-wider mb-0.5">Total Belanja</span>
+                <span class="text-base font-black leading-none" x-text="formatRp(currentTotal)"></span>
+            </div>
         </div>
-        <span class="font-black text-sm" x-text="formatRp(currentTotal)"></span>
-    </button>
+        <div class="flex items-center gap-2 font-bold text-xs bg-white/20 hover:bg-white/30 transition-colors px-4 py-2.5 rounded-xl">
+            Lihat Pesanan <i class="fas fa-arrow-right text-[10px]"></i>
+        </div>
+    </div>
 
 
     {{-- MODAL LAYOUT EDITOR (DRAG & DROP) --}}
@@ -648,7 +656,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-qrcode text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">QR Code belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko Ã¢â€ â€™ Gambar QRIS</p>
+                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Gambar QRIS</p>
                             </div>
                             @endif
                         </div>
@@ -676,7 +684,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-building-columns text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">Info rekening belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko Ã¢â€ â€™ Info Rekening Transfer</p>
+                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Info Rekening Transfer</p>
                             </div>
                             @endif
                         </div>
@@ -1284,7 +1292,7 @@
                                     <div class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fas fa-microchip text-lg"></i></div>
                                     <div class="text-left flex-1">
                                         <p class="text-sm font-black text-slate-800">USB (Serial)</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB Ã¢â‚¬â€ Pilih COM Port</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pilih COM Port</p>
                                     </div>
                                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500"></i>
                                 </button>
@@ -1469,7 +1477,7 @@
                                 </div>
                             </div>
                             
-                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' Ã¢â‚¬â€ font ' + fontSize"></p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â font ' + fontSize"></p>
                         </div>
                     </div>
                 </div>
@@ -1607,9 +1615,9 @@ function closeCashOut() {
             monthlyRevenue: {{ $monthlyRevenue ?? 0 }},
 
             get bepMonths() {
-                if (this.monthlyRevenue <= 0) return 'Ã¢Ë†Å¾';
+                if (this.monthlyRevenue <= 0) return 'ÃƒÂ¢Ã‹â€ Ã…Â¾';
                 let months = this.totalCapital / this.monthlyRevenue;
-                return isFinite(months) ? Math.ceil(months) : 'Ã¢Ë†Å¾';
+                return isFinite(months) ? Math.ceil(months) : 'ÃƒÂ¢Ã‹â€ Ã…Â¾';
             },
 
             // Multi-Worksheet Logic
@@ -2799,6 +2807,7 @@ function closeCashOut() {
 </script>
 @endpush
 @endsection
+
 
 
 
