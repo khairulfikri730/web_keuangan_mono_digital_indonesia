@@ -5,7 +5,6 @@
 
 @push('styles')
 <style>
-    header { display: none; }
     .pos-height { height: 100vh; }
     /* Scrollbar minimal */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -23,8 +22,6 @@
         
         {{-- HEADER BAR --}}
         <div class="flex items-center gap-2 sm:gap-4 mb-4 bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-100 shrink-0">
-            <h2 class="text-xl font-black text-slate-800 hidden md:block px-2">POS Kasir</h2>
-            
             <div class="relative flex-1">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                 <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchProducts()" x-ref="searchInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner text-sm transition-all" placeholder="Cari produk atau scan barcode..." autofocus>
@@ -64,22 +61,22 @@
             </div>
         </div>
 
-        {{-- SHIFT BANNER & BEP INFO --}}
+                {{-- SHIFT BANNER & BEP INFO --}}
         <div class="mb-4 shrink-0">
             {{-- Shift Status --}}
-            <div :class="activeShift ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-100 border-amber-300 text-amber-800'" class="border px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
+            <div :class="activeShift ? 'bg-white border-emerald-200' : 'bg-white border-amber-200'" class="border px-4 py-3 rounded-xl flex items-center justify-between shadow-sm">
                 <div class="flex items-center gap-3">
-                    <div :class="activeShift ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-200 text-amber-600'" class="w-10 h-10 rounded-full flex items-center justify-center shadow-inner">
-                        <i :class="activeShift ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="text-xl"></i>
+                    <div :class="activeShift ? 'text-emerald-500' : 'text-amber-500'" class="w-8 h-8 rounded-full flex items-center justify-center bg-slate-50">
+                        <i :class="activeShift ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'" class="text-lg"></i>
                     </div>
                     <div>
-                        <p class="font-black text-sm" x-text="activeShift ? 'Shift Telah Dibuka' : 'Shift Belum Dibuka'"></p>
-                        <p class="text-[10px] font-medium opacity-80" x-text="activeShift ? 'Anda sedang dalam sesi penjualan aktif.' : 'Buka shift untuk mulai mencatat transaksi.'"></p>
+                        <p class="font-bold text-xs text-slate-700" x-text="activeShift ? 'Shift Aktif' : 'Shift Belum Dibuka'"></p>
+                        <p class="text-[9px] font-medium text-slate-400" x-text="activeShift ? 'Anda sedang dalam sesi penjualan.' : 'Buka shift untuk mulai transaksi.'"></p>
                     </div>
                 </div>
                 <template x-if="!activeShift && products.length > 0">
-                    <a href="{{ route('shifts.index', ['open' => 1]) }}" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg shadow-amber-500/30">
-                        Buka Shift
+                    <a href="{{ route('shifts.index', ['open' => 1]) }}" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5">
+                        <i class="fas fa-play text-[10px]"></i> Buka Shift
                     </a>
                 </template>
                 @if($activeShift)
@@ -97,31 +94,46 @@
 
 
 
-        {{-- FILTER KATEGORI (CHIPS) --}}
+                {{-- FILTER KATEGORI (CHIPS) --}}
         <div class="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide shrink-0" id="category-buttons">
-            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-slate-800 text-white shadow-lg border-slate-800 active' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'" class="category-btn px-4 sm:px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all">
+            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all">
                 Semua
             </button>
             
-            {{-- SPECIAL FILTERS (PROMO & BEST SELLER) --}}
-            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white shadow-lg border-rose-500 active' : 'bg-white border-rose-200 text-rose-500 hover:bg-rose-50'" class="category-btn px-4 sm:px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
-                <i class="fas fa-fire"></i> Promo
+            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5">
+                <i class="fas fa-fire text-[10px]" :class="activeCategory==='PROMO' ? 'text-white' : 'text-rose-500'"></i> Promo
             </button>
-            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white shadow-lg border-amber-500 active' : 'bg-white border-amber-200 text-amber-500 hover:bg-amber-50'" class="category-btn px-4 sm:px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
-                <i class="fas fa-star"></i> Terlaris
+            
+            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5">
+                <i class="fas fa-star text-[10px]" :class="activeCategory==='BEST SELLER' ? 'text-white' : 'text-amber-500'"></i> Terlaris
             </button>
 
             <template x-for="cat in categories" :key="cat.id">
-                <button @click="setCategory(cat.id)" 
-                        :data-category="cat.id"
-                        :style="activeCategory===cat.id ? `background-color: ${cat.color || '#10b981'}; border-color: ${cat.color || '#10b981'}; color: ${getContrastYIQ(cat.color || '#10b981')}; box-shadow: 0 4px 15px -3px ${cat.color || '#10b981'}60;` : `border-color: ${cat.color || '#e2e8f0'}; color: ${cat.color || '#64748b'};`"
-                        :class="activeCategory===cat.id ? 'shadow-lg border active' : 'bg-white border hover:bg-slate-50'" 
-                        class="category-btn px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
-                    <i :class="getPlaceholderIcon(cat.name)" class="text-xs" :style="activeCategory!==cat.id ? `color: ${cat.color || '#64748b'};` : ''"></i>
+                <button @click="setCategory(cat.id)" :data-category="cat.id" :class="activeCategory===cat.id ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all">
                     <span x-text="cat.name"></span>
                 </button>
             </template>
+                </div>
+
+        {{-- MINI WORKSHEET SELECTOR (Mobile Reference) --}}
+        @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
+        <div class="mb-4 bg-white border border-slate-200 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:bg-slate-50 transition-colors shrink-0" onclick="document.getElementById('mobile-ws-dropdown').classList.toggle('hidden')">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center">
+                    <i class="fas fa-store text-emerald-500 text-[10px]"></i>
+                </div>
+                <span class="text-xs font-bold text-slate-700">{{ $activeWorksheet ? $activeWorksheet->name : 'Pilih Worksheet' }}</span>
+            </div>
+            <i class="fas fa-chevron-down text-slate-400 text-[10px]"></i>
         </div>
+        <div id="mobile-ws-dropdown" class="hidden mb-4 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden shrink-0">
+            @foreach($userWorksheets ?? [] as $w)
+            <a href="?worksheet_id={{ $w->id }}" class="block px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100 last:border-0 {{ $activeWorksheet && $activeWorksheet->id == $w->id ? 'bg-emerald-50 text-emerald-600' : '' }}">
+                {{ $w->name }}
+            </a>
+            @endforeach
+        </div>
+        @endif
 
         {{-- GRID PRODUK --}}
         <div id="product-grid-container" class="flex-1 overflow-y-auto pr-2 pb-6 scrollbar-hide scroll-smooth relative">
@@ -266,7 +278,7 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
-                                    <span class="text-[10px] text-slate-300">ÃƒÆ’Ã¢â‚¬â€</span>
+                                    <span class="text-[10px] text-slate-300">ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</span>
                                     <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5">
                                         <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
                                         <span class="text-xs font-black text-slate-800 w-5 text-center" x-text="item.quantity"></span>
@@ -656,7 +668,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-qrcode text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">QR Code belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Gambar QRIS</p>
+                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Gambar QRIS</p>
                             </div>
                             @endif
                         </div>
@@ -684,7 +696,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-building-columns text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">Info rekening belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Info Rekening Transfer</p>
+                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Info Rekening Transfer</p>
                             </div>
                             @endif
                         </div>
@@ -1292,7 +1304,7 @@
                                     <div class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fas fa-microchip text-lg"></i></div>
                                     <div class="text-left flex-1">
                                         <p class="text-sm font-black text-slate-800">USB (Serial)</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pilih COM Port</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Pilih COM Port</p>
                                     </div>
                                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500"></i>
                                 </button>
@@ -1477,7 +1489,7 @@
                                 </div>
                             </div>
                             
-                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â font ' + fontSize"></p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â font ' + fontSize"></p>
                         </div>
                     </div>
                 </div>
@@ -1615,9 +1627,9 @@ function closeCashOut() {
             monthlyRevenue: {{ $monthlyRevenue ?? 0 }},
 
             get bepMonths() {
-                if (this.monthlyRevenue <= 0) return 'ÃƒÂ¢Ã‹â€ Ã…Â¾';
+                if (this.monthlyRevenue <= 0) return 'ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â Ãƒâ€¦Ã‚Â¾';
                 let months = this.totalCapital / this.monthlyRevenue;
-                return isFinite(months) ? Math.ceil(months) : 'ÃƒÂ¢Ã‹â€ Ã…Â¾';
+                return isFinite(months) ? Math.ceil(months) : 'ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â Ãƒâ€¦Ã‚Â¾';
             },
 
             // Multi-Worksheet Logic
@@ -2807,6 +2819,9 @@ function closeCashOut() {
 </script>
 @endpush
 @endsection
+
+
+
 
 
 

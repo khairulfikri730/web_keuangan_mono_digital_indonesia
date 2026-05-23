@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -239,18 +239,19 @@
     {{-- Main Content --}}
     <div class="flex-1 lg:ml-64 min-h-screen flex flex-col">
         {{-- Topbar --}}
-        <header class="sticky top-0 z-[100] bg-slate-900/60 backdrop-blur-md border-b border-slate-800/50 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
+        <header class="sticky top-0 z-[100] @if(request()->routeIs('pos.*')) bg-white border-b border-slate-100 @else bg-slate-900/60 backdrop-blur-md border-b border-slate-800/50 @endif px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
             <div class="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                <button @click="sidebarOpen = true" class="lg:hidden text-slate-400 hover:text-white transition-colors shrink-0">
+                <button @click="sidebarOpen = true" class="lg:hidden @if(request()->routeIs('pos.*')) text-slate-600 hover:text-slate-800 @else text-slate-400 hover:text-white @endif transition-colors shrink-0">
                     <i class="fas fa-bars-staggered text-xl"></i>
                 </button>
                 <div class="min-w-0">
-                    <h1 class="text-base sm:text-lg font-black text-white tracking-tight uppercase truncate">@yield('page-title', 'Dashboard')</h1>
+                    <h1 class="text-base sm:text-lg font-black @if(request()->routeIs('pos.*')) text-slate-800 @else text-white @endif tracking-tight uppercase truncate">@yield('page-title', 'Dashboard')</h1>
                 </div>
             </div>
             
             <div class="flex items-center gap-2 sm:gap-4 shrink-0">
 
+                @unless(request()->routeIs('pos.*'))
                 {{-- Notification Bell --}}
                 @php
                     $stockQuery = \App\Models\Product::active()
@@ -331,9 +332,10 @@
                         @endif
                     </div>
                 </div>
+                @endunless
 
-                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/50 border border-slate-800/50 text-[11px] font-bold text-slate-400 tracking-wider uppercase">
-                    <i class="far fa-clock text-blue-500"></i>
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full @if(request()->routeIs('pos.*')) bg-slate-100 text-slate-500 @else bg-slate-900/50 border border-slate-800/50 text-slate-400 @endif text-[11px] font-bold tracking-wider uppercase">
+                    <i class="far fa-clock @if(request()->routeIs('pos.*')) text-emerald-500 @else text-blue-500 @endif"></i>
                     <span id="clock"></span>
                 </div>
             </div>
@@ -347,8 +349,8 @@
         {{-- Page Content --}}
         <main class="flex-1 px-4 sm:px-6 pb-8 pt-4 w-full max-w-full overflow-x-hidden">
             {{-- Big Worksheet Selector --}}
-            {{-- Big Worksheet Selector --}}
             @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
+            @unless(request()->routeIs('pos.*'))
             <div class="mb-6 bg-[#0F172A] rounded-2xl border border-emerald-500 shadow-lg shadow-emerald-500/10 relative z-[60]">
                 <div class="bg-emerald-500 px-4 py-2 rounded-t-[15px] border-b border-emerald-600 flex items-center justify-between">
                     <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
@@ -440,6 +442,7 @@
                     </div>
                 </div>
             </div>
+            @endunless
             @endif
 
             @yield('content')
