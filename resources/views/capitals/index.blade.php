@@ -245,6 +245,16 @@
                 totalAmountFormatted: '',
                 items: []
             },
+            init() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('action') === 'edit_latest') {
+                    @if($capitals->isNotEmpty())
+                        this.openEditModal({{ $capitals->first()->id }});
+                    @else
+                        this.openAddModal();
+                    @endif
+                }
+            },
             formatCurrency(value) {
                 if(!value) return '';
                 let val = value.toString().replace(/[^0-9]/g, '');
@@ -281,14 +291,14 @@
                     this.isEdit = true;
                     this.formAction = `/capitals/${id}`;
                     this.formData.date = data.date.split('T')[0];
-                    this.formData.is_detailed = data.is_detailed.toString();
-                    this.formData.totalAmountFormatted = this.formatCurrency(data.total_amount);
+                    this.formData.is_detailed = data.is_detailed ? '1' : '0';
+                    this.formData.totalAmountFormatted = this.formatCurrency(Math.floor(data.total_amount));
                     
                     this.formData.items = data.items.map(item => ({
                         name: item.name,
                         type: item.type,
-                        price: item.price.toString(),
-                        priceFormatted: this.formatCurrency(item.price),
+                        price: Math.floor(item.price).toString(),
+                        priceFormatted: this.formatCurrency(Math.floor(item.price)),
                         quantity: item.quantity
                     }));
 

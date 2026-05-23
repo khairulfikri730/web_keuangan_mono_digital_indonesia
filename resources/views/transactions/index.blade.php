@@ -12,9 +12,26 @@
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Omset Hari Ini</p>
             <p class="text-lg font-black text-emerald-400">Rp {{ number_format($todayTotalSales, 0, ',', '.') }}</p>
         </div>
-        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm">
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pengeluaran</p>
-            <p class="text-lg font-black text-red-400">Rp {{ number_format($todayExpenses, 0, ',', '.') }}</p>
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                <i class="fas fa-wallet text-xl"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Biaya</p>
+                <p class="text-xl font-black text-red-400 leading-none mb-2">Rp {{ number_format($todayExpenses, 0, ',', '.') }}</p>
+                <div class="space-y-0.5">
+                    <div class="flex items-center gap-1.5 text-[9px] truncate">
+                        <i class="fas fa-money-bill-wave text-emerald-400 w-3 text-center"></i>
+                        <span class="text-slate-500 font-semibold">Tunai:</span>
+                        <span class="font-bold text-slate-300">Rp {{ number_format($todayCashExpense, 0, ',', '.') }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[9px] truncate">
+                        <i class="fas fa-university text-blue-400 w-3 text-center"></i>
+                        <span class="text-slate-500 font-semibold">Bank:</span>
+                        <span class="font-bold text-slate-300">Rp {{ number_format($todayBankExpense, 0, ',', '.') }}</span>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm">
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pendapatan Bersih</p>
@@ -88,10 +105,17 @@
                     $pillActive = 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20';
                     $pillInactive = 'bg-slate-800/60 border-white/5 text-slate-400 hover:bg-slate-700 hover:text-white';
                 @endphp
-                <a href="{{ route('transactions.index', array_filter(request()->except(['type','page','status','payment_method']))) }}" 
-                   class="{{ $pillBase }} {{ !$curType ? $pillActive : $pillInactive }}">
+                <a href="{{ route('transactions.index', array_filter(request()->except(['type','page','status','payment_method', 'shift']))) }}" 
+                   class="{{ $pillBase }} {{ (!$curType && request('shift') !== 'live') ? $pillActive : $pillInactive }}">
                     <i class="fas fa-list"></i> Semua <span class="bg-white/20 text-white px-1.5 py-0.5 rounded-lg ml-1">{{ $countAll }}</span>
                 </a>
+
+                @if($activeShift)
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page','status','payment_method']), ['shift' => 'live'])) }}" 
+                   class="{{ $pillBase }} {{ request('shift') === 'live' ? 'bg-rose-600 text-white border-rose-500 shadow-lg shadow-rose-900/20' : $pillInactive }}">
+                    <i class="fas fa-satellite-dish {{ request('shift') === 'live' ? 'animate-pulse' : '' }}"></i> LIVE SHIFT
+                </a>
+                @endif
                 <a href="{{ route('transactions.index', array_merge(request()->except(['page','status','payment_method']), ['type' => 'penjualan'])) }}" 
                    class="{{ $pillBase }} {{ $curType === 'penjualan' ? $pillActive : $pillInactive }}">
                     <i class="fas fa-arrow-down text-emerald-400"></i> Pemasukan <span class="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-lg ml-1">{{ $countPenjualan }}</span>
@@ -113,38 +137,52 @@
             </div>
         </div>
 
-        @if(request('type') !== 'expense')
         {{-- Row 2: Status & Method Filters --}}
         <div class="flex flex-wrap items-center gap-2 border-t border-white/5 pt-4">
             @php
+                $curType = request('type');
                 $curStatus = request('status');
                 $curMethod = request('payment_method');
                 $pillBase = 'px-3 py-1.5 rounded-lg text-[10px] font-black whitespace-nowrap transition-all border inline-flex items-center gap-2 uppercase tracking-widest';
                 $pillActive = 'bg-slate-700 text-white border-slate-600';
                 $pillInactive = 'bg-slate-800/40 border-white/5 text-slate-500 hover:bg-slate-700 hover:text-white';
             @endphp
-            <a href="{{ route('transactions.index', array_filter(request()->except(['status','payment_method','page']))) }}" 
-               class="{{ $pillBase }} {{ !$curStatus && !$curMethod ? $pillActive : $pillInactive }}">Semua Status</a>
             
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['status' => 'piutang', 'payment_method' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curStatus === 'piutang' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : $pillInactive }}">
-               <i class="fas fa-clock"></i> Piutang
-            </a>
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['status' => 'lunas', 'payment_method' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curStatus === 'lunas' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : $pillInactive }}">
-               <i class="fas fa-check-circle"></i> Lunas (Piutang)
-            </a>
+            @if($curType === 'expense')
+                <a href="{{ route('transactions.index', array_filter(request()->except(['payment_method','page']))) }}" 
+                   class="{{ $pillBase }} {{ !$curMethod ? $pillActive : $pillInactive }}">Semua Pengeluaran</a>
+                
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'cash'])) }}" 
+                   class="{{ $pillBase }} {{ $curMethod === 'cash' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : $pillInactive }}">
+                   <i class="fas fa-wallet"></i> Tunai
+                </a>
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'bank'])) }}" 
+                   class="{{ $pillBase }} {{ $curMethod === 'bank' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : $pillInactive }}">
+                   <i class="fas fa-university"></i> Bank / Transfer
+                </a>
+            @else
+                <a href="{{ route('transactions.index', array_filter(request()->except(['status','payment_method','page']))) }}" 
+                   class="{{ $pillBase }} {{ !$curStatus && !$curMethod ? $pillActive : $pillInactive }}">Semua Pemasukan</a>
+                
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['status' => 'piutang', 'payment_method' => ''])) }}" 
+                   class="{{ $pillBase }} {{ $curStatus === 'piutang' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : $pillInactive }}">
+                   <i class="fas fa-clock"></i> Piutang
+                </a>
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['status' => 'lunas', 'payment_method' => ''])) }}" 
+                   class="{{ $pillBase }} {{ $curStatus === 'lunas' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : $pillInactive }}">
+                   <i class="fas fa-check-circle"></i> Lunas (Piutang)
+                </a>
 
-            <div class="h-4 w-px bg-white/5 mx-2"></div>
+                <div class="h-4 w-px bg-white/5 mx-2"></div>
 
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'cash', 'status' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curMethod === 'cash' && !$curStatus ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : $pillInactive }}">Tunai</a>
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'qris', 'status' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curMethod === 'qris' && !$curStatus ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : $pillInactive }}">QRIS</a>
-            <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'transfer', 'status' => ''])) }}" 
-               class="{{ $pillBase }} {{ $curMethod === 'transfer' && !$curStatus ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : $pillInactive }}">Transfer</a>
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'cash', 'status' => ''])) }}" 
+                   class="{{ $pillBase }} {{ $curMethod === 'cash' && !$curStatus ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : $pillInactive }}">Tunai</a>
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'qris', 'status' => ''])) }}" 
+                   class="{{ $pillBase }} {{ $curMethod === 'qris' && !$curStatus ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : $pillInactive }}">QRIS</a>
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page']), ['payment_method' => 'transfer', 'status' => ''])) }}" 
+                   class="{{ $pillBase }} {{ $curMethod === 'transfer' && !$curStatus ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : $pillInactive }}">Transfer</a>
+            @endif
         </div>
-        @endif
 
         {{-- Row 3: Users & Search --}}
         <div class="flex flex-wrap items-center justify-between gap-4 border-t border-white/5 pt-4">
@@ -276,16 +314,20 @@
                                     <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                         {{-- Detail --}}
                                         <button onclick="document.getElementById('detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Detail"><i class="fas fa-eye text-xs"></i></button>
+                                        {{-- Pelunasan --}}
+                                        @if($isPending)
+                                            <button onclick="document.getElementById('pay-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 flex items-center justify-center transition-all" title="Pelunasan Piutang"><i class="fas fa-hand-holding-dollar text-xs"></i></button>
+                                        @endif
                                         {{-- Edit --}}
-                                        @if(!$isCancelled && auth()->user()->isOwner())
+                                        @if(!$isCancelled && auth()->user()->hasPermission('transactions.edit'))
                                             <a href="{{ route('transactions.show', $model) }}" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Edit"><i class="fas fa-pencil text-xs"></i></a>
                                         @endif
                                         {{-- Print --}}
                                         <button @click="doPrint('{{ $model->id }}')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Print Struk POS"><i class="fas fa-print text-xs"></i></button>
                                         {{-- Invoice Generator --}}
                                         <a href="{{ route('invoices.create', ['transaction_id' => $model->id]) }}" class="w-8 h-8 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 flex items-center justify-center transition-all" title="Buat Invoice (Official)"><i class="fas fa-file-invoice text-xs"></i></a>
-                                        {{-- Hapus --}}
-                                        @if(auth()->user()->isOwner())
+                                        {{-- Hapus / Batal --}}
+                                        @if(auth()->user()->hasPermission('transactions.delete'))
                                             <form action="{{ route('transactions.cancel', $model) }}" method="POST" class="inline">@csrf
                                                 <button type="button" 
                                                         onclick="Swal.fire({
@@ -380,7 +422,7 @@
                             </div>
 
                             {{-- Piutang Payment Modal (Santai Scale Style) --}}
-                            @if($isPending && auth()->user()->isOwner())
+                            @if($isPending)
                             <div id="pay-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" 
                                  x-data="{ 
                                     pelunasanMethod: 'cash', 
@@ -457,14 +499,19 @@
                             </div>
                             @endif
                         @elseif($entryType === 'expense')
-                            <tr class="bg-red-500/5 hover:bg-red-500/10 transition-all group">
+                            @php
+                                $isBankExpense = in_array($model->source, ['pos_bank', 'transfer', 'bank']);
+                            @endphp
+                            <tr class="{{ $isBankExpense ? 'bg-blue-500/5 hover:bg-blue-500/10' : 'bg-red-500/5 hover:bg-red-500/10' }} transition-all group">
                                 <td class="px-4 py-4">
-                                    <p class="text-xs font-black text-red-400 mb-0.5">EXPENSE</p>
-                                    <span class="text-[10px] font-bold text-slate-500 uppercase">{{ $model->user->name }}</span>
+                                    <p class="text-xs font-black {{ $isBankExpense ? 'text-blue-400' : 'text-red-400' }} mb-0.5">
+                                        {{ $isBankExpense ? 'EXP. BANK' : 'EXP. TUNAI' }}
+                                    </p>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase">{{ $model->user->name ?? '-' }}</span>
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap">
-                                    <p class="text-xs font-bold text-slate-300">{{ $model->created_at->format('d/m/Y') }}</p>
-                                    <p class="text-[10px] text-slate-500">{{ $model->created_at->format('H:i') }}</p>
+                                    <p class="text-xs font-bold text-slate-300">{{ $model->created_at ? $model->created_at->format('d/m/Y') : ($model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->format('d/m/Y') : '-') }}</p>
+                                    <p class="text-[10px] text-slate-500">{{ $model->created_at ? $model->created_at->format('H:i') : '' }}</p>
                                 </td>
                                 <td class="px-4 py-4">
                                     <p class="text-xs font-bold text-slate-300">{{ $model->category }}</p>
@@ -473,7 +520,7 @@
                                     <p class="text-xs font-medium text-slate-400">{{ $model->description }}</p>
                                 </td>
                                 <td class="px-4 py-4 text-right">
-                                    <p class="text-xs font-black text-red-400">-Rp {{ number_format($model->amount, 0, ',', '.') }}</p>
+                                    <p class="text-xs font-black {{ $isBankExpense ? 'text-blue-400' : 'text-red-400' }}">-Rp {{ number_format($model->amount, 0, ',', '.') }}</p>
                                 </td>
                                 <td class="px-4 py-4 text-right">-</td>
                                 <td class="px-4 py-4 text-right">-</td>

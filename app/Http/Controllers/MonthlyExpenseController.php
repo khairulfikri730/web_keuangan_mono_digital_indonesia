@@ -20,9 +20,12 @@ class MonthlyExpenseController extends Controller
 
     public function index(Request $request)
     {
-        $filter = $request->filter ?? $request->period ?? 'month';
-        $start = $request->start ?? $request->date_from;
-        $end = $request->end ?? $request->date_to;
+        $filter = $request->filter ?? $request->period ?? 'today';
+        $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
+        $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
+        if ($start && $end) {
+            $filter = 'custom';
+        }
         
         $now = now();
         switch ($filter) {
@@ -51,8 +54,8 @@ class MonthlyExpenseController extends Controller
                 $dateTo = $end ? \Carbon\Carbon::parse($end)->endOfDay() : $now->copy()->endOfMonth();
                 break;
             default:
-                $dateFrom = $now->copy()->startOfMonth();
-                $dateTo = $now->copy()->endOfMonth();
+                $dateFrom = $now->copy()->startOfDay();
+                $dateTo = $now->copy()->endOfDay();
                 break;
         }
 
@@ -66,7 +69,7 @@ class MonthlyExpenseController extends Controller
 
         // 2. Local MonthlyUsage Query
         $query = MonthlyUsage::whereBetween('expense_date', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
             
         if ($request->expense_type && $request->expense_type !== 'all') {
             $query->where('expense_type', $request->expense_type);
@@ -116,7 +119,7 @@ class MonthlyExpenseController extends Controller
         // 3. Full System Expense Breakdown (for the interactive modal)
         $fullBreakdown = Cashflow::where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->selectRaw('category, SUM(amount) as total, COUNT(*) as count')
             ->groupBy('category')
             ->orderByDesc('total')
@@ -125,7 +128,7 @@ class MonthlyExpenseController extends Controller
         // Also get the top 10 individual system expenses
         $topSystemExpenses = Cashflow::where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->latest('amount')
             ->limit(10)
             ->get();
@@ -178,6 +181,7 @@ class MonthlyExpenseController extends Controller
 
         // INTEGRASI CASHFLOW
         $source = in_array(strtolower($request->payment_method), ['tunai', 'cash']) ? 'pos_cash' : 'pos_bank';
+        
         \App\Models\Cashflow::create([
             'user_id' => auth()->id(),
             'worksheet_id' => $worksheetId,

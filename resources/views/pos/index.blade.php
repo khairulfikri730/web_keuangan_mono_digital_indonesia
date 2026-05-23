@@ -335,24 +335,56 @@
             </div>
 
             {{-- DELIVERY MODE --}}
-            <div class="flex items-center justify-between bg-slate-100/50 border border-slate-200/50 rounded-xl p-3">
-                <div class="flex items-center gap-3 text-slate-600">
-                    <i class="fas fa-shipping-fast text-xs"></i>
-                    <span class="text-[10px] font-black uppercase tracking-wider">Mode Delivery</span>
+            <div class="bg-slate-100/50 border border-slate-200/50 rounded-xl p-3 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 text-slate-600">
+                        <i class="fas fa-shipping-fast text-xs"></i>
+                        <span class="text-[10px] font-black uppercase tracking-wider">Mode Delivery</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" x-model="activeWorksheet.deliveryMode" @change="if(!activeWorksheet.deliveryMode) activeWorksheet.deliveryFee = 0" class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+                    </label>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" x-model="activeWorksheet.deliveryMode" class="sr-only peer">
-                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
-                </label>
+                
+                {{-- Ongkos Kirim Input (Shows when Delivery Mode is ON) --}}
+                <div x-show="activeWorksheet.deliveryMode" x-collapse>
+                    <div class="pt-3 border-t border-slate-200/50">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Ongkos Kirim (Rp)</label>
+                        <div class="relative mb-3">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">Rp</span>
+                            <input type="number" x-model.number="activeWorksheet.deliveryFee" min="0" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all appearance-none" placeholder="0">
+                        </div>
+                        
+                        {{-- Presets --}}
+                        <template x-if="deliveryPresets && deliveryPresets.length > 0">
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="preset in deliveryPresets" :key="preset.name">
+                                    <button @click="activeWorksheet.deliveryFee = preset.price" 
+                                            class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm">
+                                        <span x-text="preset.name"></span>
+                                        <span class="opacity-50 ml-1" x-text="'(' + formatRp(preset.price) + ')'"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
 
             {{-- PAYMENT SUMMARY --}}
-            <div class="pt-4 border-t border-slate-200">
-                <div class="flex justify-between items-center mb-1">
+            <div class="pt-4 border-t border-slate-200 space-y-1">
+                <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-slate-400">Subtotal</span>
                     <span class="text-xs font-bold text-slate-600" x-text="formatRp(currentSubtotal)"></span>
                 </div>
-                <div class="flex justify-between items-end">
+                <template x-if="activeWorksheet && activeWorksheet.deliveryMode && activeWorksheet.deliveryFee > 0">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-400">Ongkir</span>
+                        <span class="text-xs font-bold text-slate-600" x-text="'+ ' + formatRp(activeWorksheet.deliveryFee)"></span>
+                    </div>
+                </template>
+                <div class="flex justify-between items-end pt-1">
                     <div>
                         <h4 class="text-xl font-black text-slate-800 tracking-tight">Total</h4>
                     </div>
@@ -377,7 +409,7 @@
 
     {{-- MODAL LAYOUT EDITOR (DRAG & DROP) --}}
     <template x-teleport="body">
-        <div x-show="showGroupManagerModal" x-transition x-cloak class="fixed inset-0 bg-slate-100 z-[100] flex flex-col h-screen overflow-hidden">
+        <div x-show="showGroupManagerModal" x-transition x-cloak class="fixed inset-0 bg-slate-100 z-[200] flex flex-col h-screen overflow-hidden">
         {{-- HEADER MODAL --}}
         <div class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm z-10">
             <div class="flex items-center gap-4">
@@ -522,7 +554,7 @@
 
     {{-- MODAL PEMBAYARAN --}}
     <template x-teleport="body">
-        <div x-show="showPaymentModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+        <div x-show="showPaymentModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
         <div @click.away="showPaymentModal = false" class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 transform transition-all max-h-[90vh] overflow-y-auto scrollbar-hide">
             
             {{-- Header --}}
@@ -711,7 +743,7 @@
 
     {{-- MODAL SUKSES (RECEIPT) --}}
     <template x-teleport="body">
-        <div x-show="showReceiptModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+        <div x-show="showReceiptModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl border border-slate-200 text-center transform transition-all relative overflow-hidden">
             <div class="absolute -top-10 -right-10 w-40 h-40 bg-emerald-50 rounded-full opacity-50"></div>
             <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-50 rounded-full opacity-50"></div>
@@ -744,7 +776,7 @@
 
     {{-- MODAL TAMBAH GRUP --}}
     <template x-teleport="body">
-        <div x-show="showAddGroupModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+        <div x-show="showAddGroupModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
         <div @click.away="closeAddGroupModal()" @keydown.escape.window="closeAddGroupModal()" class="bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700 transform transition-all overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80">
                 <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fas fa-layer-group text-blue-400"></i> Tambah Group Produk</h3>
@@ -765,7 +797,7 @@
 
     {{-- MODAL PENGELUARAN / EXPENSE --}}
     <template x-teleport="body">
-        <div x-show="showExpenseModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+        <div x-show="showExpenseModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
         <div @click.away="showExpenseModal = false" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-lg font-black text-slate-800"><i class="fas fa-arrow-down text-orange-500 mr-2"></i>Catat Pengeluaran</h2>
@@ -846,9 +878,18 @@
                     $closeDebitSales = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->where('payment_method', 'debit')->sum('total');
                     
                     $closeCashExp   = \App\Models\Cashflow::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_cash')->sum('amount');
+                    $closeBankExp   = \App\Models\Cashflow::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_bank')->sum('amount');
                     $closeTotalTrx  = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->count();
                     $closeTotalSales= \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->sum('total');
-                    $closeExpected  = $activeShift->opening_cash + $closeCashSales - $closeCashExp;
+                    
+                    $closeTransfers = \App\Models\Cashflow::withoutGlobalScope('worksheet')
+                        ->where('shift_id', $activeShift->id)
+                        ->where('source', 'pos_cash')
+                        ->where('category', '!=', 'Penjualan')
+                        ->where('transaction_category', '!=', 'expense')
+                        ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+                    $closeExpected  = $activeShift->opening_cash + $closeCashSales - $closeCashExp + $closeTransfers;
                 @endphp
                 <div class="flex justify-between">
                     <span class="text-slate-500 font-medium">Total Transaksi</span>
@@ -881,6 +922,10 @@
                 <div class="flex justify-between">
                     <span class="text-slate-500 font-medium">Pengeluaran Tunai</span>
                     <span class="font-black text-red-500">Rp {{ number_format($closeCashExp, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500 font-medium">Pengeluaran Bank</span>
+                    <span class="font-black text-red-500">Rp {{ number_format($closeBankExp, 0, ',', '.') }}</span>
                 </div>
             </div>
 
@@ -1033,7 +1078,7 @@
                             </div>
                             <div>
                                 <h3 class="text-xl font-black">Cash Out</h3>
-                                <p class="text-[10px] font-bold text-orange-100 uppercase tracking-widest mt-0.5 opacity-80">Ambil dari laci kasir</p>
+                                <p class="text-[10px] font-bold text-orange-100 uppercase tracking-widest mt-0.5 opacity-80" x-text="cashOutSource === 'bank' ? 'Ambil dari Saldo Bank' : 'Ambil dari laci kasir'"></p>
                             </div>
                         </div>
                         <button @click="showCashOutModal = false" class="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-all">
@@ -1054,6 +1099,16 @@
                                    class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-14 pr-5 py-4 text-2xl font-black text-slate-800 outline-none focus:border-orange-500 focus:bg-white transition-all shadow-inner"
                                    placeholder="0">
                         </div>
+                    </div>
+
+                    {{-- Source Selection --}}
+                    <div x-show="cashOutAccessSetting === 'both'" class="mt-4">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Sumber Dana</label>
+                        <select x-model="cashOutSource" 
+                                class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3 text-sm font-bold text-slate-700 outline-none focus:border-orange-500 transition-all">
+                            <option value="cash">Tunai (Laci Kasir)</option>
+                            <option value="bank">Saldo Bank</option>
+                        </select>
                     </div>
 
                     {{-- Main Category --}}
@@ -1523,6 +1578,7 @@ function closeCashOut() {
             activeShift: {{ $activeShift ? 'true' : 'false' }},
             taxRate: parseFloat('{{ $settings["tax_rate"] ?? 0 }}') || 0,
             rawMethods: @json(json_decode($settings['active_payment_methods'] ?? '["cash"]', true) ?: ['cash']),
+            deliveryPresets: @json(json_decode($settings['delivery_presets'] ?? '[]', true) ?: []),
             
             // Custom Price Settings
             customPriceEnabled: {{ ($settings['custom_price_enabled'] ?? '0') == '1' ? 'true' : 'false' }},
@@ -1603,6 +1659,9 @@ function closeCashOut() {
             cashOutAmount: 0,
             cashOutAmountDisplay: '',
             cashOutDesc: '',
+            cashOutSource: 'cash',
+            cashOutAccessSetting: '{{ $settings["cashout_source_access"] ?? "cash_only" }}',
+            cashOutRoleAccess: '{{ $settings["cashout_role_access"] ?? "all" }}',
             cashOutError: '',
             expenseCategories: @json($expenseCategories),
 
@@ -1684,6 +1743,17 @@ function closeCashOut() {
             },
 
             openCashOut() {
+                // Check role access
+                let userRole = '{{ auth()->user()->role ?? "cashier" }}';
+                if(this.cashOutRoleAccess === 'owner' && userRole !== 'owner') {
+                    Toast.fire({ icon: 'error', title: 'Akses ditolak. Hanya owner yang bisa melakukan Cash Out.' });
+                    return;
+                }
+                if(this.cashOutRoleAccess === 'admin_owner' && !['admin', 'owner'].includes(userRole)) {
+                    Toast.fire({ icon: 'error', title: 'Akses ditolak. Hanya admin/owner yang bisa melakukan Cash Out.' });
+                    return;
+                }
+
                 this.showCashOutModal = true;
                 this.cashOutMainCategory = '';
                 this.cashOutSubCategory = '';
@@ -1691,6 +1761,12 @@ function closeCashOut() {
                 this.cashOutAmountDisplay = '';
                 this.cashOutDesc = '';
                 this.cashOutError = '';
+                
+                if (this.cashOutAccessSetting === 'bank_only') {
+                    this.cashOutSource = 'bank';
+                } else {
+                    this.cashOutSource = 'cash';
+                }
             },
 
             get availableSubCategories() {
@@ -1727,7 +1803,8 @@ function closeCashOut() {
                         body: JSON.stringify({
                             amount: this.cashOutAmount,
                             description: this.cashOutSubCategory + (this.cashOutDesc ? ' (' + this.cashOutDesc + ')' : ''),
-                            category: this.cashOutMainCategory
+                            category: this.cashOutMainCategory,
+                            source: this.cashOutSource
                         })
                     });
                     
@@ -1921,6 +1998,7 @@ function closeCashOut() {
                     tableNumber: '',
                     notes: '',
                     deliveryMode: false,
+                    deliveryFee: 0,
                     globalDiscount: 0,
                     discountType: 'nominal'
                 });
@@ -2045,7 +2123,8 @@ function closeCashOut() {
             get currentTotal() {
                 let taxable = this.currentSubtotal - this.currentDiscountValue;
                 let tax = taxable * (this.taxRate / 100);
-                return taxable + tax;
+                let delivery = this.activeWorksheet && this.activeWorksheet.deliveryMode ? (parseFloat(this.activeWorksheet.deliveryFee) || 0) : 0;
+                return taxable + tax + delivery;
             },
 
             openPayment() {
@@ -2109,6 +2188,7 @@ function closeCashOut() {
                             paid_amount: finalPaidAmount,
                             discount: w.globalDiscount, 
                             discount_type: w.discountType,
+                            delivery_fee: w.deliveryMode ? (parseFloat(w.deliveryFee) || 0) : 0,
                             customer_name: w.customerName, 
                             customer_phone: w.customerPhone, 
                             notes: finalNotes
@@ -2629,6 +2709,11 @@ function closeCashOut() {
                         if (tx.discount > 0) {
                             let discVal = '-' + this.fmt(tx.discount);
                             commands.push(encoder.encode('Diskon:'.padEnd(32 - discVal.length) + discVal + '\n'));
+                        }
+
+                        if (tx.delivery_fee > 0) {
+                            let devVal = '+' + this.fmt(tx.delivery_fee);
+                            commands.push(encoder.encode('Ongkir:'.padEnd(32 - devVal.length) + devVal + '\n'));
                         }
 
                         let totalVal = this.fmt(tx.total);

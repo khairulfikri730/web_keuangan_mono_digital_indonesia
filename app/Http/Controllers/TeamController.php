@@ -12,8 +12,9 @@ class TeamController extends Controller
     {
         $users = User::with('worksheets')->latest()->paginate(15);
         $availablePermissions = User::AVAILABLE_PERMISSIONS;
+        $permissionGroups = User::PERMISSION_GROUPS;
         $worksheets = \App\Models\Worksheet::all();
-        return view('team.index', compact('users', 'availablePermissions', 'worksheets'));
+        return view('team.index', compact('users', 'availablePermissions', 'permissionGroups', 'worksheets'));
     }
 
     public function store(Request $request)
@@ -75,9 +76,12 @@ class TeamController extends Controller
 
         $user->update($data);
         
-        if ($request->has('worksheets')) {
-            $user->worksheets()->sync($request->worksheets);
-        } else if ($request->role === 'kasir') {
+        // Sync worksheets: only modify if the worksheet panel was submitted (role kasir)
+        if ($request->role === 'kasir') {
+            $worksheetIds = $request->input('worksheets', []);
+            $user->worksheets()->sync($worksheetIds);
+        } else {
+            // Owner gets access to all worksheets implicitly, remove specific assignments
             $user->worksheets()->detach();
         }
 

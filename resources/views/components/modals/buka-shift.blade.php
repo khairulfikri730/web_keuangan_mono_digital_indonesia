@@ -66,17 +66,50 @@
                 <input type="hidden" name="opening_cash" :value="physicCash">
                 
                 <div class="space-y-6">
-                    <!-- SECTION 2 — PILIH KASIR -->
+                    <!-- SECTION 2 — PILIH KASIR (MULTI) -->
                     @if(auth()->user()->isOwner())
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Pilih Kasir Bertugas</label>
-                        <select name="user_id" class="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-white font-bold focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer shadow-inner">
+                    <div class="space-y-2" x-data="{ selectedUsers: [{{ auth()->id() }}] }">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Pilih User Bertugas</label>
+                            <span class="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20" x-text="selectedUsers.length + ' user dipilih'"></span>
+                        </div>
+                        <div class="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/5">
                             @foreach($users as $u)
-                                <option value="{{ $u->id }}" {{ auth()->id() == $u->id ? 'selected' : '' }}>{{ $u->name }} ({{ $u->role }})</option>
+                            <label class="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-slate-800/60 transition-all group"
+                                   :class="selectedUsers.includes({{ $u->id }}) ? 'bg-blue-500/5' : ''">
+                                <input type="checkbox"
+                                       name="user_ids[]"
+                                       value="{{ $u->id }}"
+                                       x-model.number="selectedUsers"
+                                       :checked="selectedUsers.includes({{ $u->id }})"
+                                       {{ $u->id == auth()->id() ? 'checked' : '' }}
+                                       class="w-4 h-4 rounded text-blue-500 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-0 shrink-0">
+                                <div class="flex items-center gap-3 flex-1">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0
+                                        {{ $u->role === 'owner' ? 'bg-gradient-to-br from-orange-500 to-amber-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600' }}">
+                                        {{ strtoupper(substr($u->name, 0, 1)) }}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">{{ $u->name }}</p>
+                                        <p class="text-[9px] font-bold uppercase tracking-wider {{ $u->role === 'owner' ? 'text-orange-400' : 'text-blue-400' }}">
+                                            <i class="{{ $u->role === 'owner' ? 'fas fa-crown' : 'fas fa-cash-register' }} mr-1"></i>{{ $u->role }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div :class="selectedUsers.includes({{ $u->id }}) ? 'text-blue-400 opacity-100' : 'opacity-0'"
+                                     class="transition-all">
+                                    <i class="fas fa-check-circle text-sm"></i>
+                                </div>
+                            </label>
                             @endforeach
-                        </select>
+                        </div>
+                        <p class="text-[10px] text-slate-600 ml-2 flex items-center gap-1">
+                            <i class="fas fa-info-circle text-blue-500/50"></i>
+                            Semua user yang dipilih dapat menggunakan shift ini secara bersamaan.
+                        </p>
                     </div>
                     @endif
+
 
                     <!-- SECTION 3 — KAS AWAL SISTEM -->
                     <div class="space-y-2">
@@ -130,6 +163,20 @@
                             </div>
                             <i class="fas fa-chart-line-down text-red-500/20 text-3xl"></i>
                         </div>
+                    </div>
+
+                    <!-- SECTION 5.5 — WAKTU BUKA SHIFT (Opsional / Testing) -->
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Waktu Buka Shift (Opsional)</label>
+                        <div class="relative">
+                            <input type="datetime-local" name="opened_at"
+                                   class="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-blue-500/30 transition-all cursor-text"
+                                   title="Biarkan kosong untuk menggunakan waktu saat ini">
+                            <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                                <i class="fas fa-calendar-alt text-lg"></i>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-600 ml-2 italic">Kosongkan untuk menggunakan waktu sekarang. Isi hanya jika ingin backdate shift.</p>
                     </div>
 
                     <!-- SECTION 6 — CATATAN -->

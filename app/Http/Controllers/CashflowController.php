@@ -56,9 +56,7 @@ class CashflowController extends Controller
 
         // Worksheet Filter
         if ($activeWorksheetId = session('active_worksheet_id')) {
-            if ($activeWorksheetId !== 'all') {
-                $query->where('worksheet_id', $activeWorksheetId);
-            }
+            $query->where('worksheet_id', $activeWorksheetId);
         }
 
         return $query;
@@ -69,6 +67,9 @@ class CashflowController extends Controller
         $filter = $request->filter ?? $request->period ?? 'today';
         $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
         $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
+        if ($start && $end) {
+            $filter = 'custom';
+        }
         $source = $request->source ?? 'all';
         $query = $this->baseQuery($filter, $source, $start, $end);
 
@@ -84,8 +85,9 @@ class CashflowController extends Controller
         $totalExpense = $finSummary->total_expense;
         $netProfit = $finSummary->net_profit;
 
-        // ROI Analysis Data
+        // ROI Analysis Data (always all-time for payback tracking)
         $totalInvestment = \App\Models\Capital::sum('total_amount');
+        $latestCapital = \App\Models\Capital::latest()->first();
         $allTimeNetProfit = $this->financialService->getAllTimeNetProfit($worksheetId);
         $totalCollectedProfit = $allTimeNetProfit;
         $remainingCapital = max(0, $totalInvestment - $totalCollectedProfit);
@@ -95,9 +97,12 @@ class CashflowController extends Controller
         $avgMonthlyProfit = $totalCollectedProfit / $monthsActive;
         $paybackMonths = $avgMonthlyProfit > 0 ? ceil($remainingCapital / $avgMonthlyProfit) : null;
 
+        // ROI for current period
+        $periodROI = $totalInvestment > 0 ? round(($netProfit / $totalInvestment) * 100, 1) : 0;
+
         // Target Payback Analysis
         $targetPaybackMonths = 12;
-        if ($worksheetId && $worksheetId !== 'all') {
+        if ($worksheetId) {
             $ws = \App\Models\Worksheet::find($worksheetId);
             $targetPaybackMonths = $ws->target_payback_months ?? 12;
         }
@@ -134,8 +139,7 @@ class CashflowController extends Controller
 
         $trend = $this->calculateTrend($filter, $source, $start, $end);
 
-        // SALDO = ALL-TIME aktual (bukan period-filtered)
-        // Saldo menunjukkan kondisi laci/rekening saat ini
+        // SALDO = ALL-TIME synced (kondisi uang di laci/bank saat ini — TIDAK berubah saat filter diganti)
         $saldoLaciSyncedIncome  = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount');
         $saldoLaciSyncedExpense = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
         $saldoLaciSynced = $saldoLaciSyncedIncome - $saldoLaciSyncedExpense;
@@ -171,7 +175,8 @@ class CashflowController extends Controller
             'pendingQris', 'pendingTransfer', 'pendingBankCount', 'pendingLaciCount',
             'totalInvestment', 'totalCollectedProfit', 'remainingCapital', 'paybackMonths',
             'targetPaybackMonths', 'requiredMonthlyProfit', 'requiredDailyProfit', 'profitGap', 'avgMonthlyProfit',
-            'incomeQris', 'incomeCash', 'incomeTransfer', 'totalAdjIn', 'totalAdjOut'
+            'incomeQris', 'incomeCash', 'incomeTransfer', 'totalAdjIn', 'totalAdjOut',
+            'latestCapital', 'periodROI'
         ));
     }
 
@@ -194,9 +199,12 @@ class CashflowController extends Controller
 
     public function getData(Request $request)
     {
-        $filter = $request->filter ?? 'today';
-        $start = $request->start;
-        $end = $request->end;
+        $filter = $request->filter ?? $request->period ?? 'today';
+        $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
+        $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
+        if ($start && $end) {
+            $filter = 'custom';
+        }
         $source = $request->source ?? 'all';
         $page = $request->page ?? 1;
         
@@ -214,7 +222,7 @@ class CashflowController extends Controller
         $incomeCash = (clone $txQuery)->where('payment_method', 'cash')->sum('total');
         $incomeTransfer = (clone $txQuery)->where('payment_method', 'transfer')->sum('total');
 
-        // SALDO = ALL-TIME aktual
+        // SALDO = ALL-TIME synced (tidak berubah saat filter diganti)
         $saldoLaci = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
                    - Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
 
@@ -338,9 +346,7 @@ class CashflowController extends Controller
 
         // Worksheet Filter
         if ($activeWorksheetId = session('active_worksheet_id')) {
-            if ($activeWorksheetId !== 'all') {
-                $query->where('worksheet_id', $activeWorksheetId);
-            }
+            $query->where('worksheet_id', $activeWorksheetId);
         }
 
         return $query;
@@ -473,8 +479,12 @@ class CashflowController extends Controller
         // Manual entries from dashboard are immediately "synced" because they are performed by the owner
         $bankSyncStatus = 'synced';
 
+        $activeShift = \App\Models\Shift::activeShiftForUser(auth()->id());
+        $shiftId = $activeShift ? $activeShift->id : null;
+
         Cashflow::create([
             'user_id'          => auth()->id(),
+            'shift_id'         => $shiftId,
             'type'             => $request->type,
             'transaction_category' => $request->type, // Manual store from dashboard usually follows type
             'category'         => $request->category,
@@ -588,7 +598,7 @@ class CashflowController extends Controller
         ]);
 
         $activeWorksheetId = session('active_worksheet_id');
-        if ($activeWorksheetId && $activeWorksheetId !== 'all') {
+        if ($activeWorksheetId) {
             \App\Models\Worksheet::where('id', $activeWorksheetId)->update([
                 'target_payback_months' => $request->target_payback_months
             ]);
@@ -596,6 +606,48 @@ class CashflowController extends Controller
         }
 
         return back()->with('error', 'Pilih satu worksheet terlebih dahulu!');
+    }
+
+    /**
+     * Update Modal Investasi (Capital) - AJAX endpoint dari cashflow page
+     */
+    public function updateCapital(Request $request)
+    {
+        $request->validate([
+            'total_amount' => 'required|numeric|min:0',
+            'notes'        => 'nullable|string|max:255',
+            'date'         => 'nullable|date',
+        ]);
+
+        $capital = \App\Models\Capital::latest()->first();
+
+        if (!$capital) {
+            // Create a new capital record if none exists
+            $capital = \App\Models\Capital::create([
+                'date'         => $request->date ?? now()->toDateString(),
+                'is_detailed'  => false,
+                'total_amount' => $request->total_amount,
+                'worksheet_id' => session('active_worksheet_id'),
+            ]);
+        } else {
+            $capital->update([
+                'total_amount' => $request->total_amount,
+                'date'         => $request->date ?? $capital->date,
+            ]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success'      => true,
+                'message'      => 'Modal investasi berhasil diperbarui!',
+                'total_amount' => $capital->total_amount,
+                'total_fmt'    => number_format($capital->total_amount, 0, ',', '.'),
+                'new_total'    => \App\Models\Capital::sum('total_amount'),
+                'new_total_fmt'=> number_format(\App\Models\Capital::sum('total_amount'), 0, ',', '.'),
+            ]);
+        }
+
+        return back()->with('success', 'Modal investasi berhasil diperbarui!');
     }
 
     public function transfer(Request $request)
@@ -607,11 +659,16 @@ class CashflowController extends Controller
         ]);
 
         $ref = 'TRF-' . now()->format('YmdHis');
+        $activeShift = \App\Models\Shift::activeShiftForUser(auth()->id());
+        $shiftId = $activeShift ? $activeShift->id : null;
+        $worksheetId = session('active_worksheet_id');
 
         if ($request->direction === 'laci_to_bank') {
             // Expense from laci
             Cashflow::create([
                 'user_id' => auth()->id(),
+                'shift_id' => $shiftId,
+                'worksheet_id' => $worksheetId,
                 'type' => 'expense',
                 'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
@@ -626,6 +683,8 @@ class CashflowController extends Controller
             // Income to bank
             Cashflow::create([
                 'user_id' => auth()->id(),
+                'shift_id' => $shiftId,
+                'worksheet_id' => $worksheetId,
                 'type' => 'income',
                 'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
@@ -641,6 +700,8 @@ class CashflowController extends Controller
             // Expense from bank
             Cashflow::create([
                 'user_id' => auth()->id(),
+                'shift_id' => $shiftId,
+                'worksheet_id' => $worksheetId,
                 'type' => 'expense',
                 'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
@@ -655,6 +716,8 @@ class CashflowController extends Controller
             // Income to laci
             Cashflow::create([
                 'user_id' => auth()->id(),
+                'shift_id' => $shiftId,
+                'worksheet_id' => $worksheetId,
                 'type' => 'income',
                 'transaction_category' => 'adjustment',
                 'category' => 'Transfer Internal',
@@ -703,10 +766,13 @@ class CashflowController extends Controller
             }
         }
 
-        DB::transaction(function () use ($request, $type, $source, $amount) {
+        $activeShift = \App\Models\Shift::activeShiftForUser(auth()->id());
+        $shiftId = $activeShift ? $activeShift->id : null;
+
+        DB::transaction(function () use ($request, $type, $source, $amount, $shiftId) {
             // 1. Record to cash_transactions (New dedicated history table)
             CashTransaction::create([
-                'type' => $type,
+                'type' => $type === 'income' ? 'masuk' : 'keluar',
                 'source' => $source === 'pos_cash' ? 'cash' : 'bank',
                 'amount' => $amount,
                 'note' => $request->notes,
@@ -717,6 +783,7 @@ class CashflowController extends Controller
             // 2. Record to cashflows (Main history for reports & stats)
             Cashflow::create([
                 'user_id' => auth()->id(),
+                'shift_id' => $shiftId,
                 'type' => $type,
                 'transaction_category' => 'adjustment',
                 'category' => 'Input Saldo Manual',

@@ -38,7 +38,7 @@
         </div>
         <div class="stat-card">
             @php 
-                $expected = $shift->opening_cash + $shift->transactions->where('payment_method', 'cash')->where('status','completed')->sum('total'); 
+                $expected = $expectedCash; 
                 $selisih = $shift->closed_at ? ($shift->closing_cash - $expected) : 0;
             @endphp
             <div class="w-12 h-12 {{ $selisih == 0 ? 'bg-slate-700 text-slate-300' : ($selisih > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400') }} rounded-xl flex items-center justify-center flex-shrink-0">

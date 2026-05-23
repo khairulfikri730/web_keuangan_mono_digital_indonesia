@@ -4,7 +4,7 @@
         isOpen: false, 
         isGenerating: false, 
         format: 'pdf', 
-        period: 'bulan_ini', 
+        period: '{{ auth()->check() && auth()->user()->isOwner() ? "bulan_ini" : "hari_ini" }}', 
         showPreview: false,
         sections: ['summary', 'sales', 'expenses', 'profit', 'chart_sales', 'top_products', 'ai_insights'],
         roles: ['Owner', 'Manager', 'Kasir'],
@@ -121,11 +121,13 @@
                                 <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 block">2. PERIODE WAKTU</label>
                                 <select name="period" x-model="period" class="w-full bg-slate-950 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-premium shadow-inner">
                                     <option value="hari_ini">Hari Ini</option>
+                                    @if(auth()->check() && auth()->user()->isOwner())
                                     <option value="kemarin">Kemarin</option>
                                     <option value="minggu_ini">Minggu Ini</option>
                                     <option value="bulan_ini">Bulan Ini</option>
                                     <option value="tahun_ini">Tahun Ini</option>
                                     <option value="custom">Rentang Kustom</option>
+                                    @endif
                                 </select>
                                 
                                 <div x-show="period === 'custom'" x-transition class="grid grid-cols-2 gap-3 mt-4">

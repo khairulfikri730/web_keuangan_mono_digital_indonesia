@@ -25,18 +25,68 @@ class TransactionController extends Controller
         $users = \App\Models\User::all();
         $worksheetId = session('active_worksheet_id');
 
-        // --- Strict Date Filter (Today Only) ---
-        $dateFrom = today()->toDateString();
-        $dateTo = today()->toDateString();
+        $activeShift = Shift::activeShiftForUser(auth()->id());
+        $isLiveShift = $request->shift === 'live' || $request->period === 'live';
+        $period = $request->period ?? 'today';
+
+        $dfParam = is_array($request->date_from) ? null : $request->date_from;
+        $dtParam = is_array($request->date_to) ? null : $request->date_to;
+
+        if ($isLiveShift && $activeShift) {
+            $dateFrom = $activeShift->opened_at->copy()->startOfDay();
+            $dateTo = now()->endOfDay();
+        } else {
+            if ($dfParam && $dtParam) {
+                $dateFrom = Carbon::parse($dfParam)->startOfDay();
+                $dateTo = Carbon::parse($dtParam)->endOfDay();
+            } else {
+                switch ($period) {
+                    case 'yesterday':
+                        $dateFrom = now()->subDay()->startOfDay();
+                        $dateTo = now()->subDay()->endOfDay();
+                        break;
+                    case 'week':
+                        $dateFrom = now()->startOfWeek();
+                        $dateTo = now()->endOfWeek();
+                        break;
+                    case 'month':
+                        $dateFrom = now()->startOfMonth();
+                        $dateTo = now()->endOfMonth();
+                        break;
+                    case 'year':
+                        $dateFrom = now()->startOfYear();
+                        $dateTo = now()->endOfYear();
+                        break;
+                    case 'today':
+                    default:
+                        $dateFrom = now()->startOfDay();
+                        $dateTo = now()->endOfDay();
+                        break;
+                }
+            }
+        }
 
         // --- Filter by status pill ---
         $sParam = $request->status;
-        $statusFilter = is_array($sParam) ? null : $sParam; // 'piutang', 'lunas', or null
+        $statusFilter = is_array($sParam) ? null : $sParam; 
 
         // --- Build transaction items ---
-        $txQuery = Transaction::with(['user', 'items'])
-            ->whereDate('created_at', '>=', $dateFrom)
-            ->whereDate('created_at', '<=', $dateTo)
+        $openedAt = $activeShift?->opened_at;
+        $closedAt = $activeShift?->closed_at ?? now();
+
+        $txQuery = Transaction::withoutGlobalScopes()->with(['user', 'items'])
+            ->when($statusFilter !== 'piutang', function($query) use ($isLiveShift, $activeShift, $openedAt, $closedAt, $dateFrom, $dateTo) {
+                $query->when($isLiveShift && $activeShift, function($q) use ($activeShift, $openedAt, $closedAt) {
+                    $q->where(function($sq) use ($activeShift, $openedAt, $closedAt) {
+                        $sq->where('shift_id', $activeShift->id)
+                          ->orWhere(fn($q2) => $q2->whereNull('shift_id')->whereBetween('created_at', [$openedAt, $closedAt]));
+                    });
+                })
+                ->when(!($isLiveShift && $activeShift), function($q) use ($dateFrom, $dateTo) {
+                    $q->whereDate('created_at', '>=', $dateFrom)
+                      ->whereDate('created_at', '<=', $dateTo);
+                });
+            })
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->payment_method, fn($q) => $q->where('payment_method', $request->payment_method))
             ->when($statusFilter === 'piutang', fn($q) => $q->where('status', 'pending'))
@@ -45,17 +95,32 @@ class TransactionController extends Controller
                 $sq->where('invoice_number', 'like', "%{$request->search}%")
                    ->orWhere('customer_name', 'like', "%{$request->search}%");
             }))
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+            ->when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId));
 
         // --- Build expense items ---
-        $expenseQuery = Cashflow::with('user')
+        $expenseQuery = Cashflow::withoutGlobalScopes()->with('user')
             ->where('transaction_category', 'expense')
             ->whereNull('reference')
-            ->whereDate('transaction_date', '>=', $dateFrom)
-            ->whereDate('transaction_date', '<=', $dateTo)
+            ->when($isLiveShift && $activeShift, function($q) use ($activeShift, $openedAt, $closedAt) {
+                $q->where(function($sq) use ($activeShift, $openedAt, $closedAt) {
+                    $sq->where('shift_id', $activeShift->id)
+                      ->orWhere(fn($q2) => $q2->whereNull('shift_id')->whereBetween('created_at', [$openedAt, $closedAt]));
+                });
+            })
+            ->when(!($isLiveShift && $activeShift), function($q) use ($dateFrom, $dateTo) {
+                $q->whereDate('transaction_date', '>=', $dateFrom)
+                  ->whereDate('transaction_date', '<=', $dateTo);
+            })
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
+            ->when($request->payment_method, function($q) use ($request) {
+                if ($request->payment_method === 'cash') {
+                    $q->where('source', 'pos_cash');
+                } elseif ($request->payment_method === 'bank') {
+                    $q->whereIn('source', ['pos_bank', 'transfer']);
+                }
+            })
             ->when($request->search, fn($q) => $q->where('description', 'like', "%{$request->search}%"))
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+            ->when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId));
 
         // --- Compile based on type filter ---
         $items = collect();
@@ -97,55 +162,101 @@ class TransactionController extends Controller
         );
 
         // --- Pill filter counts ---
-        $baseTx = Transaction::when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
-        $baseExp = Cashflow::where('transaction_category', 'expense')->whereNull('reference')
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+        $baseTx = Transaction::when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->when($isLiveShift && $activeShift, function($q) use ($activeShift, $openedAt, $closedAt) {
+                $q->where(function($sq) use ($activeShift, $openedAt, $closedAt) {
+                    $sq->where('shift_id', $activeShift->id)
+                      ->orWhere(fn($q2) => $q2->whereNull('shift_id')->whereBetween('created_at', [$openedAt, $closedAt]));
+                });
+            })
+            ->when(!($isLiveShift && $activeShift), function($q) use ($dateFrom, $dateTo) {
+                $q->whereDate('created_at', '>=', $dateFrom)
+                  ->whereDate('created_at', '<=', $dateTo);
+            });
 
-        $countPenjualan = (clone $baseTx)->count();
+        $baseExp = Cashflow::withoutGlobalScopes()->where('transaction_category', 'expense')->whereNull('reference')
+            ->when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->when($isLiveShift && $activeShift, function($q) use ($activeShift, $openedAt, $closedAt) {
+                $q->where(function($sq) use ($activeShift, $openedAt, $closedAt) {
+                    $sq->where('shift_id', $activeShift->id)
+                      ->orWhere(fn($q2) => $q2->whereNull('shift_id')->whereBetween('created_at', [$openedAt, $closedAt]));
+                });
+            })
+            ->when(!($isLiveShift && $activeShift), function($q) use ($dateFrom, $dateTo) {
+                $q->whereDate('transaction_date', '>=', $dateFrom)
+                  ->whereDate('transaction_date', '<=', $dateTo);
+            })
+            ->when($request->payment_method, function($q) use ($request) {
+                if ($request->payment_method === 'cash') {
+                    $q->where('source', 'pos_cash');
+                } elseif ($request->payment_method === 'bank') {
+                    $q->whereIn('source', ['pos_bank', 'transfer']);
+                }
+            });
+
+        $countPenjualan = (clone $txQuery)->count();
         $countExpense = (clone $baseExp)->count();
         $countAll = $countPenjualan + $countExpense;
 
-        $countPiutang = (clone $baseTx)->where('status', 'pending')->count();
-        $countLunas = (clone $baseTx)->where('status', 'completed')->where('payment_method', 'piutang')->count();
-        $countCash = (clone $baseTx)->where('payment_method', 'cash')->count();
-        $countQris = (clone $baseTx)->where('payment_method', 'qris')->count();
-        $countTransfer = (clone $baseTx)->where('payment_method', 'transfer')->count();
-        $countDebit = (clone $baseTx)->where('payment_method', 'debit')->count();
+        $countPiutang = Transaction::withoutGlobalScopes()
+            ->when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->where('status', 'pending')->count();
+        $countLunas = (clone $txQuery)->where('status', 'completed')->where('payment_method', 'piutang')->count();
+        $countCash = (clone $txQuery)->where('payment_method', 'cash')->count();
+        $countQris = (clone $txQuery)->where('payment_method', 'qris')->count();
+        $countTransfer = (clone $txQuery)->where('payment_method', 'transfer')->count();
+        $countDebit = (clone $txQuery)->where('payment_method', 'debit')->count();
 
         // --- Stats ---
-        $activeShift = Shift::activeShift();
+        $activeShift = Shift::activeShiftForUser(auth()->id());
 
         $saldoLaci = 0;
         $saldoLaciAwal = 0;
         if ($activeShift) {
-            $cashSalesInShift = Transaction::where('shift_id', $activeShift->id)->completed()->where('payment_method', 'cash')->sum('total');
-            $cashExpInShift = Cashflow::where('shift_id', $activeShift->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
+            $summary = $this->financialService->getShiftSummary($activeShift->id, $worksheetId);
             $saldoLaciAwal = (float) $activeShift->opening_cash;
-            $saldoLaci = $saldoLaciAwal + $cashSalesInShift - $cashExpInShift;
+            
+            $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
+                ->where('shift_id', $activeShift->id)
+                ->where('source', 'pos_cash')
+                ->where('category', '!=', 'Penjualan')
+                ->where('transaction_category', '!=', 'expense')
+                ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+            $saldoLaci = $saldoLaciAwal + $summary->cash_sales - $summary->cash_expense + $transfers;
         }
 
-        $baseBank = Cashflow::whereIn('source', ['pos_bank', 'transfer'])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+        $baseBank = Cashflow::withoutGlobalScopes()->whereIn('source', ['pos_bank', 'transfer'])
+            ->when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId));
         $bankIncome = (clone $baseBank)->where('type', 'income')->sum('amount');
         $bankExpense = (clone $baseBank)->where('type', 'expense')->sum('amount');
         $saldoBank = $bankIncome - $bankExpense;
 
         // --- Stats from Unified Service ---
-        $todaySummary = $this->financialService->getSummary(\Carbon\Carbon::parse($dateFrom), \Carbon\Carbon::parse($dateTo), $worksheetId);
+        $todaySummary = $isLiveShift && $activeShift 
+            ? $this->financialService->getShiftSummary($activeShift->id, $worksheetId)
+            : $this->financialService->getSummary($dateFrom, $dateTo, $worksheetId);
+
         $todayTotalSales = $todaySummary->total_income;
         $todayExpenses = $todaySummary->total_expense;
+        $todayCashExpense = $todaySummary->cash_expense;
+        $todayBankExpense = $todaySummary->bank_expense;
         $todayNet = $todaySummary->net_profit;
-        $totalPiutang = (clone $baseTx)->piutang()->get()->sum(fn($t) => $t->total - $t->paid_so_far);
+        
+        $totalPiutang = Transaction::withoutGlobalScopes()
+            ->when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->piutang()->get()->sum(fn($t) => $t->total - $t->paid_so_far);
 
-        $todayQris = (clone $baseTx)->completed()->whereDate('created_at', today())->where('payment_method', 'qris')->sum('total');
-        $todayCash = (clone $baseTx)->completed()->whereDate('created_at', today())->where('payment_method', 'cash')->sum('total');
-        $todayTransfer = (clone $baseTx)->completed()->whereDate('created_at', today())->where('payment_method', 'transfer')->sum('total');
+        $todayQris = (clone $txQuery)->completed()->where('payment_method', 'qris')->sum('total');
+        $todayCash = (clone $txQuery)->completed()->where('payment_method', 'cash')->sum('total');
+        $todayTransfer = (clone $txQuery)->completed()->where('payment_method', 'transfer')->sum('total');
+        $todayDebit = (clone $txQuery)->completed()->where('payment_method', 'debit')->sum('total');
 
         return view('transactions.index', compact(
-            'transactions', 'users', 'todayTotalSales', 'todayExpenses', 'todayNet',
+            'transactions', 'users', 'todayTotalSales', 'todayExpenses', 'todayCashExpense', 'todayBankExpense', 'todayNet',
             'saldoLaci', 'saldoLaciAwal', 'saldoBank', 'totalPiutang', 'activeShift',
             'countAll', 'countPenjualan', 'countExpense', 'countPiutang', 'countLunas', 'countCash', 'countQris', 'countTransfer', 'countDebit',
-            'todayQris', 'todayCash', 'todayTransfer'
+            'todayQris', 'todayCash', 'todayTransfer', 'todayDebit'
         ));
     }
 
@@ -235,8 +346,10 @@ class TransactionController extends Controller
 
             Cashflow::create([
                 'user_id' => auth()->id(),
-                'shift_id' => Shift::activeShift()?->id,
+                'shift_id' => Shift::activeShiftForUser(auth()->id())?->id,
+                'worksheet_id' => $transaction->worksheet_id,
                 'type' => 'income',
+                'transaction_category' => 'income',
                 'category' => 'Pelunasan Piutang',
                 'description' => 'Pelunasan ' . $transaction->invoice_number . ($newPaidSoFar >= $transaction->total ? ' (LUNAS)' : ' (Sebagian)'),
                 'amount' => $request->amount,

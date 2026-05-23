@@ -61,138 +61,215 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Transaksi - permission based
-    Route::middleware('permission:transactions')->group(function () {
+    Route::middleware('permission:transactions.view')->group(function () {
         Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
         Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
     });
 
     // Shift Management - permission based
-    Route::middleware('permission:shifts')->prefix('shifts')->name('shifts.')->group(function () {
-        Route::get('/', [ShiftController::class, 'index'])->name('index');
-        Route::post('/open', [ShiftController::class, 'open'])->name('open');
-        Route::post('/{shift}/close', [ShiftController::class, 'close'])->name('close');
-        Route::post('/{shift}/cashout', [ShiftController::class, 'cashOut'])->name('cashout');
-        Route::put('/{shift}', [ShiftController::class, 'update'])->name('update');
-        Route::delete('/{shift}', [ShiftController::class, 'destroy'])->name('destroy');
-        Route::get('/{shift}', [ShiftController::class, 'show'])->name('show');
-        Route::get('/{shift}/summary', [ShiftController::class, 'getSummary'])->name('summary');
+    Route::prefix('shifts')->name('shifts.')->group(function () {
+        // Access to index and summary allowed if can view OR manage
+        Route::get('/', [ShiftController::class, 'index'])->middleware('permission:shifts.view,shifts.manage')->name('index');
+        Route::get('/{shift}/summary', [ShiftController::class, 'getSummary'])->middleware('permission:shifts.view,shifts.manage')->name('summary');
+        
+        // Specific route for opening shift (GET) to prevent collision with {shift}
+        Route::get('/open', function() {
+            return redirect()->route('shifts.index', ['open' => 1]);
+        })->middleware('permission:shifts.manage')->name('open-form');
+
+        // Viewing specific shift detail only if has view permission
+        Route::get('/{shift}', [ShiftController::class, 'show'])->middleware('permission:shifts.view')->name('show');
+        
+        // Managing actions require manage permission
+        Route::middleware('permission:shifts.manage')->group(function() {
+            Route::post('/open', [ShiftController::class, 'open'])->name('open');
+            Route::post('/{shift}/close', [ShiftController::class, 'close'])->name('close');
+            Route::post('/{shift}/cashout', [ShiftController::class, 'cashOut'])->name('cashout');
+            Route::put('/{shift}', [ShiftController::class, 'update'])->name('update');
+            Route::delete('/{shift}', [ShiftController::class, 'destroy'])->name('destroy');
+        });
     });
 
     // Produk - permission based
-    Route::middleware('permission:products')->group(function () {
-        Route::resource('products', ProductController::class)->except(['show']);
-        Route::get('/products/export/{format}', [ProductController::class, 'export'])->name('products.export');
+    Route::group([], function () {
+        Route::get('/products', [ProductController::class, 'index'])->middleware('permission:products.view,products.create,products.edit,products.delete')->name('products.index');
+        Route::get('/products/export/{format}', [ProductController::class, 'export'])->middleware('permission:products.view')->name('products.export');
+        
+        Route::middleware('permission:products.create')->group(function() {
+            Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
+            Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+            Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
+            Route::get('/products/import/template', [ProductController::class, 'downloadTemplate'])->name('products.import.template');
+        });
+        
+        Route::middleware('permission:products.edit')->group(function() {
+            Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+            Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+        });
+        
+        Route::middleware('permission:products.delete')->group(function() {
+            Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+        });
     });
 
+
     // Kategori - permission based
-    Route::middleware('permission:categories')->prefix('categories')->name('categories.')->group(function () {
-        Route::get('/', [CategoryController::class, 'index'])->name('index');
-        Route::post('/', [CategoryController::class, 'store'])->name('store');
-        Route::put('/{category}', [CategoryController::class, 'update'])->name('update');
-        Route::delete('/{category}', [CategoryController::class, 'destroy'])->name('destroy');
+    Route::prefix('categories')->name('categories.')->group(function () {
+        Route::get('/', [CategoryController::class, 'index'])->middleware('permission:categories.view,categories.create,categories.edit,categories.delete')->name('index');
+        Route::post('/', [CategoryController::class, 'store'])->middleware('permission:categories.create')->name('store');
+        Route::put('/{category}', [CategoryController::class, 'update'])->middleware('permission:categories.edit')->name('update');
+        Route::delete('/{category}', [CategoryController::class, 'destroy'])->middleware('permission:categories.delete')->name('destroy');
     });
 
     // Stok - permission based
-    Route::middleware('permission:stock')->prefix('stock')->name('stock.')->group(function () {
-        Route::get('/', [StockController::class, 'index'])->name('index');
-        Route::post('/adjust', [StockController::class, 'adjust'])->name('adjust');
-        Route::delete('/mutation/{mutation}', [StockController::class, 'destroy'])->name('destroy');
+    Route::prefix('stock')->name('stock.')->group(function () {
+        Route::get('/', [StockController::class, 'index'])->middleware('permission:stock.view,stock.edit')->name('index');
+        Route::get('/history', [StockController::class, 'history'])->middleware('permission:stock.view,stock.edit')->name('history');
+        Route::post('/adjust', [StockController::class, 'adjust'])->middleware('permission:stock.edit')->name('adjust');
+        Route::delete('/mutation/{mutation}', [StockController::class, 'destroy'])->middleware('permission:stock.edit')->name('destroy');
     });
 
     // Cashflow - permission based
-    Route::middleware('permission:cashflow')->prefix('cashflow')->name('cashflow.')->group(function () {
+    Route::middleware('permission:cashflow.view')->prefix('cashflow')->name('cashflow.')->group(function () {
         Route::get('/', [CashflowController::class, 'index'])->name('index');
         Route::get('/data', [CashflowController::class, 'getData'])->name('data');
         Route::get('/export', [CashflowController::class, 'export'])->name('export');
-        Route::post('/', [CashflowController::class, 'store'])->name('store');
-        Route::post('/transfer', [CashflowController::class, 'transfer'])->name('transfer');
-        Route::post('/update-target', [CashflowController::class, 'updateTarget'])->name('update-target');
-        Route::post('/sync-bank', [CashflowController::class, 'syncBank'])->name('sync-bank');
-        Route::post('/sync-laci', [CashflowController::class, 'syncLaci'])->name('sync-laci');
-        Route::put('/{cashflow}', [CashflowController::class, 'update'])->name('update');
-        Route::post('/quick-store', [CashflowController::class, 'storeQuick'])->name('quick-store');
-        Route::delete('/{cashflow}', [CashflowController::class, 'destroy'])->name('destroy');
+        
+        Route::middleware('permission:cashflow.create')->group(function() {
+            Route::post('/', [CashflowController::class, 'store'])->name('store');
+            Route::post('/transfer', [CashflowController::class, 'transfer'])->name('transfer');
+            Route::post('/quick-store', [CashflowController::class, 'storeQuick'])->name('quick-store');
+        });
+        
+        Route::middleware('permission:settings')->group(function() {
+            Route::post('/update-target', [CashflowController::class, 'updateTarget'])->name('update-target');
+            Route::post('/update-capital', [CashflowController::class, 'updateCapital'])->name('update-capital');
+            Route::post('/sync-bank', [CashflowController::class, 'syncBank'])->name('sync-bank');
+            Route::post('/sync-laci', [CashflowController::class, 'syncLaci'])->name('sync-laci');
+        });
+        
+        Route::put('/{cashflow}', [CashflowController::class, 'update'])->middleware('permission:cashflow.create')->name('update');
+        Route::delete('/{cashflow}', [CashflowController::class, 'destroy'])->middleware('permission:cashflow.delete')->name('destroy');
     });
 
     // Modal Usaha & Pemakaian Bulanan (Owner / Financial access)
-    Route::middleware('permission:reports_financial')->group(function () {
-        Route::post('capitals/import', [CapitalController::class, 'import'])->name('capitals.import');
-        Route::get('capitals/template', function () {
-            $path = public_path('templates/Template_Import_Modal.xlsx');
-            if (!file_exists($path)) {
-                // Return dummy response since creating real excel here is complex, we just create an empty file if needed or user creates it.
-                // Or better, generate dynamically.
-                $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-                $sheet = $spreadsheet->getActiveSheet();
-                $sheet->setCellValue('A1', 'Nama Item');
-                $sheet->setCellValue('B1', 'Tipe');
-                $sheet->setCellValue('C1', 'Harga Satuan');
-                $sheet->setCellValue('D1', 'Jumlah');
-                $sheet->setCellValue('E1', 'Satuan');
-                
-                $sheet->setCellValue('A2', 'Kamera Canon 5D');
-                $sheet->setCellValue('B2', 'Aset');
-                $sheet->setCellValue('C2', '15000000');
-                $sheet->setCellValue('D2', '1');
-                $sheet->setCellValue('E2', 'Pcs');
-                
-                $sheet->setCellValue('A3', 'Kertas HVS A4');
-                $sheet->setCellValue('B3', 'Bahan Baku');
-                $sheet->setCellValue('C3', '55000');
-                $sheet->setCellValue('D3', '10');
-                $sheet->setCellValue('E3', 'Rim');
-
-                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                header('Content-Disposition: attachment; filename="Template_Import_Modal.xlsx"');
-                $writer->save('php://output');
-                exit;
-            }
-            return response()->download($path);
-        })->name('capitals.template');
-        Route::resource('capitals', CapitalController::class);
-        Route::resource('monthly_expenses', MonthlyExpenseController::class);
-        Route::resource('expense_categories', ExpenseCategoryController::class);
+    Route::middleware('permission:reports_financial,capitals.view,monthly_expenses.view,expense_categories.view')->group(function () {
         
-        // Invoice Generator Routes
-        Route::resource('invoices', \App\Http\Controllers\InvoiceController::class);
-        Route::get('invoices/{invoice}/pdf', [\App\Http\Controllers\InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
-        Route::post('invoices/{invoice}/payments', [\App\Http\Controllers\InvoiceController::class, 'addPayment'])->name('invoices.payments.store');
+        Route::middleware('permission:capitals.view')->group(function() {
+            Route::get('capitals', [CapitalController::class, 'index'])->name('capitals.index');
+            Route::get('capitals/{capital}', [CapitalController::class, 'show'])->name('capitals.show');
+            Route::middleware('permission:capitals.manage')->group(function() {
+                Route::get('capitals/create', [CapitalController::class, 'create'])->name('capitals.create');
+                Route::post('capitals', [CapitalController::class, 'store'])->name('capitals.store');
+                Route::get('capitals/{capital}/edit', [CapitalController::class, 'edit'])->name('capitals.edit');
+                Route::put('capitals/{capital}', [CapitalController::class, 'update'])->name('capitals.update');
+                Route::delete('capitals/{capital}', [CapitalController::class, 'destroy'])->name('capitals.destroy');
+                Route::post('capitals/import', [CapitalController::class, 'import'])->name('capitals.import');
+                Route::get('capitals/template', [CapitalController::class, 'template'])->name('capitals.template');
+            });
+        });
 
-        Route::resource('expense_categories', ExpenseCategoryController::class);
+        Route::middleware('permission:monthly_expenses.view')->group(function() {
+            Route::get('monthly_expenses', [MonthlyExpenseController::class, 'index'])->name('monthly_expenses.index');
+            Route::middleware('permission:monthly_expenses.manage')->group(function() {
+                Route::get('monthly_expenses/create', [MonthlyExpenseController::class, 'create'])->name('monthly_expenses.create');
+                Route::post('monthly_expenses', [MonthlyExpenseController::class, 'store'])->name('monthly_expenses.store');
+                Route::get('monthly_expenses/{monthly_expense}/edit', [MonthlyExpenseController::class, 'edit'])->name('monthly_expenses.edit');
+                Route::put('monthly_expenses/{monthly_expense}', [MonthlyExpenseController::class, 'update'])->name('monthly_expenses.update');
+                Route::delete('monthly_expenses/{monthly_expense}', [MonthlyExpenseController::class, 'destroy'])->name('monthly_expenses.destroy');
+            });
+        });
+
+        Route::middleware('permission:expense_categories.view')->group(function() {
+            Route::get('expense_categories', [ExpenseCategoryController::class, 'index'])->name('expense_categories.index');
+            Route::middleware('permission:expense_categories.manage')->group(function() {
+                Route::post('expense_categories', [ExpenseCategoryController::class, 'store'])->name('expense_categories.store');
+                Route::put('expense_categories/{expense_category}', [ExpenseCategoryController::class, 'update'])->name('expense_categories.update');
+                Route::delete('expense_categories/{expense_category}', [ExpenseCategoryController::class, 'destroy'])->name('expense_categories.destroy');
+            });
+        });
+    });
+
+    // Invoice Generator Routes
+    Route::middleware('permission:invoices.view')->group(function() {
+        Route::get('invoices', [\App\Http\Controllers\InvoiceController::class, 'index'])->name('invoices.index');
+        
+        Route::middleware('permission:invoices.create')->group(function() {
+            Route::get('invoices/create', [\App\Http\Controllers\InvoiceController::class, 'create'])->name('invoices.create');
+            Route::post('invoices', [\App\Http\Controllers\InvoiceController::class, 'store'])->name('invoices.store');
+            Route::get('invoices/{invoice}/edit', [\App\Http\Controllers\InvoiceController::class, 'edit'])->name('invoices.edit');
+            Route::put('invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'update'])->name('invoices.update');
+            Route::post('invoices/{invoice}/payments', [\App\Http\Controllers\InvoiceController::class, 'addPayment'])->name('invoices.payments.store');
+        });
+
+        Route::get('invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('invoices/{invoice}/pdf', [\App\Http\Controllers\InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+        Route::delete('invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'destroy'])->middleware('permission:invoices.delete')->name('invoices.destroy');
     });
 
     // Laporan - permission based
-    Route::middleware('permission:sales')->get('/reports/sales', [ReportController::class, 'sales'])->name('sales.index');
+    Route::middleware('permission:sales.view')->get('/reports/sales', [ReportController::class, 'sales'])->name('sales.index');
     Route::middleware('permission:reports_financial')->get('/reports/financial', [ReportController::class, 'financial'])->name('reports.financial');
     Route::middleware('permission:reports_shifts')->get('/reports/shifts', [ReportController::class, 'shifts'])->name('reports.shifts');
     Route::post('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
     Route::post('/reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
     Route::post('/reports/export-csv', [ReportController::class, 'exportCsv'])->name('reports.export-csv');
 
-    // Owner-only routes
-    Route::middleware(['role:owner'])->group(function () {
-        // Batalkan / hapus transaksi
-        Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->name('transactions.cancel');
-        Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
+    // Transaksi Actions (Protected by granular permissions)
+    Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->middleware('permission:transactions.edit')->name('transactions.cancel');
+    Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('permission:transactions.delete')->name('transactions.destroy');
 
-        // Bayar piutang
-        Route::post('/transactions/{transaction}/pay', [TransactionController::class, 'payPiutang'])->name('transactions.pay');
+    // Bayar piutang (Protected by granular permission)
+    Route::post('/transactions/{transaction}/pay', [TransactionController::class, 'payPiutang'])->middleware('permission:transactions.edit')->name('transactions.pay');
 
-        // Manajemen Tim
-        Route::middleware('permission:team')->prefix('team')->name('team.')->group(function () {
-            Route::get('/', [TeamController::class, 'index'])->name('index');
-            Route::post('/', [TeamController::class, 'store'])->name('store');
-            Route::put('/{user}', [TeamController::class, 'update'])->name('update');
-            Route::post('/{user}/toggle-active', [TeamController::class, 'toggleActive'])->name('toggle-active');
-            Route::delete('/{user}', [TeamController::class, 'destroy'])->name('destroy');
-        });
+    // Manajemen Tim
+    Route::prefix('team')->name('team.')->group(function () {
+        Route::get('/', [TeamController::class, 'index'])->middleware('permission:team.view,team.manage')->name('index');
+        Route::post('/', [TeamController::class, 'store'])->middleware('permission:team.manage')->name('store');
+        Route::put('/{user}', [TeamController::class, 'update'])->middleware('permission:team.manage')->name('update');
+        Route::post('/{user}/toggle-active', [TeamController::class, 'toggleActive'])->middleware('permission:team.manage')->name('toggle-active');
+        Route::delete('/{user}', [TeamController::class, 'destroy'])->middleware('permission:team.manage')->name('destroy');
+    });
 
-        // Pengaturan
-        Route::middleware('permission:settings')->group(function () {
-            Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-            Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
-            Route::post('/settings/test-drawer', [SettingController::class, 'testDrawer'])->name('settings.test-drawer');
+    // Pengaturan
+    Route::middleware('permission:settings')->group(function () {
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+        Route::post('/settings/test-drawer', [SettingController::class, 'testDrawer'])->name('settings.test-drawer');
+    });
+
+    // Jadwal Kerja (Independent Schedule System)
+    Route::prefix('schedules')->name('schedules.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ScheduleController::class, 'index'])->middleware('permission:schedules.view,schedules.manage')->name('index');
+        Route::get('/poster', [\App\Http\Controllers\ScheduleController::class, 'poster'])->middleware('permission:schedules.view,schedules.manage')->name('poster');
+        
+        Route::middleware('permission:schedules.manage')->group(function () {
+            // Locations
+            Route::post('/locations', [\App\Http\Controllers\ScheduleController::class, 'storeLocation'])->name('locations.store');
+            Route::put('/locations/{location}', [\App\Http\Controllers\ScheduleController::class, 'updateLocation'])->name('locations.update');
+            Route::delete('/locations/{location}', [\App\Http\Controllers\ScheduleController::class, 'destroyLocation'])->name('locations.destroy');
+            
+            // Crews
+            Route::post('/crews', [\App\Http\Controllers\ScheduleController::class, 'storeCrew'])->name('crews.store');
+            Route::put('/crews/{crew}', [\App\Http\Controllers\ScheduleController::class, 'updateCrew'])->name('crews.update');
+            Route::post('/crews/{crew}/toggle', [\App\Http\Controllers\ScheduleController::class, 'toggleCrew'])->name('crews.toggle');
+            Route::delete('/crews/{crew}', [\App\Http\Controllers\ScheduleController::class, 'destroyCrew'])->name('crews.destroy');
+            
+            // Shifts
+            Route::post('/shifts', [\App\Http\Controllers\ScheduleController::class, 'storeShift'])->name('shifts.store');
+            Route::put('/shifts/{shift}', [\App\Http\Controllers\ScheduleController::class, 'updateShift'])->name('shifts.update');
+            Route::delete('/shifts/{shift}', [\App\Http\Controllers\ScheduleController::class, 'destroyShift'])->name('shifts.destroy');
+            
+            // Assignments
+            Route::post('/assignments', [\App\Http\Controllers\ScheduleController::class, 'storeAssignment'])->name('assignments.store');
+            Route::delete('/assignments/{assignment}', [\App\Http\Controllers\ScheduleController::class, 'destroyAssignment'])->name('assignments.destroy');
+            Route::post('/assignments/bulk', [\App\Http\Controllers\ScheduleController::class, 'bulkAssign'])->name('assignments.bulk');
+            Route::post('/assignments/weekly-bulk', [\App\Http\Controllers\ScheduleController::class, 'weeklyBulkAssign'])->name('assignments.weekly-bulk');
+            
+            // Close / Reopen / Change
+            Route::post('/assignments/{assignment}/close', [\App\Http\Controllers\ScheduleController::class, 'closeAssignment'])->name('assignments.close');
+            Route::post('/assignments/{assignment}/reopen', [\App\Http\Controllers\ScheduleController::class, 'reopenAssignment'])->name('assignments.reopen');
+            Route::post('/assignments/{assignment}/change', [\App\Http\Controllers\ScheduleController::class, 'changeAssignment'])->name('assignments.change');
         });
     });
 });

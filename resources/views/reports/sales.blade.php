@@ -8,36 +8,13 @@
 <div x-data="analyticsDashboard()" class="flex flex-col gap-6">
 
     {{-- HEADER & QUICK FILTERS --}}
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-2">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-2 relative z-[50]">
         <div>
             <h1 class="text-2xl font-black text-white tracking-tight">Dashboard Analytics</h1>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Rekap Penjualan & Margin Profit</p>
         </div>
-        
-        <div class="flex flex-wrap items-center gap-3">
-            <div class="flex bg-slate-800/80 backdrop-blur-md rounded-xl p-1 border border-slate-700/50 shadow-inner" id="periodFilterBar">
-                @php
-                    $periodFrom = request('date_from');
-                    $periodTo = request('date_to');
-                    $today = now()->format('Y-m-d');
-                    $startOfWeek = now()->startOfWeek()->format('Y-m-d');
-                    $startOfMonth = now()->startOfMonth()->format('Y-m-d');
-                    $startOfYear = now()->startOfYear()->format('Y-m-d');
-                    
-                    $activePeriod = 'custom';
-                    if (!$periodFrom || ($periodFrom == $today && $periodTo == $today)) $activePeriod = 'today';
-                    elseif ($periodFrom == $startOfWeek && $periodTo == $today) $activePeriod = 'week';
-                    elseif ($periodFrom == $startOfMonth && $periodTo == $today) $activePeriod = 'month';
-                    elseif ($periodFrom == $startOfYear && $periodTo == $today) $activePeriod = 'year';
-                @endphp
-                <button type="button" onclick="setPeriod('{{ $today }}', '{{ $today }}')" class="px-4 py-2 text-[10px] font-black rounded-lg transition-all {{ $activePeriod == 'today' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:text-slate-200' }}">HARI INI</button>
-                <button type="button" onclick="setPeriod('{{ $startOfWeek }}', '{{ $today }}')" class="px-4 py-2 text-[10px] font-black rounded-lg transition-all {{ $activePeriod == 'week' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:text-slate-200' }}">MINGGUAN</button>
-                <button type="button" onclick="setPeriod('{{ $startOfMonth }}', '{{ $today }}')" class="px-4 py-2 text-[10px] font-black rounded-lg transition-all {{ $activePeriod == 'month' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:text-slate-200' }}">BULANAN</button>
-                <button type="button" onclick="setPeriod('{{ $startOfYear }}', '{{ $today }}')" class="px-4 py-2 text-[10px] font-black rounded-lg transition-all {{ $activePeriod == 'year' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:text-slate-200' }}">TAHUNAN</button>
-            </div>
-            
-                <span class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Live Report</span>
-            </div>
+        <div class="flex items-center gap-3">
+            <x-custom-filter :dateFrom="$dateFrom" :dateTo="$dateTo" />
             
             <button onclick="window.openExportModal()" class="w-11 h-11 bg-slate-800 border border-white/5 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
                 <i class="fas fa-file-export"></i>
@@ -50,18 +27,9 @@
         <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-[80px] pointer-events-none"></div>
 
         <form id="filterForm" action="{{ route('sales.index') }}" method="GET" class="flex flex-col md:flex-row gap-5 items-end md:items-center w-full">
-            <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-5">
-                <div class="col-span-1 md:col-span-2 flex items-center gap-3">
-                    <div class="w-full relative group">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block"><i class="far fa-calendar-alt mr-1"></i> Tanggal Awal</label>
-                        <input type="date" id="date_from" name="date_from" value="{{ is_array(request('date_from')) ? ($dateFrom ? $dateFrom->format('Y-m-d') : '') : request('date_from', $dateFrom->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0f172a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all placeholder-slate-500/60 group-hover:shadow-sm">
-                    </div>
-                    <span class="text-slate-600 font-black self-end mb-3">-</span>
-                    <div class="w-full relative group">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block"><i class="far fa-calendar-check mr-1"></i> Tanggal Akhir</label>
-                        <input type="date" id="date_to" name="date_to" value="{{ is_array(request('date_to')) ? ($dateTo ? $dateTo->format('Y-m-d') : '') : request('date_to', $dateTo->format('Y-m-d')) }}" style="color-scheme: dark;" class="w-full bg-[#0f172a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all placeholder-slate-500/60 group-hover:shadow-sm">
-                    </div>
-                </div>
+            <input type="hidden" name="date_from" value="{{ is_object($dateFrom) ? $dateFrom->format('Y-m-d') : $dateFrom }}">
+            <input type="hidden" name="date_to" value="{{ is_object($dateTo) ? $dateTo->format('Y-m-d') : $dateTo }}">
+            <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-5">
                 
                 <div class="group relative">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block"><i class="fas fa-wallet mr-1"></i> Metode Pembayaran</label>
@@ -558,15 +526,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function setPeriod(from, to) {
-    document.getElementById('date_from').value = from;
-    document.getElementById('date_to').value = to;
-    document.getElementById('filterForm').submit();
-}
-
 function analyticsDashboard() {
     return {
-        // Alpine initialization logic if needed
+        // no-op
     }
 }
 </script>

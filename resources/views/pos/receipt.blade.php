@@ -89,6 +89,9 @@
         @if($transaction->tax > 0)
         <div class="flex"><span>Pajak:</span> <span>{{ number_format($transaction->tax, 0, ',', '.') }}</span></div>
         @endif
+        @if($transaction->delivery_fee > 0)
+        <div class="flex"><span>Ongkir:</span> <span>{{ number_format($transaction->delivery_fee, 0, ',', '.') }}</span></div>
+        @endif
         
         <div class="flex font-bold" style="font-size: 1.1em; border-top: 1px solid #000; padding-top: 2px; margin-top: 2px;">
             <span>TOTAL:</span> <span>{{ number_format($transaction->total, 0, ',', '.') }}</span>

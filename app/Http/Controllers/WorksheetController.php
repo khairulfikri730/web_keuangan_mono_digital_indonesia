@@ -12,16 +12,12 @@ class WorksheetController extends Controller
     {
         $id = $request->worksheet_id;
         
-        if ($id === 'all' && auth()->user()->isOwner()) {
-            session(['active_worksheet_id' => 'all']);
-        } else {
-            $worksheet = Worksheet::findOrFail($id);
-            // Ensure kasir has access
-            if (!auth()->user()->isOwner() && !auth()->user()->worksheets->contains($worksheet->id)) {
-                abort(403, 'Unauthorized action.');
-            }
-            session(['active_worksheet_id' => $worksheet->id]);
+        $worksheet = Worksheet::findOrFail($id);
+        // Ensure kasir has access
+        if (!auth()->user()->isOwner() && !auth()->user()->worksheets->contains($worksheet->id)) {
+            abort(403, 'Unauthorized action.');
         }
+        session(['active_worksheet_id' => $worksheet->id]);
 
         return back();
     }

@@ -11,7 +11,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'worksheet_id', 'invoice_number', 'shift_id', 'user_id', 'subtotal', 'discount',
-        'tax', 'total', 'paid_amount', 'change_amount', 'paid_so_far', 'payment_method',
+        'tax', 'delivery_fee', 'total', 'paid_amount', 'change_amount', 'paid_so_far', 'payment_method',
         'status', 'customer_name', 'customer_phone', 'discount_type', 'notes',
     ];
 
@@ -19,6 +19,7 @@ class Transaction extends Model
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
         'tax' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
         'total' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',

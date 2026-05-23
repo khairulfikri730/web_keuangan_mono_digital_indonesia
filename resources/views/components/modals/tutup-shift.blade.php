@@ -103,8 +103,8 @@
                         <i class="fas fa-arrow-up-right-from-square"></i>
                     </div>
                     <div>
-                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pengeluaran</p>
-                        <p class="text-sm font-black text-orange-400">Rp {{ number_format($currentExpenses ?? 0, 0, ',', '.') }}</p>
+                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Biaya</p>
+                        <p class="text-sm font-black text-orange-400">Rp {{ number_format($currentTotalExpenses ?? 0, 0, ',', '.') }}</p>
                     </div>
                 </div>
                 <div class="bg-gradient-to-br from-cyan-500/10 to-transparent border border-cyan-500/20 rounded-2xl p-4 space-y-2 group hover:border-cyan-500/40 transition-all duration-300">

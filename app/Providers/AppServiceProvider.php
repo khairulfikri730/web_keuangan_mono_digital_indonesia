@@ -31,20 +31,20 @@ class AppServiceProvider extends ServiceProvider
                 $activeWorksheetId = session('active_worksheet_id');
                 $activeWorksheet = null;
 
-                if ($activeWorksheetId && $activeWorksheetId !== 'all') {
+                if ($activeWorksheetId) {
                     $activeWorksheet = $worksheets->firstWhere('id', $activeWorksheetId);
                 }
 
-                // Auto-assign first worksheet for Kasir if none is active
-                if (!$user->isOwner() && !$activeWorksheet && $worksheets->count() > 0) {
+                // Auto-assign first worksheet if none is active
+                if (!$activeWorksheet && $worksheets->count() > 0) {
                     $activeWorksheet = $worksheets->first();
                     session(['active_worksheet_id' => $activeWorksheet->id]);
+                    $activeWorksheetId = $activeWorksheet->id;
                 }
 
-                // If Kasir has no worksheets, this could be problematic, but we handle it in UI
                 $view->with('userWorksheets', $worksheets);
                 $view->with('activeWorksheet', $activeWorksheet);
-                $view->with('activeWorksheetId', session('active_worksheet_id', $user->isOwner() ? 'all' : null));
+                $view->with('activeWorksheetId', session('active_worksheet_id'));
             }
         });
     }

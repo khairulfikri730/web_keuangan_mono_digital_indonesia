@@ -22,7 +22,7 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
 .kind-btn.selected{border-color:#3b82f6;background:rgba(37,99,235,.2);color:#60a5fa;}
 </style>
 
-<div x-data="prodPage()" class="space-y-5">
+<div x-data="{ showImport: false }" class="space-y-5">
 
 {{-- STATS --}}
 <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
@@ -145,11 +145,19 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
        style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);">
       <i class="fas fa-file-pdf"></i> PDF
     </a>
+    {{-- Import Excel Button --}}
+    @if(auth()->user()->hasPermission('products.create'))
+    <button type="button" @click="showImport = true"
+       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-violet-400 flex-shrink-0 transition-all hover:scale-105"
+       style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);">
+      <i class="fas fa-file-import"></i> Import Excel
+    </button>
     <a href="{{ route('products.create') }}"
             class="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-bold text-white flex-shrink-0 transition-all hover:opacity-90 hover:scale-105 active:scale-95"
             style="background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 4px 15px rgba(37,99,235,.35);">
       <i class="fas fa-plus text-xs"></i> Tambah Produk
     </a>
+    @endif
   </form>
 
   {{-- TABLE --}}
@@ -217,10 +225,15 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
           </td>
           <td class="px-4 py-3 text-right">
             <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              @if(!$p->isStockless())
+              @if(!$p->isStockless() && auth()->user()->hasPermission('stock.edit'))
               <a href="{{ route('stock.index', ['action' => 'restock', 'product_id' => $p->id]) }}" class="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400 hover:text-emerald-300 transition-all hover:scale-110" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);" title="Restock / Sesuaikan Stok"><i class="fas fa-plus text-xs"></i></a>
               @endif
+              
+              @if(auth()->user()->hasPermission('products.edit'))
               <a href="{{ route('products.edit',$p) }}" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition-all hover:scale-110" style="background:rgba(71,85,105,.5);border:1px solid rgba(71,85,105,.5);" title="Edit"><i class="fas fa-pen text-xs"></i></a>
+              @endif
+              
+              @if(auth()->user()->hasPermission('products.delete'))
               <form action="{{ route('products.destroy',$p) }}" method="POST" id="delete-product-{{ $p->id }}">
                 @csrf @method('DELETE')
                 <button type="button" 
@@ -238,6 +251,7 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
                         })"
                         class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 transition-all hover:scale-110" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
               </form>
+              @endif
             </div>
           </td>
         </tr>
@@ -259,8 +273,139 @@ $kinds=['regular'=>'Biasa','weight'=>'Timbangan','unlimited'=>'Unlimited','servi
   @if($products->hasPages())
   <div class="p-4 border-t border-slate-700/50">{{ $products->links('pagination::tailwind') }}</div>
   @endif
-</div>
+</div>{{-- end .main card div --}}
 
+{{-- ======= IMPORT EXCEL MODAL (inside x-data scope) ======= --}}
+
+<div x-show="showImport" x-cloak
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[200] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.75);backdrop-filter:blur(6px)">
+
+  <div @click.away="showImport = false"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       class="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl"
+       style="background:#0f172a;border:1px solid rgba(139,92,246,0.3);">
+
+    {{-- Header --}}
+    <div class="px-6 py-5 flex items-center justify-between" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.08));border-bottom:1px solid rgba(139,92,246,0.2);">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.3);">
+          <i class="fas fa-file-import text-violet-400 text-sm"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-black text-white">Import Produk dari Excel</h3>
+          <p class="text-xs text-slate-400">Upload file .xlsx, .xls, atau .csv</p>
+        </div>
+      </div>
+      <button @click="showImport = false" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    {{-- Body --}}
+    <div class="p-6 space-y-5">
+
+      {{-- Template Download --}}
+      <div class="rounded-xl p-4 flex items-center gap-4" style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background:rgba(16,185,129,0.15);">
+          <i class="fas fa-download text-emerald-400"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-bold text-white">Download Template Excel</p>
+          <p class="text-xs text-slate-400">Gunakan template ini agar format data sesuai</p>
+        </div>
+        <a href="{{ route('products.import.template') }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-300 flex items-center gap-1.5 hover:bg-emerald-500/20 transition-all"
+           style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);">
+          <i class="fas fa-file-csv"></i> Download
+        </a>
+      </div>
+
+      {{-- Upload Form --}}
+      <form action="{{ route('products.import') }}" method="POST" enctype="multipart/form-data" x-data="{ fileName: '', dragging: false }">
+        @csrf
+        <div class="space-y-4">
+          {{-- Drag & Drop Zone --}}
+          <label for="import_file"
+                 class="block rounded-xl cursor-pointer transition-all duration-200"
+                 :class="dragging ? 'scale-[1.01]' : ''"
+                 style="background:rgba(139,92,246,0.05);border:2px dashed rgba(139,92,246,0.3);"
+                 @dragover.prevent="dragging = true"
+                 @dragleave.prevent="dragging = false"
+                 @drop.prevent="dragging = false; fileName = $event.dataTransfer.files[0]?.name; $el.querySelector('input').files = $event.dataTransfer.files">
+            <div class="flex flex-col items-center justify-center py-8 px-4 text-center">
+              <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 transition-all"
+                   :class="fileName ? 'bg-violet-500/20 border-violet-500/40' : 'bg-slate-800'"
+                   style="border:1px solid rgba(139,92,246,0.2);">
+                <i class="text-2xl transition-all" :class="fileName ? 'fas fa-file-check text-violet-400' : 'fas fa-cloud-upload-alt text-slate-500'"></i>
+              </div>
+              <template x-if="!fileName">
+                <div>
+                  <p class="text-sm font-bold text-slate-300">Drag & drop file di sini</p>
+                  <p class="text-xs text-slate-500 mt-1">atau <span class="text-violet-400 font-bold underline">klik untuk pilih file</span></p>
+                  <p class="text-[11px] text-slate-600 mt-2">.xlsx · .xls · .csv · maks 5MB</p>
+                </div>
+              </template>
+              <template x-if="fileName">
+                <div>
+                  <p class="text-sm font-bold text-violet-300" x-text="fileName"></p>
+                  <p class="text-xs text-slate-400 mt-1">File siap diimport</p>
+                </div>
+              </template>
+            </div>
+            <input id="import_file" name="import_file" type="file" accept=".xlsx,.xls,.csv" class="hidden"
+                   @change="fileName = $event.target.files[0]?.name">
+          </label>
+
+          {{-- Kolom Guide --}}
+          <div class="rounded-xl p-4" style="background:rgba(30,41,59,0.8);border:1px solid rgba(71,85,105,0.4);">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <i class="fas fa-table-columns text-blue-400"></i> Kolom yang Dikenali
+            </p>
+            <div class="grid grid-cols-2 gap-1.5">
+              @foreach([
+                ['nama_produk','Nama Produk','required'],
+                ['kategori','Kategori','opsional'],
+                ['sku','SKU','opsional'],
+                ['harga_jual','Harga Jual','required'],
+                ['harga_modal','Harga Modal','opsional'],
+                ['stok','Stok Awal','opsional'],
+                ['satuan','Satuan (pcs/kg...)','opsional'],
+                ['tipe','Tipe (regular/unlimited)','opsional'],
+              ] as [$col,$label,$req])
+              <div class="flex items-center gap-1.5">
+                <code class="text-[9px] font-black px-1.5 py-0.5 rounded {{ $req==='required' ? 'text-emerald-300 bg-emerald-500/10' : 'text-slate-400 bg-slate-800' }}">{{ $col }}</code>
+                <span class="text-[10px] text-slate-500">{{ $label }}</span>
+              </div>
+              @endforeach
+            </div>
+          </div>
+
+          {{-- Actions --}}
+          <div class="flex gap-3 pt-1">
+            <button type="button" @click="showImport = false"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-300 hover:text-white transition-all"
+                    style="background:rgba(71,85,105,0.4);border:1px solid rgba(71,85,105,0.4);">Batal</button>
+            <button type="submit" :disabled="!fileName"
+                    class="flex-[2] py-2.5 rounded-xl text-sm font-black text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style="background:linear-gradient(135deg,#7c3aed,#6d28d9);box-shadow:0 4px 15px rgba(124,58,237,0.35);">
+              <i class="fas fa-file-import"></i>
+              <span x-text="fileName ? 'Mulai Import' : 'Pilih File Dahulu'"></span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</div>{{-- end main x-data div --}}
 
 @endsection
-

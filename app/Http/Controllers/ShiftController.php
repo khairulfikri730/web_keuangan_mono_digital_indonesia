@@ -11,84 +11,173 @@ use Illuminate\Support\Facades\DB;
 
 class ShiftController extends Controller
 {
+    protected $financialService;
+
+    public function __construct(\App\Services\FinancialReportService $financialService)
+    {
+        $this->financialService = $financialService;
+    }
+
     public function index(Request $request)
     {
-        // Handle Quick Period Filter
-        if ($request->period && $request->period !== 'custom') {
-            switch ($request->period) {
-                case 'today':
-                    $request->merge(['date_from' => today()->toDateString(), 'date_to' => today()->toDateString()]);
-                    break;
-                case 'yesterday':
-                    $yesterday = today()->subDay()->toDateString();
-                    $request->merge(['date_from' => $yesterday, 'date_to' => $yesterday]);
-                    break;
-                case 'week':
-                    $request->merge(['date_from' => now()->startOfWeek()->toDateString(), 'date_to' => now()->endOfWeek()->toDateString()]);
-                    break;
-                case 'month':
-                    $request->merge(['date_from' => now()->startOfMonth()->toDateString(), 'date_to' => now()->endOfMonth()->toDateString()]);
-                    break;
-                case 'year':
-                    $request->merge(['date_from' => now()->startOfYear()->toDateString(), 'date_to' => now()->endOfYear()->toDateString()]);
-                    break;
+        $activeShift = Shift::activeShiftForUser(auth()->id());
+        $isLiveShift = $request->shift === 'live' || $request->period === 'live';
+        $period = $request->period ?? 'today';
+        
+        $dfParam = is_array($request->date_from) ? null : $request->date_from;
+        $dtParam = is_array($request->date_to) ? null : $request->date_to;
+
+        if ($isLiveShift && $activeShift) {
+            $dateFrom = $activeShift->opened_at->copy()->startOfDay();
+            $dateTo = now()->endOfDay();
+        } else {
+            if ($dfParam && $dtParam) {
+                $dateFrom = Carbon::parse($dfParam)->startOfDay();
+                $dateTo = Carbon::parse($dtParam)->endOfDay();
+            } else {
+                switch ($period) {
+                    case 'yesterday':
+                        $dateFrom = now()->subDay()->startOfDay();
+                        $dateTo = now()->subDay()->endOfDay();
+                        break;
+                    case 'week':
+                        $dateFrom = now()->startOfWeek();
+                        $dateTo = now()->endOfWeek();
+                        break;
+                    case 'month':
+                        $dateFrom = now()->startOfMonth();
+                        $dateTo = now()->endOfMonth();
+                        break;
+                    case 'year':
+                        $dateFrom = now()->startOfYear();
+                        $dateTo = now()->endOfYear();
+                        break;
+                    case 'today':
+                    default:
+                        $dateFrom = now()->startOfDay();
+                        $dateTo = now()->endOfDay();
+                        break;
+                }
             }
         }
 
+        $worksheetId = session('active_worksheet_id');
+
         $query = Shift::with(['opener', 'closer'])
-            ->when($request->date_from && !is_array($request->date_from), fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
-            ->when($request->date_to && !is_array($request->date_to), fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
+            ->whereBetween('opened_at', [$dateFrom, $dateTo])
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->when($request->status && !is_array($request->status), fn($q) => $q->where('status', $request->status))
             ->when($request->user_id && !is_array($request->user_id), fn($q) => $q->where('opened_by', $request->user_id));
 
         $shifts = $query->latest()->paginate(15)->withQueryString();
         
         $activeShiftsCount = Shift::where('status', 'open')->count();
-        $totalClosingCash = Shift::where('status', 'closed')
-            ->when($request->date_from, fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
-            ->when($request->date_to, fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
-            ->sum('closing_cash');
+        $closedShifts = (clone $query)->where('status', 'closed')->get();
+        $totalClosingCash = $closedShifts->sum('closing_cash');
             
-        $totalSalesToday = Transaction::withoutGlobalScopes()
-            ->completed()
-            ->when($request->date_from, fn($q) => $q->whereDate('created_at', '>=', $request->date_from))
-            ->when($request->date_to, fn($q) => $q->whereDate('created_at', '<=', $request->date_to))
-            ->when(!$request->date_from && !$request->date_to, fn($q) => $q->whereDate('created_at', today()))
-            ->sum('total');
-        
-        $totalDiscrepancy = Shift::where('status', 'closed')
-            ->when($request->date_from, fn($q) => $q->whereDate('opened_at', '>=', $request->date_from))
-            ->when($request->date_to, fn($q) => $q->whereDate('opened_at', '<=', $request->date_to))
-            ->sum('discrepancy');
-
-        $activeShift = Shift::activeShift();
-        $users = \App\Models\User::where('is_active', true)->get();
-        $laciBalance = $this->getCurrentLaciBalance();
-
-        // Extra stats for insights
-        $bestCashier = Shift::select('opened_by', DB::raw('SUM(total_sales) as total'))
-            ->where('status', 'closed')
-            ->whereDate('opened_at', today())
-            ->groupBy('opened_by')
-            ->orderByDesc('total')
-            ->first()?->opener;
-            
-        if($bestCashier) {
-            $bestCashier->total = Shift::where('opened_by', $bestCashier->id)->whereDate('opened_at', today())->sum('total_sales');
+        $shiftIds = $closedShifts->pluck('id')->toArray();
+        if ($activeShift) {
+            $shiftIds[] = $activeShift->id;
         }
 
-        $highestShift = Shift::where('status', 'closed')->orderByDesc('total_sales')->first();
-        $avgDiscrepancy = Shift::where('status', 'closed')->avg('discrepancy') ?: 0;
+        $totalSalesToday = Transaction::withoutGlobalScopes()->completed()
+            ->when($isLiveShift && $activeShift, fn($q) => $q->where('shift_id', $activeShift->id))
+            ->when(!($isLiveShift && $activeShift), fn($q) => $q->whereIn('shift_id', $shiftIds))
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->sum('total');
+        
+        $totalDiscrepancy = 0;
+        foreach ($closedShifts as $s) {
+            $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+            $expected = $s->opening_cash + $cashSales - $cashExpenses;
+            $totalDiscrepancy += ($s->closing_cash - $expected);
+        }
+
+        // Total Expenses & Net Profit
+        $currentSales = 0;
+        $currentCashExpenses = 0;
+        $currentTotalExpenses = 0;
+        $laciBalance = $this->getCurrentLaciBalance();
+        $currentExpected = $laciBalance;
+
+        $laciMovements = collect(); // transfers/adjustments during active shift
+
+        if ($activeShift) {
+            $sumLive = $this->financialService->getShiftSummary($activeShift->id, $worksheetId);
+            $currentSales = $sumLive->cash_sales;
+            $currentCashExpenses = $sumLive->cash_expense;
+            $currentTotalExpenses = $sumLive->total_expense;
+
+            $nonPosNet = (float) Cashflow::withoutGlobalScopes()
+                ->where('shift_id', $activeShift->id)
+                ->where('source', 'pos_cash')
+                ->where('category', '!=', 'Penjualan')
+                ->where('transaction_category', '!=', 'expense')
+                ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+            $currentExpected = $activeShift->opening_cash + $currentSales - $currentCashExpenses + $nonPosNet;
+
+            // Fetch non-POS cashflow movements during active shift (transfers, manual adjustments)
+            $laciMovements = Cashflow::withoutGlobalScopes()
+                ->where('shift_id', $activeShift->id)
+                ->where('source', 'pos_cash')
+                ->where('category', '!=', 'Penjualan')
+                ->orderBy('created_at')
+                ->get();
+        }
+
+        if ($isLiveShift && $activeShift) {
+            $totalExpensesToday = $currentTotalExpenses;
+            $cashExpensesToday = $sumLive->cash_expense;
+            $bankExpensesToday = $sumLive->bank_expense;
+            $netProfitToday = $sumLive->total_income - $totalExpensesToday;
+        } else {
+            // Aggregate totals specifically for the filtered shifts to match the list exactly
+            $expenseBreakdownQuery = Cashflow::withoutGlobalScopes()->where('type', 'expense')
+                ->whereIn('shift_id', $shiftIds)
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
+                
+            $cashExpensesToday = (clone $expenseBreakdownQuery)->where('source', 'pos_cash')->sum('amount');
+            $bankExpensesToday = (clone $expenseBreakdownQuery)->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
+            $totalExpensesToday = $cashExpensesToday + $bankExpensesToday;
+            
+            $netProfitToday = $totalSalesToday - $totalExpensesToday;
+        }
+
+        $users = \App\Models\User::all();
+
+        // Extra stats for insights (consistent with ReportController and respects active filters)
+        $avgDiscrepancy = $closedShifts->count() > 0 ? $totalDiscrepancy / $closedShifts->count() : 0;
+        $highestShift = $closedShifts->sortByDesc('total_sales')->first();
+
+        $bestCashier = Transaction::withoutGlobalScopes()->completed()
+            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
+            ->when($worksheetId, fn($q) => $q->where('transactions.worksheet_id', $worksheetId))
+            ->join('users', 'transactions.user_id', '=', 'users.id')
+            ->selectRaw('users.name, SUM(transactions.total) as total')
+            ->groupBy('users.name')->orderByDesc('total')->first();
 
         return view('reports.shifts', compact(
-            'shifts', 'activeShift', 'users', 'laciBalance', 
+            'shifts', 'activeShift', 'users', 'laciBalance', 'closedShifts',
             'activeShiftsCount', 'totalClosingCash', 'totalSalesToday', 'totalDiscrepancy',
-            'bestCashier', 'highestShift', 'avgDiscrepancy'
+            'totalExpensesToday', 'netProfitToday', 'cashExpensesToday', 'bankExpensesToday',
+            'bestCashier', 'highestShift', 'avgDiscrepancy',
+            'currentSales', 'currentCashExpenses', 'currentTotalExpenses', 'currentExpected',
+            'laciMovements'
         ));
     }
 
     private function getCurrentLaciBalance()
     {
+        // Always mirror the Cashflow dashboard "Tunai/Laci" value exactly.
+        // This ensures real-time reflection of:
+        //   - POS sales (cash)
+        //   - Cash-out expenses during shift
+        //   - Transfers: laci → bank (reduces laci)
+        //   - Transfers: bank → laci (increases laci)
+        //   - Any manual saldo adjustments
+        // BelongsToWorksheet global scope on Cashflow handles worksheet filtering automatically.
         return (float) Cashflow::where('source', 'pos_cash')
             ->where('bank_sync_status', 'synced')
             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
@@ -96,45 +185,61 @@ class ShiftController extends Controller
 
     public function open(Request $request)
     {
-        if (Shift::activeShift()) {
+        $activeShift = Shift::activeShift();
+        if ($activeShift) {
+            // Jika user punya akses buka shift, mereka bisa otomatis "bergabung" ke shift yang ada
+            if (auth()->user()->hasPermission('shifts.manage')) {
+                if (!$activeShift->isUserAssigned(auth()->id())) {
+                    $assigned = $activeShift->assigned_users ?? [];
+                    $assigned[] = auth()->id();
+                    $activeShift->update(['assigned_users' => array_unique(array_map('intval', $assigned))]);
+                    return back()->with('success', 'Berhasil bergabung dengan shift yang sedang aktif!');
+                } else {
+                    return back()->with('error', 'Anda sudah tergabung dalam shift ini!');
+                }
+            }
             return back()->with('error', 'Sudah ada shift yang sedang berjalan!');
         }
 
         $request->validate([
             'opening_cash' => 'required|numeric|min:0',
-            'user_id' => 'nullable|exists:users,id',
-            'notes' => 'nullable|string|max:255',
+            'user_ids'     => 'nullable|array',
+            'user_ids.*'   => 'exists:users,id',
+            'notes'        => 'nullable|string|max:255',
+            'opened_at'    => 'nullable|date',
         ]);
 
-        // Owner bisa buka shift untuk user lain
-        $userId = $request->user_id ?: auth()->id();
+        // Collect assigned users: support both old single user_id and new multi user_ids[]
+        $assignedUserIds = $request->input('user_ids', []);
+        if (empty($assignedUserIds) && $request->filled('user_id')) {
+            $assignedUserIds = [$request->user_id];
+        }
+        if (empty($assignedUserIds)) {
+            $assignedUserIds = [auth()->id()];
+        }
+        // Always make sure opener is included
+        if (!in_array(auth()->id(), $assignedUserIds)) {
+            $assignedUserIds[] = auth()->id();
+        }
+        $assignedUserIds = array_map('intval', array_unique($assignedUserIds));
+
+        // Primary opener is the first selected user (or current auth user)
+        $primaryUserId = $assignedUserIds[0];
 
         $shift = Shift::create([
-            'opened_by' => $userId,
-            'opening_cash' => $request->opening_cash,
-            'status' => 'open',
-            'notes' => $request->notes,
-            'opened_at' => now(),
+            'opened_by'      => $primaryUserId,
+            'assigned_users' => $assignedUserIds,
+            'opening_cash'   => $request->opening_cash,
+            'status'         => 'open',
+            'notes'          => $request->notes,
+            'opened_at'      => $request->opened_at ? \Carbon\Carbon::parse($request->opened_at) : now(),
         ]);
 
-        if ($request->opening_cash >= 0) {
-            \App\Models\Cashflow::create([
-                'user_id' => $userId,
-                'shift_id' => $shift->id,
-                'worksheet_id' => $shift->worksheet_id,
-                'type' => 'income',
-                'transaction_category' => 'adjustment',
-                'category' => 'Modal Awal Kasir',
-                'description' => 'Kas Awal Shift',
-                'amount' => $request->opening_cash,
-                'source' => 'pos_cash',
-                'bank_sync_status' => 'synced',
-                'transaction_date' => today(),
-            ]);
-        }
+
 
         return back()->with('success', 'Shift berhasil dibuka!');
     }
+
 
     public function close(Request $request, Shift $shift)
     {
@@ -142,36 +247,36 @@ class ShiftController extends Controller
             return back()->with('error', 'Shift sudah ditutup!');
         }
 
+        if (!$shift->isUserAssigned(auth()->id())) {
+            return back()->with('error', 'Anda tidak memiliki akses untuk menutup shift ini!');
+        }
+
         $request->validate([
             'closing_cash' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        // Calculate all financial data for the shift
-        $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
-            ->completed()
-            ->where('payment_method', 'cash')
-            ->sum('total');
+        // Calculate all financial data for the shift using service for consistency
+        $worksheetId = session('active_worksheet_id');
+        $summary = $this->financialService->getShiftSummary($shift->id, $worksheetId);
 
-        $bankSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
-            ->completed()
-            ->whereIn('payment_method', ['transfer', 'qris', 'debit'])
-            ->sum('total');
+        $cashSales = $summary->cash_sales;
+        $bankSales = $summary->bank_sales;
+        $totalSales = $summary->total_income;
+        $totalTransactions = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->count();
+        $cashExpenses = $summary->cash_expense;
+        $bankExpenses = $summary->bank_expense;
 
-        $totalSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
-            ->completed()->sum('total');
-
-        $totalTransactions = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)
-            ->completed()->count();
-
-        // Cash expenses within this shift
-        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)
-            ->where('type', 'expense')
+        // Non-POS transfers and adjustments affecting pos_cash during the shift
+        $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
+            ->where('shift_id', $shift->id)
             ->where('source', 'pos_cash')
-            ->sum('amount');
+            ->where('category', '!=', 'Penjualan')
+            ->where('transaction_category', '!=', 'expense')
+            ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
-        // Expected cash = Modal Awal + Penjualan Tunai - Pengeluaran Tunai
-        $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses;
+        // Expected cash = Modal Awal + Penjualan Tunai - Pengeluaran Tunai + Transfers/Adjustments
+        $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses + $transfers;
         $discrepancy = $request->closing_cash - $expectedCash;
 
         $shift->update([
@@ -182,6 +287,7 @@ class ShiftController extends Controller
             'cash_sales' => $cashSales,
             'bank_sales' => $bankSales,
             'cash_expenses' => $cashExpenses,
+            'bank_expenses' => $bankExpenses,
             'total_sales' => $totalSales,
             'total_transactions' => $totalTransactions,
             'status' => 'closed',
@@ -207,9 +313,14 @@ class ShiftController extends Controller
             'amount'      => 'required|numeric|min:1',
             'description' => 'required|string|max:255',
             'category'    => 'nullable|string|max:100', // Ini sekarang berisi Main Category (Operasional, etc)
+            'source'      => 'nullable|string|in:cash,bank',
         ]);
 
-        $worksheetId = session('worksheet_id') ?: \App\Models\Worksheet::first()->id;
+        $sourceParam = $request->source === 'bank' ? 'bank' : 'cash';
+        $sourceType = $sourceParam === 'bank' ? 'pos_bank' : 'pos_cash';
+        $paymentMethod = $sourceParam === 'bank' ? 'transfer' : 'tunai';
+
+        $worksheetId = $shift->worksheet_id ?: session('active_worksheet_id') ?: \App\Models\Worksheet::first()->id;
         
         // Map category to lowercase for expense_type
         $expenseType = strtolower($request->category ?: 'operasional');
@@ -222,7 +333,7 @@ class ShiftController extends Controller
             'sub_category'   => $request->category ?: 'Operasional',
             'quantity'       => 1,
             'unit'           => 'Pcs',
-            'payment_method' => 'tunai',
+            'payment_method' => $paymentMethod,
             'usage_amount'   => $request->amount,
             'expense_date'   => today(),
             'month'          => now()->month,
@@ -242,7 +353,7 @@ class ShiftController extends Controller
             'category'         => $request->category ?: 'Operasional',
             'description'      => 'POS Cash Out: ' . $request->description,
             'amount'           => $request->amount,
-            'source'           => 'pos_cash',
+            'source'           => $sourceType,
             'bank_sync_status' => 'synced',
             'transaction_date' => today(),
             'reference_id'     => $monthlyUsage->id,
@@ -266,7 +377,15 @@ class ShiftController extends Controller
         $cashSales = Transaction::where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
         $bankSales = Transaction::where('shift_id', $shift->id)->completed()->whereIn('payment_method', ['transfer', 'qris', 'debit'])->sum('total');
         $cashExpenses = Cashflow::where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
-        $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses;
+        
+        $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
+            ->where('shift_id', $shift->id)
+            ->where('source', 'pos_cash')
+            ->where('category', '!=', 'Penjualan')
+            ->where('transaction_category', '!=', 'expense')
+            ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+        $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses + $transfers;
 
         return view('shifts.show', compact('shift', 'transactions', 'cashSales', 'bankSales', 'cashExpenses', 'expectedCash'));
     }
@@ -276,16 +395,27 @@ class ShiftController extends Controller
      */
     public function getSummary(Shift $shift)
     {
-        $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
-        $qrisSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'qris')->sum('total');
-        $transferSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'transfer')->sum('total');
-        $debitSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'debit')->sum('total');
+        $worksheetId = session('active_worksheet_id');
+        $summary = $this->financialService->getShiftSummary($shift->id, $worksheetId);
+        $incomeQuery = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed();
+        $qrisSales = (clone $incomeQuery)->where('payment_method', 'qris')->sum('total');
+        $transferSales = (clone $incomeQuery)->where('payment_method', 'transfer')->sum('total');
+        $debitSales = (clone $incomeQuery)->where('payment_method', 'debit')->sum('total');
         
-        $bankSales = $qrisSales + $transferSales + $debitSales;
-        $totalSales = $cashSales + $bankSales;
+        $cashSales = $summary->cash_sales;
+        $bankSales = $summary->bank_sales;
+        $totalSales = $summary->pos_income;
         $totalTransactions = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->count();
-        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
-        $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses;
+        $cashExpenses = $summary->cash_expense;
+
+        $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
+             ->where('shift_id', $shift->id)
+             ->where('source', 'pos_cash')
+             ->where('category', '!=', 'Penjualan')
+             ->where('transaction_category', '!=', 'expense')
+             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+        $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses + $transfers;
 
         $duration = '';
         if ($shift->closed_at) {
@@ -331,7 +461,14 @@ class ShiftController extends Controller
         $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
         $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
         
-        $expectedCash = $openingCash + $cashSales - $cashExpenses;
+        $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
+            ->where('shift_id', $shift->id)
+            ->where('source', 'pos_cash')
+            ->where('category', '!=', 'Penjualan')
+            ->where('transaction_category', '!=', 'expense')
+            ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+        $expectedCash = $openingCash + $cashSales - $cashExpenses + $transfers;
         $discrepancy = null;
         
         if ($shift->status === 'closed') {

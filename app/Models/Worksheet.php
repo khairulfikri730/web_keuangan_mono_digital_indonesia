@@ -42,4 +42,9 @@ class Worksheet extends Model
     {
         return $this->hasMany(Shift::class);
     }
+
+    public function workShifts()
+    {
+        return $this->hasMany(WorkShift::class);
+    }
 }

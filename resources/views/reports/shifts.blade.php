@@ -8,41 +8,25 @@
 <div x-data="shiftDashboardApp()" class="flex flex-col gap-6">
 
     {{-- FILTER BAR MODERN --}}
-    <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative z-40">
+    <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative z-[50]">
         <form method="GET" id="filter-form" class="flex flex-col gap-4 w-full">
+            <input type="hidden" name="date_from" value="{{ request('date_from') }}">
+            <input type="hidden" name="date_to" value="{{ request('date_to') }}">
+            <input type="hidden" name="period" value="{{ request('period', 'today') }}">
             {{-- PERIOD SELECTOR --}}
-            <div class="flex items-center gap-2 mb-2">
-                <div class="flex flex-wrap items-center gap-1 p-1 bg-slate-900/50 rounded-xl w-fit border border-slate-700/30">
-                    @php
-                        $currentPeriod = request('period', 'today');
-                    @endphp
-                    @foreach(['today' => 'HARI', 'yesterday' => 'KMRN', 'week' => 'MINGGU', 'month' => 'BULAN', 'year' => 'TAHUN', 'custom' => 'CUSTOM'] as $key => $label)
-                    <button type="button" 
-                            onclick="setQuickPeriod('{{ $key }}')"
-                            class="px-4 py-1.5 text-[10px] font-black rounded-lg transition-all duration-300 {{ ($currentPeriod == $key) ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800' }}">
-                        {{ $label }}
-                    </button>
-                    @endforeach
-                    <input type="hidden" name="period" id="period_input" value="{{ $currentPeriod }}">
-                </div>
-                <div class="h-px flex-1 bg-gradient-to-r from-slate-700/50 to-transparent"></div>
+            <div class="flex items-center gap-3 mb-2 flex-wrap">
+                <x-custom-filter :dateFrom="request('date_from')" :dateTo="request('date_to')" />
+
+                @if($activeShift)
+                <a href="{{ request()->url() }}?shift=live" 
+                        class="px-5 py-2.5 text-[10px] font-black rounded-full transition-all duration-300 {{ (request('shift') == 'live') ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20' : 'text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white bg-rose-500/10' }}">
+                    LIVE
+                </a>
+                @endif
             </div>
 
-            <div class="flex flex-col md:flex-row gap-4 items-end md:items-center w-full">
-                <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-4" x-show="'{{ $currentPeriod }}' === 'custom' || window.showCustomDates" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
-                    <div class="col-span-1 md:col-span-2 flex items-center gap-2">
-                    <div class="w-full relative">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="far fa-calendar-alt"></i> Dari Tanggal</label>
-                        <input type="date" name="date_from" value="{{ is_array(request('date_from')) ? '' : request('date_from') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner">
-                    </div>
-                    <span class="text-slate-500 font-bold self-end mb-2">-</span>
-                    <div class="w-full relative">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="far fa-calendar-check"></i> Sampai Tanggal</label>
-                        <input type="date" name="date_to" value="{{ is_array(request('date_to')) ? '' : request('date_to') }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner">
-                    </div>
-                    </div>
-                </div>
-                
+            @if(auth()->user()->isOwner())
+            <div class="flex flex-col md:flex-row gap-4 items-end md:items-center w-full mt-4 md:mt-0">
                 <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 block"><i class="fas fa-traffic-light"></i> Status Shift</label>
@@ -63,21 +47,22 @@
                         </select>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0">
-                @if(request()->has('date_from'))
-                <a href="{{ route('reports.shifts') }}" class="py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors text-sm border border-slate-600 shadow-sm text-center flex-1 md:flex-none">Reset</a>
-                @endif
-                <button type="submit" class="py-2.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 text-sm flex items-center justify-center gap-2 flex-1 md:flex-none">
-                    <i class="fas fa-filter"></i> Terapkan
-                </button>
+                <div class="flex gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0">
+                    @if(request()->has('date_from'))
+                    <a href="{{ request()->url() }}" class="py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors text-sm border border-slate-600 shadow-sm text-center flex-1 md:flex-none">Reset</a>
+                    @endif
+                    <button type="submit" class="py-2.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 text-sm flex items-center justify-center gap-2 flex-1 md:flex-none">
+                        <i class="fas fa-filter"></i> Terapkan
+                    </button>
+                </div>
             </div>
+            @endif
         </form>
     </div>
 
     {{-- SUMMARY SHIFT CARDS --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {{-- Shift Aktif --}}
         <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-blue-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-blue-500/20 transition-all"></div>
@@ -85,49 +70,79 @@
                 <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30 shrink-0 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-inner">
                     <i class="fas fa-door-open text-xl"></i>
                 </div>
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Shift Aktif Saat Ini</p>
-                    <h3 class="text-xl font-black text-white">{{ $activeShiftsCount }} Kasir</h3>
-                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Sedang bertugas</p>
+                <div class="flex-1">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Total Shift</p>
+                    <h3 class="text-xl font-black text-white">{{ $activeShiftsCount + $closedShifts->count() }} Shift</h3>
+                    <div class="mt-1.5 space-y-0.5">
+                        <p class="text-[9px] text-slate-500 font-bold flex items-center gap-1">
+                            <i class="fas fa-door-open text-[7px] text-blue-400"></i>
+                            Aktif: <span class="text-slate-400">{{ $activeShiftsCount }}</span>
+                        </p>
+                        <p class="text-[9px] text-slate-500 font-bold flex items-center gap-1">
+                            <i class="fas fa-door-closed text-[7px] text-slate-400"></i>
+                            Selesai: <span class="text-slate-400">{{ $closedShifts->count() }}</span>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        {{-- Total Kas Masuk --}}
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <div class="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-emerald-500/20 transition-all"></div>
-            <div class="flex items-center gap-4 relative z-10">
-                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shrink-0 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shadow-inner">
-                    <i class="fas fa-cash-register text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Total Uang Laci (Closed)</p>
-                    <h3 class="text-xl font-black text-emerald-400">Rp {{ number_format($totalClosingCash, 0, ',', '.') }}</h3>
-                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Kas riil di laci saat shift tutup</p>
-                </div>
-            </div>
-        </div>
-
-        {{-- Penjualan Hari Ini --}}
+        {{-- Penjualan --}}
         <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-purple-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-purple-500/20 transition-all"></div>
             <div class="flex items-center gap-4 relative z-10">
                 <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 shrink-0 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors shadow-inner">
                     <i class="fas fa-chart-line text-xl"></i>
                 </div>
-                @php
-                    $salesLabel = 'Penjualan ' . ($currentPeriod == 'today' ? 'Hari Ini' : ($currentPeriod == 'yesterday' ? 'Kemarin' : ($currentPeriod == 'week' ? 'Minggu Ini' : ($currentPeriod == 'month' ? 'Bulan Ini' : ($currentPeriod == 'year' ? 'Tahun Ini' : 'Periode Terpilih')))));
-                @endphp
                 <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">{{ $salesLabel }}</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Total Omset</p>
                     <h3 class="text-xl font-black text-purple-400">Rp {{ number_format($totalSalesToday, 0, ',', '.') }}</h3>
-                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Semua transaksi sukses di periode ini</p>
+                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Periode terpilih</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Pengeluaran --}}
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-red-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-red-500/20 transition-all"></div>
+            <div class="flex items-center gap-4 relative z-10">
+                <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center border border-red-500/30 shrink-0 text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors shadow-inner">
+                    <i class="fas fa-wallet text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Total Biaya</p>
+                    <h3 class="text-xl font-black text-red-400">Rp {{ number_format($totalExpensesToday, 0, ',', '.') }}</h3>
+                    <div class="mt-1.5 space-y-0.5">
+                        <p class="text-[9px] text-slate-500 font-bold flex items-center gap-1">
+                            <i class="fas fa-money-bill-wave text-[7px] text-emerald-500"></i>
+                            Tunai: <span class="text-slate-400">Rp {{ number_format($cashExpensesToday, 0, ',', '.') }}</span>
+                        </p>
+                        <p class="text-[9px] text-slate-500 font-bold flex items-center gap-1">
+                            <i class="fas fa-building-columns text-[7px] text-blue-400"></i>
+                            Bank: <span class="text-slate-400">Rp {{ number_format($bankExpensesToday, 0, ',', '.') }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Laba Bersih --}}
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-emerald-500/20 transition-all"></div>
+            <div class="flex items-center gap-4 relative z-10">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shrink-0 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shadow-inner">
+                    <i class="fas fa-sack-dollar text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Pendapatan Bersih</p>
+                    <h3 class="text-xl font-black text-emerald-400">Rp {{ number_format($netProfitToday, 0, ',', '.') }}</h3>
+                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Keuntungan riil</p>
                 </div>
             </div>
         </div>
 
         {{-- Selisih Kas --}}
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+        <div @click="showDiscrepancyModal = true" class="bg-slate-800 rounded-2xl p-5 border border-slate-700/80 shadow-sm relative overflow-hidden group hover:-translate-y-1 hover:border-amber-500/30 transition-all duration-300 cursor-pointer">
             <div class="absolute -right-4 -top-4 w-20 h-20 {{ $totalDiscrepancy < 0 ? 'bg-red-500/10' : 'bg-amber-500/10' }} rounded-full blur-xl pointer-events-none transition-all"></div>
             <div class="flex items-center gap-4 relative z-10">
                 <div class="w-12 h-12 rounded-xl {{ $totalDiscrepancy < 0 ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30' }} flex items-center justify-center border shrink-0 transition-colors shadow-inner">
@@ -138,7 +153,10 @@
                     <h3 class="text-xl font-black {{ $totalDiscrepancy < 0 ? 'text-red-400' : ($totalDiscrepancy > 0 ? 'text-emerald-400' : 'text-slate-300') }}">
                         {{ $totalDiscrepancy < 0 ? '-' : ($totalDiscrepancy > 0 ? '+' : '') }} Rp {{ number_format(abs($totalDiscrepancy), 0, ',', '.') }}
                     </h3>
-                    <p class="text-[9px] text-slate-500 mt-1 font-bold">Akumulasi shift selesai</p>
+                    <p class="text-[9px] text-slate-500 mt-1 font-bold flex items-center gap-1">
+                        Akumulasi shift selesai
+                        <i class="fas fa-info-circle text-[8px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                    </p>
                 </div>
             </div>
         </div>
@@ -151,10 +169,6 @@
             
             {{-- CURRENT SHIFT CARD (REALTIME) --}}
             @if($activeShift)
-            @php
-                $currentExpected = $activeShift->opening_cash + \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $activeShift->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-                $currentSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $activeShift->id)->where('status', 'completed')->sum('total');
-            @endphp
             <div class="bg-gradient-to-br from-blue-900/40 to-slate-800 rounded-2xl p-6 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
                 
@@ -168,19 +182,74 @@
                     </div>
                 </div>
 
-                <div class="space-y-4 relative z-10">
-                    <div class="flex justify-between items-center pb-3 border-b border-slate-700/50">
-                        <span class="text-xs font-bold text-slate-400">Modal Kas Awal</span>
+                @php
+                    // Compute expected laci from shift-only data (opening + sales - cash-out)
+                    $shiftOnlyExpected = $activeShift->opening_cash + $currentSales - $currentCashExpenses;
+                    // Net non-POS movements (transfers, adjustments) = actual laci - shift-only expected
+                    $nonPosNet = $currentExpected - $shiftOnlyExpected;
+                @endphp
+                <div class="space-y-3 relative z-10">
+                    {{-- Modal Awal --}}
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
+                        <span class="text-xs font-bold text-slate-400"><i class="fas fa-play-circle text-blue-400 mr-1"></i>Modal Kas Awal</span>
                         <span class="text-sm font-bold text-slate-200">Rp {{ number_format($activeShift->opening_cash, 0, ',', '.') }}</span>
                     </div>
-                    <div class="flex justify-between items-center pb-3 border-b border-slate-700/50">
-                        <span class="text-xs font-bold text-slate-400">Total Penjualan</span>
-                        <span class="text-sm font-black text-emerald-400">Rp {{ number_format($currentSales, 0, ',', '.') }}</span>
+                    {{-- Penjualan Tunai --}}
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
+                        <span class="text-xs font-bold text-slate-400"><i class="fas fa-plus text-emerald-400 mr-1"></i>Penjualan Tunai</span>
+                        <span class="text-sm font-black text-emerald-400">+ Rp {{ number_format($currentSales, 0, ',', '.') }}</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-slate-400">Estimasi Uang Laci</span>
+                    {{-- Pengeluaran Cash --}}
+                    @if($currentCashExpenses > 0)
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
+                        <span class="text-xs font-bold text-slate-400"><i class="fas fa-minus text-red-400 mr-1"></i>Pengeluaran Tunai</span>
+                        <span class="text-sm font-bold text-red-400">- Rp {{ number_format($currentCashExpenses, 0, ',', '.') }}</span>
+                    </div>
+                    @endif
+                    {{-- Non-POS Movements (Transfers / Adjustments) --}}
+                    @if($laciMovements->count() > 0)
+                    <div class="pb-2 border-b border-slate-700/50">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-bold text-amber-400"><i class="fas fa-exchange-alt mr-1"></i>Transfer / Penyesuaian</span>
+                            <span class="text-sm font-bold {{ $nonPosNet >= 0 ? 'text-emerald-400' : 'text-red-400' }}">
+                                {{ $nonPosNet >= 0 ? '+' : '-' }} Rp {{ number_format(abs($nonPosNet), 0, ',', '.') }}
+                            </span>
+                        </div>
+                        {{-- Itemized list --}}
+                        <div class="space-y-1 pl-2 border-l-2 border-amber-500/30 ml-1">
+                            @foreach($laciMovements as $mv)
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-500 truncate max-w-[55%]">
+                                    {{ $mv->description ?: $mv->category }}
+                                </span>
+                                <span class="text-[10px] font-bold {{ $mv->type === 'income' ? 'text-emerald-400' : 'text-red-400' }}">
+                                    {{ $mv->type === 'income' ? '+' : '-' }} Rp {{ number_format($mv->amount, 0, ',', '.') }}
+                                </span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+                    {{-- Estimasi Total Laci --}}
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-xs font-black text-slate-300">Estimasi Uang Laci</span>
                         <span class="text-lg font-black text-white">Rp {{ number_format($currentExpected, 0, ',', '.') }}</span>
                     </div>
+                    @if($laciMovements->count() > 0 || $currentCashExpenses > 0)
+                    <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2 flex items-start gap-2">
+                        <i class="fas fa-info-circle text-amber-400 text-[10px] mt-0.5 shrink-0"></i>
+                        <p class="text-[10px] text-amber-300/80 font-medium leading-relaxed">
+                            Saldo berubah dari modal awal karena
+                            @if($currentCashExpenses > 0 && $laciMovements->count() > 0)
+                                pengeluaran tunai dan transfer/penyesuaian saldo selama sesi ini.
+                            @elseif($currentCashExpenses > 0)
+                                ada pengeluaran tunai selama sesi ini.
+                            @else
+                                ada transfer atau penyesuaian saldo selama sesi ini.
+                            @endif
+                        </p>
+                    </div>
+                    @endif
                 </div>
 
                 <div class="mt-6 pt-4 border-t border-slate-700/50 flex gap-2 relative z-10">
@@ -274,9 +343,11 @@
                                         <span class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-slate-700 text-slate-400 border border-slate-600">Selesai</span>
                                     @endif
                                 </div>
-                                <div class="text-xs font-bold text-slate-500 flex items-center gap-1.5">
-                                    <i class="far fa-calendar-alt"></i> {{ $s->opened_at->format('d M Y') }} &nbsp;•&nbsp; 
-                                    <i class="far fa-clock"></i> {{ $s->opened_at->format('H:i') }} - {{ $s->closed_at ? $s->closed_at->format('H:i') : 'Skrg' }}
+                                <div class="text-xs font-bold text-slate-500 flex flex-wrap items-center gap-1.5 mt-1">
+                                    <span class="flex items-center gap-1.5"><i class="far fa-calendar-alt"></i> {{ $s->opened_at->format('d M Y') }}</span>
+                                    <span class="text-slate-700">•</span>
+                                    <span class="flex items-center gap-1.5"><i class="far fa-clock"></i> {{ $s->opened_at->format('H:i') }} - {{ $s->closed_at ? $s->closed_at->format('H:i') : 'Skrg' }}</span>
+                                    <span class="ml-1 px-1.5 py-0.5 rounded-md bg-slate-900/50 text-[9px] font-black uppercase tracking-wider text-blue-400/80 border border-slate-700/50">{{ $s->getDuration() }}</span>
                                 </div>
                             </div>
                         </div>
@@ -296,13 +367,37 @@
                                 @endphp
                                 <p class="text-sm font-black text-emerald-400 mt-0.5">Rp {{ number_format($rowSales, 0, ',', '.') }}</p>
                             </div>
+                            <div>
+                                <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Pengeluaran</p>
+                                @php
+                                    $rowCashExpenses = $s->status === 'open'
+                                        ? \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount')
+                                        : ($s->cash_expenses ?? 0);
+                                    $rowBankExpenses = $s->status === 'open'
+                                        ? \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount')
+                                        : ($s->bank_expenses ?? 0);
+                                @endphp
+                                <div class="mt-0.5 space-y-0.5">
+                                    @if($rowCashExpenses > 0 || $rowBankExpenses == 0)
+                                    <p class="text-[11px] font-bold text-red-400 leading-tight">
+                                        <i class="fas fa-money-bill-wave text-[9px] w-3 text-center"></i> Rp {{ number_format($rowCashExpenses, 0, ',', '.') }}
+                                    </p>
+                                    @endif
+                                    @if($rowBankExpenses > 0)
+                                    <p class="text-[11px] font-bold text-blue-400 leading-tight">
+                                        <i class="fas fa-university text-[9px] w-3 text-center"></i> Rp {{ number_format($rowBankExpenses, 0, ',', '.') }}
+                                    </p>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
 
                         {{-- Kanan: Hasil & Selisih --}}
                         <div class="flex gap-4 md:gap-6 items-center shrink-0">
                             @if($s->closed_at)
                                 @php 
-                                    $expected = $s->opening_cash + \App\Models\Transaction::where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total'); 
+                                    $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+                                    $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses; 
                                     $selisih = $s->closing_cash - $expected;
                                 @endphp
                                 <div class="text-right">
@@ -311,8 +406,8 @@
                                 </div>
                                 <div class="text-right min-w-[80px]">
                                     <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Selisih</p>
-                                    <div class="px-2 py-0.5 mt-0.5 rounded-md inline-block {{ $selisih == 0 ? 'bg-slate-700/50 text-slate-400' : ($selisih > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }}">
-                                        <p class="text-sm font-black">{{ $selisih == 0 ? 'Pas' : ($selisih > 0 ? '+'.number_format($selisih, 0, ',', '.') : '-'.number_format(abs($selisih), 0, ',', '.')) }}</p>
+                                    <div class="px-2 py-0.5 mt-0.5 rounded-md inline-block {{ abs($selisih) < 1 ? 'bg-slate-700/50 text-slate-400' : ($selisih > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }}">
+                                        <p class="text-sm font-black">{{ abs($selisih) < 1 ? 'Pas' : ($selisih > 0 ? '+'.number_format($selisih, 0, ',', '.') : '-'.number_format(abs($selisih), 0, ',', '.')) }}</p>
                                     </div>
                                 </div>
                             @else
@@ -321,6 +416,7 @@
                                 </div>
                             @endif
                             <div class="flex items-center gap-2 ml-4 md:ml-6">
+                                @if(auth()->user()->isOwner())
                                 <button @click.stop="openEditModalFor({{ $s->id }})" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -331,6 +427,7 @@
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
+                                @endif
                             </div>
                         </div>
 
@@ -429,7 +526,9 @@
                         <div>
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-xs font-black text-blue-400 uppercase flex items-center gap-2 tracking-wider"><i class="fas fa-money-bill-wave"></i> Arus Kas</h4>
+                                @if(auth()->user()->isOwner())
                                 <button @click="openEditModal()" class="text-[10px] font-bold text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-600 border border-blue-500/20 px-2 py-1 rounded-md transition-colors flex items-center gap-1.5"><i class="fas fa-edit"></i> Edit Angka</button>
+                                @endif
                             </div>
                             <div class="bg-slate-800 rounded-xl border border-slate-700/50 p-4 space-y-3">
                                 <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
@@ -464,6 +563,7 @@
                         </div>
 
                         {{-- Danger Zone (Hapus Shift) --}}
+                        @if(auth()->user()->isOwner())
                         <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mt-6">
                             <h4 class="text-sm font-black text-red-400 flex items-center gap-2 mb-1"><i class="fas fa-exclamation-triangle"></i> Hapus Shift Ini</h4>
                             <p class="text-xs text-red-400/80 mb-4 font-medium">Aksi ini tidak dapat dibatalkan.</p>
@@ -488,6 +588,7 @@
                                 </button>
                             </form>
                         </div>
+                        @endif
                     </div>
                 </template>
             </div>
@@ -581,8 +682,119 @@
     @endif
 
     {{-- MODAL BUKA SHIFT --}}
-    @include('components.modals.buka-shift')
+    @if(!$activeShift)
+        @include('components.modals.buka-shift')
+    @endif
 
+    {{-- MODAL BREAKDOWN SELISIH --}}
+    <div x-show="showDiscrepancyModal" 
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+         x-cloak>
+        <div x-show="showDiscrepancyModal" 
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="showDiscrepancyModal = false"
+             class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+
+        <div x-show="showDiscrepancyModal"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+             x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+             class="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 overflow-hidden">
+            
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-gradient-to-r from-slate-900 to-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/20">
+                        <i class="fas fa-list-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Rincian Selisih Kas</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Daftar shift yang berkontribusi</p>
+                    </div>
+                </div>
+                <button @click="showDiscrepancyModal = false" class="w-8 h-8 rounded-full hover:bg-slate-700 flex items-center justify-center text-slate-400 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
+                            <th class="pb-3 px-2">Kasir / Waktu</th>
+                            <th class="pb-3 px-2 text-right">Hitungan Sistem</th>
+                            <th class="pb-3 px-2 text-right">Uang Laci</th>
+                            <th class="pb-3 px-2 text-right">Selisih</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/50">
+                        @php $hasDiscrepancy = false; @endphp
+                        @if(isset($closedShifts))
+                            @foreach($closedShifts as $s)
+                                @if(abs($s->discrepancy) > 0.1)
+                                    @php 
+                                        $hasDiscrepancy = true; 
+                                        // Redo the calculation to be explicit in the UI
+                                        $cashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+                                        $cashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+                                        $expected = $s->opening_cash + $cashSales - $cashExpenses;
+                                    @endphp
+                                    <tr class="group hover:bg-slate-800/30 transition-colors">
+                                        <td class="py-4 px-2">
+                                            <p class="text-sm font-bold text-slate-200">{{ $s->opener->name ?? 'Kasir' }}</p>
+                                            <p class="text-[9px] text-slate-500">{{ $s->opened_at->format('d M Y H:i') }}</p>
+                                        </td>
+                                        <td class="py-4 px-2 text-right">
+                                            <div class="text-[10px] text-slate-400 space-y-0.5">
+                                                <p>Awal: {{ number_format($s->opening_cash, 0, ',', '.') }}</p>
+                                                <p>+ Jual: {{ number_format($cashSales, 0, ',', '.') }}</p>
+                                                <p>- Keluar: {{ number_format($cashExpenses, 0, ',', '.') }}</p>
+                                                <p class="font-bold border-t border-slate-700 pt-0.5 text-slate-300">= {{ number_format($expected, 0, ',', '.') }}</p>
+                                            </div>
+                                        </td>
+                                        <td class="py-4 px-2 text-right">
+                                            <p class="text-sm font-black text-white">Rp {{ number_format($s->closing_cash, 0, ',', '.') }}</p>
+                                        </td>
+                                        <td class="py-4 px-2 text-right">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-black {{ $s->discrepancy > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400' }}">
+                                                {{ $s->discrepancy > 0 ? '+' : '-' }} {{ number_format(abs($s->discrepancy), 0, ',', '.') }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        @endif
+                        
+                        @if(!$hasDiscrepancy)
+                            <tr>
+                                <td colspan="2" class="py-12 text-center">
+                                    <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <i class="fas fa-check-circle text-emerald-500"></i>
+                                    </div>
+                                    <p class="text-sm font-bold text-slate-400">Semua shift sudah pas!</p>
+                                    <p class="text-[10px] text-slate-600 mt-1">Tidak ada selisih yang ditemukan dalam periode ini.</p>
+                                </td>
+                            </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-6 bg-slate-900/50 border-t border-slate-800 flex justify-between items-center">
+                <span class="text-sm font-bold text-slate-400">Total Akumulasi</span>
+                <span class="text-xl font-black {{ $totalDiscrepancy > 0 ? 'text-emerald-400' : ($totalDiscrepancy < 0 ? 'text-red-400' : 'text-slate-300') }}">
+                    {{ $totalDiscrepancy > 0 ? '+' : ($totalDiscrepancy < 0 ? '-' : '') }} Rp {{ number_format(abs($totalDiscrepancy), 0, ',', '.') }}
+                </span>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -603,8 +815,9 @@ function shiftDashboardApp() {
         detailLoading: false,
         detailData: null,
         showCloseModal: false,
-        showOpenModal: {{ request('open') ? 'true' : 'false' }},
+        showOpenModal: {{ request('open') && !$activeShift ? 'true' : 'false' }},
         showEditModal: false,
+        showDiscrepancyModal: false,
 
         editOpening: 0,
         editClosing: 0,

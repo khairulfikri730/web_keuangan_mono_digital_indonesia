@@ -17,7 +17,7 @@ class PosController extends Controller
 {
     public function index()
     {
-        $activeShift = Shift::activeShift();
+        $activeShift = Shift::activeShiftForUser(auth()->id());
 
         $categories = Category::where('is_active', true)->get();
         $products = Product::active()->with('category')->orderBy('name')->get();
@@ -25,7 +25,8 @@ class PosController extends Controller
         $settings = \App\Models\Setting::getMultiple([
             'tax_rate', 'active_payment_methods', 'bank_name', 'bank_account', 'bank_holder', 'qris_image',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
-            'custom_price_require_reason', 'custom_price_access'
+            'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
+            'cashout_source_access', 'cashout_role_access'
         ]);
         
         // BEP Analysis Data
@@ -86,12 +87,13 @@ class PosController extends Controller
             'paid_amount' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:nominal,percentage',
+            'delivery_fee' => 'nullable|numeric|min:0',
             'customer_name' => 'nullable|string|max:100',
             'customer_phone' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
         ]);
 
-        $activeShift = Shift::activeShift();
+        $activeShift = Shift::activeShiftForUser(auth()->id());
         if (!$activeShift) {
             return response()->json(['error' => 'Tidak ada shift aktif!'], 422);
         }
@@ -161,7 +163,9 @@ class PosController extends Controller
             $taxRate = \App\Models\Setting::get('tax_rate', 0);
             $tax = ($subtotal - $discount) * ($taxRate / 100);
             
-            $total = $subtotal - $discount + $tax;
+            $deliveryFee = $request->delivery_fee ?? 0;
+            
+            $total = $subtotal - $discount + $tax + $deliveryFee;
             $change = $request->paid_amount - $total;
 
             $isPiutang = $request->payment_method === 'piutang';
@@ -175,6 +179,7 @@ class PosController extends Controller
                 'discount' => $discount,
                 'discount_type' => $discountType,
                 'tax' => $tax,
+                'delivery_fee' => $deliveryFee,
                 'total' => $total,
                 'paid_amount' => $isPiutang ? $dpAmount : $request->paid_amount,
                 'change_amount' => $isPiutang ? 0 : max(0, $change),
@@ -216,8 +221,9 @@ class PosController extends Controller
 
             $transaction->load('items');
 
-            // --- AUTO OPEN CASH DRAWER LOGIC ---
+            // --- AUTO OPEN CASH DRAWER LOGIC (TEMPORARILY DISABLED) ---
             $printerStatus = null;
+            /*
             if ($request->payment_method === 'cash') {
                 try {
                     $printerService = app(\App\Services\PrinterService::class);
@@ -228,6 +234,7 @@ class PosController extends Controller
                     $printerStatus = ['success' => false, 'message' => 'Gagal membuka laci kasir (System Error)'];
                 }
             }
+            */
             // ------------------------------------
 
             return response()->json([
@@ -420,7 +427,7 @@ class PosController extends Controller
             'category' => 'nullable|string|max:100',
         ]);
 
-        $activeShift = Shift::activeShift();
+        $activeShift = Shift::activeShiftForUser(auth()->id());
         if (!$activeShift) {
             return response()->json(['error' => 'Tidak ada shift aktif!'], 422);
         }

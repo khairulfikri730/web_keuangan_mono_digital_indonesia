@@ -33,19 +33,76 @@
                     </div>
 
                     {{-- Permission Checkboxes (only for kasir) --}}
-                    <div x-show="role === 'kasir'" x-transition class="space-y-3">
-                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Hak Akses Menu</label>
-                        <div class="grid grid-cols-1 gap-2 bg-slate-900/30 p-4 rounded-xl border border-slate-700/50">
-                            @foreach($availablePermissions as $key => $label)
-                            <label class="flex items-center gap-3 cursor-pointer group/perm hover:bg-slate-800/50 px-3 py-2 rounded-lg transition-all">
-                                <input type="checkbox" name="permissions[]" value="{{ $key }}" class="w-4 h-4 rounded text-blue-500 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-0"
-                                    {{ in_array($key, ['pos', 'transactions']) ? 'checked' : '' }}>
-                                <span class="text-sm text-slate-300 group-hover/perm:text-white transition-colors">{{ $label }}</span>
+                    <div x-show="role === 'kasir'" x-transition 
+                         x-data="{ 
+                            allPerms: [],
+                            toggleGroup(groupKeys, checked) {
+                                groupKeys.forEach(k => {
+                                    if (checked) {
+                                        if (!this.allPerms.includes(k)) this.allPerms.push(k);
+                                    } else {
+                                        this.allPerms = this.allPerms.filter(x => x !== k);
+                                    }
+                                });
+                            },
+                            isGroupChecked(groupKeys) {
+                                return groupKeys.every(k => this.allPerms.includes(k));
+                            },
+                            toggleAll(checked) {
+                                if (checked) {
+                                    this.allPerms = {{ json_encode(array_keys($availablePermissions)) }};
+                                } else {
+                                    this.allPerms = [];
+                                }
+                            }
+                         }"
+                         class="space-y-4">
+                        
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest">Hak Akses Menu</label>
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" @change="toggleAll($el.checked)" :checked="allPerms.length === @json(count($availablePermissions))" class="w-3.5 h-3.5 rounded text-blue-500 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-0 transition-all">
+                                <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors uppercase tracking-wider">Pilih Semua</span>
                             </label>
+                        </div>
+
+                        <div class="space-y-4">
+                            @foreach($permissionGroups as $groupName => $perms)
+                            <div class="bg-slate-900/40 rounded-2xl border border-slate-700/50 overflow-hidden shadow-sm">
+                                <div class="px-4 py-2.5 bg-slate-800/40 border-b border-slate-700/50 flex items-center justify-between">
+                                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                                        <i class="fas fa-layer-group text-blue-400/70"></i> {{ $groupName }}
+                                    </span>
+                                    @php $groupKeys = array_keys($perms); @endphp
+                                    <label class="flex items-center gap-1.5 cursor-pointer group/toggle">
+                                        <input type="checkbox" 
+                                               @change="toggleGroup({{ json_encode($groupKeys) }}, $el.checked)" 
+                                               :checked="isGroupChecked({{ json_encode($groupKeys) }})"
+                                               class="w-3 h-3 rounded text-blue-500 bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-0">
+                                        <span class="text-[9px] font-bold text-slate-500 group-hover/toggle:text-blue-400 transition-colors uppercase tracking-tighter">Grup</span>
+                                    </label>
+                                </div>
+                                <div class="p-3 grid grid-cols-1 gap-1">
+                                    @foreach($perms as $key => $label)
+                                    @php $isSub = str_contains($key, '.'); @endphp
+                                    <label class="flex items-center gap-3 cursor-pointer group/perm hover:bg-slate-800/30 px-2 py-1.5 rounded-lg transition-all {{ $isSub ? 'ml-6' : 'mt-1' }}">
+                                        <input type="checkbox" name="permissions[]" value="{{ $key }}" 
+                                               x-model="allPerms"
+                                               class="w-4 h-4 rounded text-blue-500 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-0 transition-transform active:scale-90">
+                                        <span class="{{ $isSub ? 'text-[13px] text-slate-500' : 'text-sm font-bold text-slate-300' }} group-hover/perm:text-white transition-colors">{{ $label }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
                             @endforeach
                         </div>
-                        <p class="text-[10px] text-slate-500"><i class="fas fa-info-circle text-blue-400 mr-1"></i>Super Admin selalu memiliki akses penuh ke semua menu.</p>
+                        
+                        <div class="flex items-center gap-2 p-3 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                            <i class="fas fa-info-circle text-blue-400 text-xs"></i>
+                            <p class="text-[10px] text-slate-400 leading-tight">Super Admin (Owner) secara otomatis memiliki akses penuh ke seluruh fitur sistem.</p>
+                        </div>
                     </div>
+
 
                     {{-- Worksheet Assignment (only for kasir) --}}
                     @if($worksheets->count() > 0)
@@ -180,22 +237,75 @@
                         </div>
 
                         {{-- Permission checkboxes for edit --}}
-                        <div x-show="editRole === 'kasir'" x-transition class="mt-4">
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Hak Akses</label>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 bg-slate-900/30 p-3 rounded-xl border border-slate-700/50">
-                                @foreach($availablePermissions as $key => $label)
-                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-800/50 px-2 py-1.5 rounded-lg transition-all">
-                                    <input type="checkbox" name="permissions[]" value="{{ $key }}" class="w-3.5 h-3.5 rounded text-blue-500 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-0"
-                                        {{ in_array($key, $user->permissions ?? []) ? 'checked' : '' }}>
-                                    <span class="text-xs text-slate-300">{{ $label }}</span>
+                        <div x-show="editRole === 'kasir'" x-transition 
+                             x-data="{ 
+                                allPerms: {{ json_encode($user->permissions ?? []) }},
+                                toggleGroup(groupKeys, checked) {
+                                    groupKeys.forEach(k => {
+                                        if (checked) {
+                                            if (!this.allPerms.includes(k)) this.allPerms.push(k);
+                                        } else {
+                                            this.allPerms = this.allPerms.filter(x => x !== k);
+                                        }
+                                    });
+                                },
+                                isGroupChecked(groupKeys) {
+                                    return groupKeys.every(k => this.allPerms.includes(k));
+                                },
+                                toggleAll(checked) {
+                                    if (checked) {
+                                        this.allPerms = {{ json_encode(array_keys($availablePermissions)) }};
+                                    } else {
+                                        this.allPerms = [];
+                                    }
+                                }
+                             }"
+                             class="mt-6 space-y-4">
+                            
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest">Hak Akses Menu</label>
+                                <label class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox" @change="toggleAll($el.checked)" :checked="allPerms.length === @json(count($availablePermissions))" class="w-3.5 h-3.5 rounded text-blue-500 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-0 transition-all">
+                                    <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors uppercase tracking-wider">Pilih Semua</span>
                                 </label>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                @foreach($permissionGroups as $groupName => $perms)
+                                <div class="bg-slate-900/40 rounded-2xl border border-slate-700/50 overflow-hidden shadow-sm">
+                                    <div class="px-4 py-2 bg-slate-800/40 border-b border-slate-700/50 flex items-center justify-between">
+                                        <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                                            <i class="fas fa-layer-group text-blue-400/70 text-[10px]"></i> {{ $groupName }}
+                                        </span>
+                                        @php $groupKeys = array_keys($perms); @endphp
+                                        <label class="flex items-center gap-1.5 cursor-pointer group/toggle">
+                                            <input type="checkbox" 
+                                                   @change="toggleGroup({{ json_encode($groupKeys) }}, $el.checked)" 
+                                                   :checked="isGroupChecked({{ json_encode($groupKeys) }})"
+                                                   class="w-3 h-3 rounded text-blue-500 bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-0">
+                                            <span class="text-[8px] font-bold text-slate-500 group-hover/toggle:text-blue-400 transition-colors uppercase tracking-tighter">Grup</span>
+                                        </label>
+                                    </div>
+                                    <div class="p-2 grid grid-cols-1 gap-0.5">
+                                        @foreach($perms as $key => $label)
+                                        @php $isSub = str_contains($key, '.'); @endphp
+                                        <label class="flex items-center gap-2.5 cursor-pointer group/perm hover:bg-slate-800/30 px-2 py-1 rounded-lg transition-all {{ $isSub ? 'ml-5' : 'mt-0.5' }}">
+                                            <input type="checkbox" name="permissions[]" value="{{ $key }}" 
+                                                   x-model="allPerms"
+                                                   class="w-3.5 h-3.5 rounded text-blue-500 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-0 transition-transform active:scale-90">
+                                            <span class="{{ $isSub ? 'text-[11px] text-slate-500' : 'text-[12px] font-bold text-slate-300' }} group-hover/perm:text-white transition-colors leading-tight">{{ $label }}</span>
+                                        </label>
+                                        @endforeach
+                                    </div>
+                                </div>
                                 @endforeach
                             </div>
                         </div>
 
-                        {{-- Worksheet assignment for edit --}}
+
+                        {{-- Worksheet assignment for edit (always rendered in DOM so checkboxes submit) --}}
                         @if($worksheets->count() > 0)
-                        <div x-show="editRole === 'kasir'" x-transition class="mt-4">
+                        <div x-show="editRole === 'kasir'" class="mt-4">
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Akses Worksheet / Cabang</label>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-2 bg-slate-900/30 p-3 rounded-xl border border-slate-700/50">
                                 @php

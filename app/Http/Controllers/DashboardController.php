@@ -21,20 +21,15 @@ class DashboardController extends Controller
     public function index()
     {
         $today = Carbon::today();
-        $activeShift = Shift::activeShift();
+        $activeShift = Shift::activeShiftForUser(auth()->id());
 
         // 1. Stats using Unified Service
         $finSummary = $this->financialService->getSummary($today, $today);
         $todaySales = $finSummary->total_income;
         $todayExpenses = $finSummary->total_expense;
+        $todayNetProfit = $finSummary->net_profit;
         $todayTransactions = Transaction::completed()
             ->whereDate('created_at', $today)->count();
-
-        // Stats bulan ini
-        $monthSales = Transaction::completed()
-            ->whereMonth('created_at', $today->month)
-            ->whereYear('created_at', $today->year)
-            ->sum('total');
 
         // Produk stok rendah
         $lowStockProducts = Product::active()->lowStock()->with('category')->take(5)->get();
@@ -49,22 +44,30 @@ class DashboardController extends Controller
             ];
         }
 
-        // Transaksi terbaru
-        $recentTransactions = Transaction::with(['user', 'items'])
-            ->latest()->take(5)->get();
+        // Transaksi terbaru (hari ini)
+        $recentTransactions = Transaction::completed()
+            ->whereDate('created_at', $today)
+            ->with(['user', 'items'])
+            ->latest()
+            ->take(5)
+            ->get();
 
         // Total produk
         $productCount = Product::count();
 
-        // Top produk
-        $topProducts = \App\Models\TransactionItem::selectRaw('product_id, product_name, SUM(quantity) as total_qty, SUM(subtotal) as total_revenue')
-            ->groupBy('product_id', 'product_name')
+        // Top produk (hari ini)
+        $topProducts = Transaction::completed()
+            ->whereDate('transactions.created_at', $today)
+            ->join('transaction_items', 'transactions.id', '=', 'transaction_items.transaction_id')
+            ->selectRaw('transaction_items.product_id, transaction_items.product_name, SUM(transaction_items.quantity) as total_qty, SUM(transaction_items.subtotal) as total_revenue')
+            ->groupBy('transaction_items.product_id', 'transaction_items.product_name')
             ->orderByDesc('total_qty')
-            ->take(5)->get();
+            ->take(5)
+            ->get();
 
         return view('dashboard', compact(
             'activeShift', 'todaySales', 'todayTransactions',
-            'todayExpenses', 'monthSales', 'lowStockProducts',
+            'todayExpenses', 'todayNetProfit', 'lowStockProducts',
             'chartData', 'recentTransactions', 'topProducts', 'productCount'
         ));
     }

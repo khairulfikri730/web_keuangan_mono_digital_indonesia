@@ -140,9 +140,34 @@
                         @endforeach
                     </div>
                 </div>
+                
+                {{-- Cash Out Settings --}}
+                <div class="border-t border-slate-700/50 pt-8 mt-6">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-4"><i class="fas fa-hand-holding-dollar mr-1"></i> Pengaturan Pengeluaran (Cash Out)</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Sumber Dana Diizinkan</label>
+                            <select name="cashout_source_access" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner transition-all">
+                                <option value="cash_only" {{ ($settings['cashout_source_access'] ?? 'cash_only') == 'cash_only' ? 'selected' : '' }}>Hanya Tunai (Laci Kasir)</option>
+                                <option value="bank_only" {{ ($settings['cashout_source_access'] ?? '') == 'bank_only' ? 'selected' : '' }}>Hanya Saldo Bank</option>
+                                <option value="both" {{ ($settings['cashout_source_access'] ?? '') == 'both' ? 'selected' : '' }}>Tunai & Saldo Bank (Pilih Bebas)</option>
+                            </select>
+                            <p class="text-[10px] text-slate-500 mt-2 font-medium uppercase tracking-wider">Menentukan dari mana dana cash out dapat diambil di POS.</p>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Hak Akses Cash Out</label>
+                            <select name="cashout_role_access" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner transition-all">
+                                <option value="all" {{ ($settings['cashout_role_access'] ?? 'all') == 'all' ? 'selected' : '' }}>Semua Kasir & Admin</option>
+                                <option value="admin_owner" {{ ($settings['cashout_role_access'] ?? '') == 'admin_owner' ? 'selected' : '' }}>Hanya Admin & Owner</option>
+                                <option value="owner" {{ ($settings['cashout_role_access'] ?? '') == 'owner' ? 'selected' : '' }}>Hanya Owner</option>
+                            </select>
+                            <p class="text-[10px] text-slate-500 mt-2 font-medium uppercase tracking-wider">Menentukan siapa saja yang boleh melakukan cash out di POS.</p>
+                        </div>
+                    </div>
+                </div>
 
                 {{-- Bank & QRIS Info --}}
-                <div class="border-t border-slate-700/50 pt-8">
+                <div class="border-t border-slate-700/50 pt-8 mt-6">
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-4"><i class="fas fa-building-columns mr-1"></i> Info Rekening Transfer</label>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
@@ -422,6 +447,57 @@
             </div>
         </div>
 
+        {{-- Section: Preset Ongkos Kirim --}}
+        <div x-data="deliveryPresets()" class="card overflow-hidden border border-slate-700/80 shadow-xl mt-6">
+            <div class="p-6 border-b border-slate-700 bg-slate-800/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                        <i class="fas fa-motorcycle"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white">Preset Ongkos Kirim</h3>
+                        <p class="text-xs text-slate-400">Buat daftar zona ongkir. Kasir bisa pilih preset atau ketik manual saat mode Delivery aktif.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 lg:p-8 space-y-4">
+                <input type="hidden" name="delivery_presets" :value="JSON.stringify(presets)">
+
+                <!-- Existing Presets -->
+                <div class="space-y-3 mb-6">
+                    <template x-for="(preset, index) in presets" :key="index">
+                        <div class="flex items-center justify-between p-4 bg-orange-500/5 border border-orange-500/20 rounded-xl">
+                            <div>
+                                <h4 class="font-bold text-white text-sm" x-text="preset.name"></h4>
+                                <p class="text-orange-400 font-black text-xs" x-text="'Rp ' + formatCurrency(preset.price)"></p>
+                            </div>
+                            <button type="button" @click="removePreset(index)" class="text-red-400 hover:text-red-300 transition-colors p-2">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </template>
+                    <div x-show="presets.length === 0" class="text-center p-6 border border-slate-700 border-dashed rounded-xl text-slate-500 text-sm">
+                        Belum ada preset ongkos kirim
+                    </div>
+                </div>
+
+                <!-- Add New Preset -->
+                <div class="flex items-end gap-3 pt-4 border-t border-slate-700/50">
+                    <div class="flex-1">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Zona</label>
+                        <input type="text" x-model="newName" placeholder="Contoh: Dalam Kota" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition-all">
+                    </div>
+                    <div class="w-32">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Harga (Rp)</label>
+                        <input type="number" x-model="newPrice" placeholder="10000" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition-all">
+                    </div>
+                    <button type="button" @click="addPreset()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/20 whitespace-nowrap">
+                        <i class="fas fa-plus mr-1"></i> Tambah
+                    </button>
+                </div>
+            </div>
+        </div>
+
         @push('scripts')
         <script>
             function testCashDrawer() {
@@ -477,6 +553,30 @@
                     }
                 });
             }
+
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('deliveryPresets', () => ({
+                    presets: {!! $settings['delivery_presets'] ?? '[]' !!},
+                    newName: '',
+                    newPrice: '',
+                    
+                    addPreset() {
+                        if (this.newName.trim() === '' || this.newPrice === '') return;
+                        this.presets.push({
+                            name: this.newName,
+                            price: parseInt(this.newPrice)
+                        });
+                        this.newName = '';
+                        this.newPrice = '';
+                    },
+                    removePreset(index) {
+                        this.presets.splice(index, 1);
+                    },
+                    formatCurrency(value) {
+                        return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    }
+                }));
+            });
         </script>
         @endpush
 

@@ -39,7 +39,7 @@ class ReportController extends Controller
             ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->user_id));
 
         $worksheetId = session('active_worksheet_id');
-        if ($worksheetId && $worksheetId !== 'all') {
+        if ($worksheetId) {
             $baseQuery->where('worksheet_id', $worksheetId);
         }
 
@@ -77,7 +77,7 @@ class ReportController extends Controller
             ->selectRaw('HOUR(created_at) as hour, COUNT(*) as count')
             ->groupBy('hour')->orderByDesc('count')->take(5)->get();
 
-        // SALDO LACI & BANK
+        // SALDO LACI & BANK (ALL-TIME synced — kondisi uang saat ini, tidak berubah saat filter diganti)
         $saldoLaci = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
                    - Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
 
@@ -100,15 +100,51 @@ class ReportController extends Controller
 
     public function financial(Request $request)
     {
-        $mParam = $request->month;
-        $yParam = $request->year;
-        $month = ($mParam && !is_array($mParam)) ? $mParam : now()->month;
-        $year = ($yParam && !is_array($yParam)) ? $yParam : now()->year;
+        $filter = $request->filter ?? $request->period ?? 'today';
+        $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
+        $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
+        if ($start && $end) {
+            $filter = 'custom';
+        }
+
+        $now = now();
+        switch ($filter) {
+            case 'today':
+                $dateFrom = $now->copy()->startOfDay();
+                $dateTo = $now->copy()->endOfDay();
+                break;
+            case 'yesterday':
+                $dateFrom = $now->copy()->subDay()->startOfDay();
+                $dateTo = $now->copy()->subDay()->endOfDay();
+                break;
+            case 'week':
+                $dateFrom = $now->copy()->startOfWeek();
+                $dateTo = $now->copy()->endOfWeek();
+                break;
+            case 'month':
+                $dateFrom = $now->copy()->startOfMonth();
+                $dateTo = $now->copy()->endOfMonth();
+                break;
+            case 'year':
+                $dateFrom = $now->copy()->startOfYear();
+                $dateTo = $now->copy()->endOfYear();
+                break;
+            case 'custom':
+                $dateFrom = $start ? Carbon::parse($start)->startOfDay() : $now->copy()->startOfMonth();
+                $dateTo = $end ? Carbon::parse($end)->endOfDay() : $now->copy()->endOfMonth();
+                break;
+            default:
+                $dateFrom = $now->copy()->startOfDay();
+                $dateTo = $now->copy()->endOfDay();
+                break;
+        }
+
+        $daysDiff = $dateFrom->diffInDays($dateTo) + 1;
+        $prevDateFrom = $dateFrom->copy()->subDays($daysDiff)->startOfDay();
+        $prevDateTo = $dateFrom->copy()->subDay()->endOfDay();
         
-        $dateFrom = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $dateTo = $dateFrom->copy()->endOfMonth();
-        $prevDateFrom = $dateFrom->copy()->subMonth()->startOfMonth();
-        $prevDateTo = $dateFrom->copy()->subMonth()->endOfMonth();
+        $month = $dateFrom->month;
+        $year = $dateFrom->year;
         
         $worksheetId = session('active_worksheet_id');
         
@@ -129,7 +165,7 @@ class ReportController extends Controller
         // 2. Sales & COGS
         $salesQuery = Transaction::completed()
             ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
         
         $salesTotal = (clone $salesQuery)->sum('total');
         $transactionCount = (clone $salesQuery)->count();
@@ -151,7 +187,7 @@ class ReportController extends Controller
 
         $expenseDetails = Cashflow::where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->selectRaw('category, SUM(amount) as total')
             ->groupBy('category')
             ->orderByDesc('total')
@@ -185,25 +221,61 @@ class ReportController extends Controller
             'salesTotal', 'transactionCount', 'cogs', 'grossProfit',
             'incomeDetails', 'expenseDetails', 'topProducts', 'trendData',
             'totalCapital', 'allTimeNetProfit', 'avgMonthlyProfit', 
-            'remainingToPayback', 'paybackPeriodMonths', 'health', 'insights'
+            'remainingToPayback', 'paybackPeriodMonths', 'health', 'insights',
+            'dateFrom', 'dateTo'
         ));
     }
 
     public function shifts(Request $request)
     {
+        $isLiveShift = $request->shift === 'live' || $request->period === 'live';
+        $period = $request->period ?? 'today';
+        $activeShift = Shift::activeShiftForUser(auth()->id());
+        
         $dfParam = is_array($request->date_from) ? null : $request->date_from;
         $dtParam = is_array($request->date_to) ? null : $request->date_to;
-        
-        $dateFrom = $dfParam ? Carbon::parse($dfParam)->startOfDay() : now()->startOfMonth();
-        $dateTo = $dtParam ? Carbon::parse($dtParam)->endOfDay() : now()->endOfDay();
+        if ($isLiveShift && $activeShift) {
+            $dateFrom = $activeShift->opened_at->copy()->startOfDay();
+            $dateTo = now()->endOfDay();
+        } else {
+            if ($dfParam && $dtParam) {
+                $dateFrom = Carbon::parse($dfParam)->startOfDay();
+                $dateTo = Carbon::parse($dtParam)->endOfDay();
+            } else {
+                // Handle preset periods
+                switch ($period) {
+                    case 'yesterday':
+                        $dateFrom = now()->subDay()->startOfDay();
+                        $dateTo = now()->subDay()->endOfDay();
+                        break;
+                    case 'week':
+                        $dateFrom = now()->startOfWeek();
+                        $dateTo = now()->endOfWeek();
+                        break;
+                    case 'month':
+                        $dateFrom = now()->startOfMonth();
+                        $dateTo = now()->endOfMonth();
+                        break;
+                    case 'year':
+                        $dateFrom = now()->startOfYear();
+                        $dateTo = now()->endOfYear();
+                        break;
+                    case 'today':
+                    default:
+                        $dateFrom = now()->startOfDay();
+                        $dateTo = now()->endOfDay();
+                        break;
+                }
+            }
+        }
         
         $worksheetId = session('active_worksheet_id');
 
         $query = Shift::with(['opener', 'closer'])
             ->whereBetween('opened_at', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id));
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->when($request->status && !is_array($request->status), fn($q) => $q->where('status', $request->status))
+            ->when($request->user_id && !is_array($request->user_id), fn($q) => $q->where('opened_by', $request->user_id));
 
         $shifts = $query->latest()->paginate(20)->withQueryString();
 
@@ -211,37 +283,103 @@ class ReportController extends Controller
         $closedShifts = (clone $query)->where('status', 'closed')->get();
         $totalClosingCash = $closedShifts->sum('closing_cash');
         
-        $totalSalesToday = Transaction::completed()
-            ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+        $totalSalesToday = Transaction::withoutGlobalScopes()->completed()
+            ->when($isLiveShift && $activeShift, fn($q) => $q->where('shift_id', $activeShift->id))
+            ->when(!($isLiveShift && $activeShift), fn($q) => $q->whereBetween('created_at', [$dateFrom, $dateTo]))
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->sum('total');
 
         $totalDiscrepancy = 0;
         foreach ($closedShifts as $s) {
-            $cashSales = Transaction::where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-            $cashExpenses = Cashflow::where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
-            $expected = $s->opening_cash + $cashSales - $cashExpenses;
+            $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+            
+            $cashTransfers = Cashflow::withoutGlobalScopes()
+                ->where('shift_id', $s->id)
+                ->where('source', 'pos_cash')
+                ->where('category', '!=', 'Penjualan')
+                ->where('transaction_category', '!=', 'expense')
+                ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+            $expected = $s->opening_cash + $cashSales - $cashExpenses + $cashTransfers;
             $totalDiscrepancy += ($s->closing_cash - $expected);
         }
 
         $avgDiscrepancy = $closedShifts->count() > 0 ? $totalDiscrepancy / $closedShifts->count() : 0;
         $highestShift = $closedShifts->sortByDesc('total_sales')->first();
 
-        $bestCashier = Transaction::completed()
+        $bestCashier = Transaction::withoutGlobalScopes()->completed()
             ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('transactions.worksheet_id', $worksheetId))
+            ->when($worksheetId, fn($q) => $q->where('transactions.worksheet_id', $worksheetId))
             ->join('users', 'transactions.user_id', '=', 'users.id')
             ->selectRaw('users.name, SUM(transactions.total) as total')
             ->groupBy('users.name')->orderByDesc('total')->first();
 
-        $activeShift = Shift::with('opener')->where('status', 'open')->latest()->first();
         $users = \App\Models\User::all();
+        
+        // Always mirror Cashflow dashboard: sum all pos_cash (income - expense).
+        // This reflects transfers, adjustments, and POS sales in real-time.
         $laciBalance = (float) Cashflow::where('source', 'pos_cash')
+            ->where('bank_sync_status', 'synced')
             ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
+        $currentSales = 0;
+        $currentCashExpenses = 0;
+        $currentTotalExpenses = 0;
+        $currentExpected = $laciBalance;
+
+        $laciMovements = collect(); // transfers/adjustments during active shift
+
+        if ($activeShift) {
+            $sumLive = $this->financialService->getShiftSummary($activeShift->id, $worksheetId);
+            $currentSales = $sumLive->cash_sales;
+            $currentCashExpenses = $sumLive->cash_expense;
+            $currentTotalExpenses = $sumLive->total_expense;
+
+            $nonPosNet = (float) Cashflow::withoutGlobalScopes()
+                ->where('shift_id', $activeShift->id)
+                ->where('source', 'pos_cash')
+                ->where('category', '!=', 'Penjualan')
+                ->where('transaction_category', '!=', 'expense')
+                ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+            $currentExpected = $activeShift->opening_cash + $currentSales - $currentCashExpenses + $nonPosNet;
+
+            // Fetch non-POS cashflow movements during active shift (transfers, manual adjustments)
+            $laciMovements = Cashflow::withoutGlobalScopes()
+                ->where('shift_id', $activeShift->id)
+                ->where('source', 'pos_cash')
+                ->where('category', '!=', 'Penjualan')
+                ->where('transaction_category', '!=', 'expense')
+                ->orderBy('created_at')
+                ->get();
+        }
+
+        // Total Expenses & Net Profit
+        if ($isLiveShift && $activeShift) {
+            $totalExpensesToday = $currentTotalExpenses;
+            $cashExpensesToday = $sumLive->cash_expense;
+            $bankExpensesToday = $sumLive->bank_expense;
+            $netProfitToday = $sumLive->total_income - $totalExpensesToday;
+        } else {
+            $summary = $this->financialService->getSummary($dateFrom, $dateTo, $worksheetId);
+            $totalExpensesToday = $summary->total_expense;
+            $netProfitToday = $summary->net_profit;
+            
+            // Calculate cash vs bank expense breakdown for the period
+            $expenseBreakdownQuery = Cashflow::where('transaction_category', 'expense')
+                ->whereBetween('transaction_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
+            $cashExpensesToday = (clone $expenseBreakdownQuery)->where('source', 'pos_cash')->sum('amount');
+            $bankExpensesToday = (clone $expenseBreakdownQuery)->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
+        }
+
         return view('reports.shifts', compact(
-            'shifts', 'activeShiftsCount', 'totalClosingCash', 'totalSalesToday', 'totalDiscrepancy',
-            'highestShift', 'avgDiscrepancy', 'bestCashier', 'activeShift', 'users', 'laciBalance'
+            'shifts', 'activeShiftsCount', 'totalClosingCash', 'totalSalesToday', 'totalDiscrepancy', 'closedShifts',
+            'highestShift', 'avgDiscrepancy', 'bestCashier', 'activeShift', 'users', 'laciBalance',
+            'totalExpensesToday', 'netProfitToday', 'cashExpensesToday', 'bankExpensesToday',
+            'currentSales', 'currentCashExpenses', 'currentTotalExpenses', 'currentExpected',
+            'laciMovements'
         ));
     }
 
@@ -344,14 +482,14 @@ class ReportController extends Controller
                     $q->where('category', 'like', '%Transfer%')
                       ->orWhere('description', 'like', '%Transfer%');
                 })
-                ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->latest()->get();
         }
 
         // 5. Invoice Analytics
         if (in_array('invoice_analytics', $sections)) {
             $invoiceQuery = Transaction::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
             
             $data['invoices'] = [
                 'lunas' => (clone $invoiceQuery)->completed()->count(),
@@ -378,7 +516,7 @@ class ReportController extends Controller
             'theme' => $request->theme,
             'sections' => $sections,
             'settings' => $settings,
-            'worksheet_name' => ($worksheetId && $worksheetId !== 'all') ? Worksheet::find($worksheetId)->name : 'Semua Cabang',
+            'worksheet_name' => ($worksheetId) ? Worksheet::find($worksheetId)->name : 'Semua Cabang',
             'include_signature' => $request->has('include_signature'),
             'signature_roles' => $request->signature_roles ?? ['Owner', 'Manager', 'Kasir'],
             'hash' => hash('crc32', now() . auth()->id()),
@@ -391,7 +529,7 @@ class ReportController extends Controller
     {
         $data = [];
         $queryTrx = Transaction::completed()->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId));
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
 
         if (in_array('history_trx', $sections)) {
             $data['transactions'] = (clone $queryTrx)->with(['user', 'items'])->latest()->get();
@@ -409,7 +547,7 @@ class ReportController extends Controller
         if (in_array('category_analysis', $sections)) {
             $data['expense_categories'] = Cashflow::where('transaction_category', 'expense')
                 ->whereBetween('transaction_date', [$dateFrom, $dateTo])
-                ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->selectRaw('category, SUM(amount) as total')
                 ->groupBy('category')->orderByDesc('total')->get();
         }
@@ -430,12 +568,12 @@ class ReportController extends Controller
         }
         if (in_array('shift_details', $sections)) {
             $data['shifts'] = Shift::whereBetween('opened_at', [$dateFrom, $dateTo])
-                ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->with(['opener', 'closer'])->latest()->get();
         }
         if (in_array('full_cashflow', $sections)) {
             $data['full_cashflow'] = Cashflow::whereBetween('transaction_date', [$dateFrom, $dateTo])
-                ->when($worksheetId && $worksheetId !== 'all', fn($q) => $q->where('worksheet_id', $worksheetId))
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->latest()->get();
         }
 

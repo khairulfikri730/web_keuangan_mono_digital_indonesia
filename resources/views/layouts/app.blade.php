@@ -47,10 +47,10 @@
     @include('components.report-export-modal')
 
     {{-- Mobile Overlay --}}
-    <div class="fixed inset-0 bg-black/60 z-40 lg:hidden" x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak></div>
+    <div class="fixed inset-0 bg-black/60 z-[140] lg:hidden" x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak></div>
 
     {{-- Sidebar --}}
-    <aside class="fixed top-0 left-0 w-64 bg-[#0B1120] text-gray-300 h-screen p-4 z-50 flex flex-col lg:translate-x-0 -translate-x-full transition-transform duration-300 shadow-2xl"
+    <aside class="fixed top-0 left-0 w-64 bg-[#0B1120] text-gray-300 h-screen p-4 z-[150] flex flex-col lg:translate-x-0 -translate-x-full transition-transform duration-300 shadow-2xl"
            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
 
         <!-- LOGO -->
@@ -77,7 +77,7 @@
                         <i class="fas fa-shopping-cart w-6 mr-1 text-sm"></i> POS Kasir
                     </a>
                     @endif
-                    @if(auth()->user()->hasPermission('transactions'))
+                    @if(auth()->user()->hasPermission('transactions.view'))
                     <a href="{{ route('transactions.index') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('transactions.*') ? 'active-link' : '' }}">
                         <i class="fas fa-receipt w-6 mr-1 text-sm"></i> Daftar Transaksi
                     </a>
@@ -86,27 +86,27 @@
             </div>
 
             <!-- MANAJEMEN -->
-            @if(auth()->user()->hasPermission('shifts') || auth()->user()->hasPermission('products') || auth()->user()->hasPermission('categories') || auth()->user()->hasPermission('stock'))
+            @if(auth()->user()->hasPermission('shifts.view') || auth()->user()->hasPermission('products.view') || auth()->user()->hasPermission('categories.view') || auth()->user()->hasPermission('stock.view'))
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Manajemen</p>
 
                 <div class="space-y-1">
-                    @if(auth()->user()->hasPermission('shifts'))
+                    @if(auth()->user()->hasPermission('shifts.view'))
                     <a href="{{ route('shifts.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('shifts.*') ? 'active-link' : '' }}">
                         <i class="fas fa-clock w-6 mr-1 text-sm"></i> Sesi Shift
                     </a>
                     @endif
-                    @if(auth()->user()->hasPermission('products'))
+                    @if(auth()->user()->hasPermission('products.view'))
                     <a href="{{ route('products.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('products.*') ? 'active-link' : '' }}">
                         <i class="fas fa-box w-6 mr-1 text-sm"></i> Katalog Produk
                     </a>
                     @endif
-                    @if(auth()->user()->hasPermission('categories'))
+                    @if(auth()->user()->hasPermission('categories.view'))
                     <a href="{{ route('categories.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('categories.*') ? 'active-link' : '' }}">
                         <i class="fas fa-tags w-6 mr-1 text-sm"></i> Kategori Produk
                     </a>
                     @endif
-                    @if(auth()->user()->hasPermission('stock'))
+                    @if(auth()->user()->hasPermission('stock.view'))
                     @php
                         $sidebarStockAlerts = \App\Models\Product::active()
                             ->whereNotIn('product_kind', ['unlimited','service'])
@@ -129,31 +129,37 @@
             @endif
 
             <!-- KEUANGAN -->
-            @if(auth()->user()->hasPermission('cashflow') || auth()->user()->hasPermission('sales') || auth()->user()->hasPermission('reports_financial') || auth()->user()->hasPermission('reports_shifts'))
+            @if(auth()->user()->hasPermission('cashflow.view') || auth()->user()->hasPermission('sales.view') || auth()->user()->hasPermission('reports_financial') || auth()->user()->hasPermission('reports_shifts') || auth()->user()->hasPermission('capitals.view') || auth()->user()->hasPermission('monthly_expenses.view') || auth()->user()->hasPermission('expense_categories.view'))
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Keuangan & Analisis</p>
 
                 <div class="space-y-1">
-                    @if(auth()->user()->hasPermission('cashflow'))
+                    @if(auth()->user()->hasPermission('cashflow.view'))
                     <a href="{{ route('cashflow.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('cashflow.*') ? 'active-link' : '' }}">
                         <i class="fas fa-money-bill-transfer w-6 mr-1 text-sm"></i> Cashflow
                     </a>
                     @endif
-                    @if(auth()->user()->hasPermission('sales'))
+                    @if(auth()->user()->hasPermission('sales.view'))
                     <a href="{{ route('sales.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('sales.*') ? 'active-link' : '' }}">
                         <i class="fas fa-chart-line w-6 mr-1 text-sm"></i> Analisa Penjualan
                     </a>
                     @endif
-                    @if(auth()->user()->hasPermission('reports_financial'))
+                    @if(auth()->user()->hasPermission('capitals.view'))
                     <a href="{{ route('capitals.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('capitals.*') ? 'active-link' : '' }}">
                         <i class="fas fa-wallet w-6 mr-1 text-sm"></i> Modal Usaha
                     </a>
+                    @endif
+                    @if(auth()->user()->hasPermission('monthly_expenses.view'))
                     <a href="{{ route('monthly_expenses.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('monthly_expenses.*') ? 'active-link' : '' }}">
                         <i class="fas fa-file-invoice w-6 mr-1 text-sm"></i> Biaya Bulanan
                     </a>
+                    @endif
+                    @if(auth()->user()->hasPermission('expense_categories.view'))
                     <a href="{{ route('expense_categories.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('expense_categories.*') ? 'active-link' : '' }}">
                         <i class="fas fa-list-check w-6 mr-1 text-sm"></i> Master Jenis Biaya
                     </a>
+                    @endif
+                    @if(auth()->user()->hasPermission('reports_financial'))
                     <a href="{{ route('reports.financial') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('reports.financial') ? 'active-link' : '' }}">
                         <i class="fas fa-file-invoice-dollar w-6 mr-1 text-sm"></i> Laporan Laba Rugi
                     </a>
@@ -168,6 +174,7 @@
             @endif
 
             <!-- INVOICE GENERATOR -->
+            @if(auth()->user()->hasPermission('invoices.view'))
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Invoice Generator</p>
                 <div class="space-y-1">
@@ -179,16 +186,23 @@
                     </a>
                 </div>
             </div>
+            @endif
 
             <!-- LAINNYA (Owner only) -->
-            @if(auth()->user()->hasPermission('team') || auth()->user()->hasPermission('settings'))
+            @if(auth()->user()->hasPermission('team.view') || auth()->user()->hasPermission('settings') || auth()->user()->hasPermission('schedules.view'))
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Lainnya</p>
 
                 <div class="space-y-1">
-                    @if(auth()->user()->hasPermission('team'))
+                    @if(auth()->user()->hasPermission('team.view'))
                     <a href="{{ route('team.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('team.*') ? 'active-link' : '' }}">
                         <i class="fas fa-users-gear w-6 mr-1 text-sm"></i> Manajemen Tim
+                    </a>
+                    @endif
+                    @if(auth()->user()->hasPermission('schedules.view'))
+                    <a href="{{ route('schedules.index') }}" class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('schedules.*') ? 'active-link' : '' }}">
+                        <span class="flex items-center"><i class="fas fa-calendar-alt w-6 mr-1 text-sm text-yellow-400"></i> Jadwal Kerja</span>
+                        <span class="px-1.5 py-0.5 bg-yellow-500 text-black text-[9px] font-black rounded-sm tracking-wider uppercase">Baru</span>
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('settings'))
@@ -225,7 +239,7 @@
     {{-- Main Content --}}
     <div class="flex-1 lg:ml-64 min-h-screen flex flex-col">
         {{-- Topbar --}}
-        <header class="sticky top-0 z-30 bg-slate-900/60 backdrop-blur-md border-b border-slate-800/50 px-6 py-4 flex items-center justify-between">
+        <header class="sticky top-0 z-[100] bg-slate-900/60 backdrop-blur-md border-b border-slate-800/50 px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <button @click="sidebarOpen = true" class="lg:hidden text-slate-400 hover:text-white transition-colors">
                     <i class="fas fa-bars-staggered text-xl"></i>
@@ -335,7 +349,7 @@
             {{-- Big Worksheet Selector --}}
             {{-- Big Worksheet Selector --}}
             @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
-            <div class="mb-6 bg-[#0F172A] rounded-2xl border border-emerald-500 shadow-lg shadow-emerald-500/10">
+            <div class="mb-6 bg-[#0F172A] rounded-2xl border border-emerald-500 shadow-lg shadow-emerald-500/10 relative z-[60]">
                 <div class="bg-emerald-500 px-4 py-2 rounded-t-[15px] border-b border-emerald-600 flex items-center justify-between">
                     <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                         <i class="fas fa-store-alt"></i> WORKSHEET BISNIS / CABANG
@@ -352,7 +366,7 @@
                                     </div>
                                     <span class="text-base text-white">
                                         @if(isset($userWorksheets) && $userWorksheets->count() > 0)
-                                            {{ $activeWorksheetId === 'all' ? 'Semua (Gabungan)' : ($activeWorksheet ? $activeWorksheet->name : 'Pilih Worksheet') }}
+                                            {{ $activeWorksheet ? $activeWorksheet->name : 'Pilih Worksheet' }}
                                         @else
                                             Belum Ada Worksheet
                                         @endif
@@ -363,20 +377,6 @@
                             
                             <div x-show="wsOpen" x-cloak x-transition.opacity.duration.200ms class="absolute left-0 right-0 top-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
                                 <div class="max-h-64 overflow-y-auto p-2 space-y-1">
-                                    @if(auth()->user()->isOwner())
-                                    <form action="{{ route('worksheets.switch') }}" method="POST" class="m-0">
-                                        @csrf
-                                        <input type="hidden" name="worksheet_id" value="all">
-                                        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg text-sm font-bold {{ $activeWorksheetId === 'all' ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white' }} flex items-center justify-between transition-colors">
-                                            <div class="flex items-center gap-3">
-                                                <i class="fas fa-globe {{ $activeWorksheetId === 'all' ? 'text-emerald-400' : 'text-slate-500' }}"></i>
-                                                <span>Semua (Gabungan)</span>
-                                            </div>
-                                            @if($activeWorksheetId === 'all') <i class="fas fa-check"></i> @endif
-                                        </button>
-                                    </form>
-                                    @endif
-                                    
                                     @if(isset($userWorksheets) && $userWorksheets->count() > 0)
                                         @foreach($userWorksheets as $ws)
                                         <form action="{{ route('worksheets.switch') }}" method="POST" class="m-0">
@@ -408,7 +408,7 @@
                                 <i class="fas fa-plus text-lg"></i>
                             </button>
                             
-                            @if($activeWorksheetId !== 'all' && $activeWorksheet)
+                            @if($activeWorksheet)
                                 {{-- Edit --}}
                                 <button x-data @click="$dispatch('open-modal', 'edit-worksheet-{{ $activeWorksheet->id }}')" class="w-[50px] h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Edit Worksheet">
                                     <i class="fas fa-pen text-lg"></i>
@@ -434,16 +434,6 @@
                                         <i class="fas fa-trash text-lg"></i>
                                     </button>
                                 </form>
-                            @else
-                                {{-- Edit Disabled --}}
-                                <button disabled class="w-[50px] h-[50px] rounded-xl border border-slate-700 text-slate-600 bg-slate-800/50 flex items-center justify-center cursor-not-allowed" title="Pilih Worksheet spesifik untuk Edit">
-                                    <i class="fas fa-pen text-lg"></i>
-                                </button>
-                                
-                                {{-- Delete Disabled --}}
-                                <button disabled class="w-[50px] h-[50px] rounded-xl bg-slate-800 text-slate-600 flex items-center justify-center cursor-not-allowed" title="Pilih Worksheet spesifik untuk Hapus">
-                                    <i class="fas fa-trash text-lg"></i>
-                                </button>
                             @endif
                         </div>
                         @endif

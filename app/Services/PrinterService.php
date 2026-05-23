@@ -21,34 +21,7 @@ class PrinterService
      */
     public function openDrawer($transactionId = null, $force = false)
     {
-        $autoOpen = Setting::get('drawer_auto_open', '0');
-        if (!$force && $autoOpen !== '1') {
-            return ['success' => false, 'message' => 'Auto open drawer is disabled.'];
-        }
-
-        $printerName = Setting::get('printer_name', 'POS-58');
-        $connectionType = Setting::get('printer_connection', 'windows');
-        $pin = (int) Setting::get('drawer_pulse_pin', '0');
-
-        try {
-            $connector = $this->getConnector($connectionType, $printerName);
-            $printer = new Printer($connector);
-
-            // Pulse to open drawer
-            // Blueprint BP-ECO58D typically uses pin 0 or 1
-            $printer->pulse($pin);
-            
-            $printer->close();
-
-            $this->logAction($transactionId, 'success', 'Laci kasir berhasil dibuka.');
-
-            return ['success' => true, 'message' => 'Laci kasir terbuka.'];
-        } catch (Exception $e) {
-            $this->logAction($transactionId, 'failed', 'Gagal membuka laci: ' . $e->getMessage());
-            Log::error('Printer Error: ' . $e->getMessage());
-            
-            return ['success' => false, 'message' => 'Gagal: ' . $e->getMessage()];
-        }
+        return ['success' => false, 'message' => 'Fitur buka laci otomatis dinonaktifkan sementara.'];
     }
 
     /**
@@ -56,33 +29,7 @@ class PrinterService
      */
     public function printReceiptAndOpenDrawer($transaction, $openDrawer = true)
     {
-        $printerName = Setting::get('printer_name', 'POS-58');
-        $connectionType = Setting::get('printer_connection', 'windows');
-        $autoOpen = Setting::get('drawer_auto_open', '0');
-        $pin = (int) Setting::get('drawer_pulse_pin', '0');
-
-        try {
-            $connector = $this->getConnector($connectionType, $printerName);
-            $printer = new Printer($connector);
-
-            // --- Receipt Content ---
-            $this->generateReceiptContent($printer, $transaction);
-            // ------------------------
-
-            // Pulse drawer if payment is cash and setting is ON
-            if ($openDrawer && $autoOpen === '1' && $transaction->payment_method === 'cash') {
-                $printer->pulse($pin);
-                $this->logAction($transaction->id, 'success', 'Laci kasir otomatis terbuka setelah cetak.');
-            }
-
-            $printer->cut();
-            $printer->close();
-
-            return ['success' => true, 'message' => 'Struk berhasil dicetak.'];
-        } catch (Exception $e) {
-            $this->logAction($transaction->id, 'failed', 'Printer error: ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Printer tidak terhubung atau error.'];
-        }
+        return ['success' => false, 'message' => 'Fitur cetak server dinonaktifkan sementara. Silakan cetak via web browser.'];
     }
 
     private function getConnector($type, $target)

@@ -120,35 +120,33 @@
             </div>
 
             {{-- Filter Bar --}}
-            <div class="p-6 bg-slate-900/30 border-b border-white/5">
+            <div class="p-6 bg-slate-900/30 border-b border-white/5 relative z-[50]">
                 <form method="GET" class="flex flex-col gap-4">
+                    <input type="hidden" name="date_from" value="{{ is_object($start) ? $start->format('Y-m-d') : $start }}">
+                    <input type="hidden" name="date_to" value="{{ is_object($end) ? $end->format('Y-m-d') : $end }}">
                     <div class="flex flex-wrap items-center gap-3">
-                        <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-white/5">
-                            <input type="date" name="date_from" value="{{ is_array(request('date_from')) ? now()->startOfMonth()->format('Y-m-d') : request('date_from', now()->startOfMonth()->format('Y-m-d')) }}" 
-                                   class="bg-transparent border-none text-[11px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
-                            <span class="text-slate-600 text-[10px] font-black">S/D</span>
-                            <input type="date" name="date_to" value="{{ is_array(request('date_to')) ? now()->format('Y-m-d') : request('date_to', now()->format('Y-m-d')) }}" 
-                                   class="bg-transparent border-none text-[11px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
-                        </div>
+                        @php
+                            $startVal = request('date_from');
+                            $endVal = request('date_to');
+                            if (is_array($startVal)) $startVal = now()->startOfMonth()->format('Y-m-d');
+                            if (is_array($endVal)) $endVal = now()->format('Y-m-d');
+                            $start = \Carbon\Carbon::parse($startVal ?? now()->startOfMonth());
+                            $end = \Carbon\Carbon::parse($endVal ?? now());
+                        @endphp
+                        <x-custom-filter :dateFrom="$start" :dateTo="$end" />
 
-                        <select name="status" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-xl px-4 py-2 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
+                        <select name="status" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-2xl px-4 py-2.5 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
                             <option value="">— Semua Status —</option>
                             <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Aktif (Open)</option>
                             <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Selesai (Closed)</option>
                         </select>
 
-                        <select name="user_id" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-xl px-4 py-2 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
+                        <select name="user_id" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-2xl px-4 py-2.5 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
                             <option value="">— Semua Kasir —</option>
                             @foreach($users as $u)
                                 <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
                             @endforeach
                         </select>
-
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20">
-                            <i class="fas fa-filter mr-1.5"></i> Filter
-                        </button>
-                        
-                        <a href="{{ route('shifts.index') }}" class="text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-widest transition-colors">Reset</a>
                     </div>
                 </form>
             </div>
@@ -169,7 +167,10 @@
                         <tr class="hover:bg-slate-800 transition-all duration-200 group border-l-2 {{ $s->status === 'open' ? 'border-emerald-500 bg-emerald-500/5' : 'border-transparent hover:border-blue-500' }} cursor-default">
                             <td class="p-4">
                                 <p class="text-sm font-bold text-white">{{ $s->opened_at->format('d M Y') }}</p>
-                                <p class="text-xs text-slate-400 mt-0.5"><i class="far fa-clock mr-1"></i>{{ $s->opened_at->format('H:i') }} - {{ $s->closed_at ? $s->closed_at->format('H:i') : 'Sekarang' }}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <p class="text-xs text-slate-400"><i class="far fa-clock mr-1"></i>{{ $s->opened_at->format('H:i') }} - {{ $s->closed_at ? $s->closed_at->format('H:i') : 'Sekarang' }}</p>
+                                    <span class="px-1.5 py-0.5 rounded bg-slate-900/50 text-[9px] font-black text-blue-400/80 border border-white/5 uppercase tracking-tighter">{{ $s->getDuration() }}</span>
+                                </div>
                             </td>
                             <td class="p-4">
                                 <div class="space-y-1">

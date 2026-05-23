@@ -7,7 +7,7 @@
 @section('content')
 <div class="space-y-6">
        {{-- Filter Bar --}}
-    <div class="bg-slate-800/20 p-6 rounded-[2rem] border border-white/5 shadow-xl space-y-4">
+    <div class="bg-slate-800/20 p-6 rounded-[2rem] border border-white/5 shadow-xl space-y-4 relative z-[50]">
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div class="flex flex-wrap items-center gap-2">
                 <div class="bg-slate-900/50 p-1 rounded-xl border border-white/5 flex">
@@ -31,13 +31,17 @@
             <form method="GET" class="flex-1 flex flex-wrap items-center gap-3">
                 @if(request('status') && !is_array(request('status'))) <input type="hidden" name="status" value="{{ request('status') }}"> @endif
                 
-                <div class="flex items-center gap-2 bg-slate-900/60 p-1 rounded-xl border border-white/5">
-                    <input type="date" name="date_from" value="{{ is_array(request('date_from')) ? '' : request('date_from') }}" 
-                           class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
-                    <span class="text-slate-600 text-[10px] font-black">S/D</span>
-                    <input type="date" name="date_to" value="{{ is_array(request('date_to')) ? '' : request('date_to') }}" 
-                           class="bg-transparent border-none text-[10px] font-black text-slate-300 focus:ring-0 w-32 cursor-pointer">
-                </div>
+                @php
+                    $startVal = request('date_from');
+                    $endVal = request('date_to');
+                    if (is_array($startVal)) $startVal = null;
+                    if (is_array($endVal)) $endVal = null;
+                    $start = $startVal ? \Carbon\Carbon::parse($startVal) : null;
+                    $end = $endVal ? \Carbon\Carbon::parse($endVal) : null;
+                @endphp
+                <input type="hidden" name="date_from" value="{{ $startVal }}">
+                <input type="hidden" name="date_to" value="{{ $endVal }}">
+                <x-custom-filter :dateFrom="$start" :dateTo="$end" />
 
                 <div class="relative group flex-1 max-w-sm">
                     <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[10px] group-focus-within:text-blue-400 transition-colors"></i>

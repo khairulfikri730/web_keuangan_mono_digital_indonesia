@@ -12,30 +12,14 @@
     </div>
 
     <!-- TOP HEADER -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-[50]">
         <div>
             <h2 class="text-2xl font-black text-white tracking-tight">Dashboard Pengeluaran</h2>
             <p class="text-slate-400 text-sm mt-1">Kelola dan pantau semua pengeluaran dan biaya bisnis Anda</p>
         </div>
         
-        <div class="flex flex-col sm:flex-row gap-3">
-            <form id="dateFilterForm" method="GET" class="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl p-1">
-                @php
-                    $activePeriod = request('period', 'month');
-                    $today = now()->format('Y-m-d');
-                    $startOfWeek = now()->startOfWeek()->format('Y-m-d');
-                    $startOfMonth = now()->startOfMonth()->format('Y-m-d');
-                    $startOfYear = now()->startOfYear()->format('Y-m-d');
-                @endphp
-                <input type="hidden" name="date_from" id="date_from" value="{{ $dateFrom->format('Y-m-d') }}">
-                <input type="hidden" name="date_to" id="date_to" value="{{ $dateTo->format('Y-m-d') }}">
-                <input type="hidden" name="period" id="period" value="{{ is_array($activePeriod) ? 'month' : $activePeriod }}">
-                
-                <button type="button" @click="setPeriod('today', '{{ $today }}', '{{ $today }}')" :class="period === 'today' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-[10px] font-black rounded-lg transition-all">HARI INI</button>
-                <button type="button" @click="setPeriod('week', '{{ $startOfWeek }}', '{{ $today }}')" :class="period === 'week' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-[10px] font-black rounded-lg transition-all">MINGGUAN</button>
-                <button type="button" @click="setPeriod('month', '{{ $startOfMonth }}', '{{ $today }}')" :class="period === 'month' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-[10px] font-black rounded-lg transition-all">BULANAN</button>
-                <button type="button" @click="setPeriod('year', '{{ $startOfYear }}', '{{ $today }}')" :class="period === 'year' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'" class="px-3 py-1.5 text-[10px] font-black rounded-lg transition-all">TAHUNAN</button>
-            </form>
+        <div class="flex flex-wrap items-center gap-3">
+            <x-custom-filter :dateFrom="$dateFrom" :dateTo="$dateTo" />
 
             <button onclick="window.openExportModal()" class="w-11 h-11 bg-slate-800 border border-white/5 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
                 <i class="fas fa-file-export"></i>
@@ -457,15 +441,7 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('expenseDashboard', () => ({
-            period: '{{ is_array($activePeriod) ? "month" : $activePeriod }}',
             showDetailModal: false,
-            setPeriod(period, from, to) {
-                this.period = period;
-                document.getElementById('period').value = period;
-                document.getElementById('date_from').value = from;
-                document.getElementById('date_to').value = to;
-                document.getElementById('dateFilterForm').submit();
-            }
         }));
     });
 

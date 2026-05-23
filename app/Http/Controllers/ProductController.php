@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMutation;
+use App\Imports\ProductsImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
@@ -246,5 +248,71 @@ class ProductController extends Controller
     {
         // Placeholder — install maatwebsite/excel & barryvdh/laravel-dompdf for full implementation
         return back()->with('error', 'Fitur export ' . strtoupper($format) . ' sedang dalam pengembangan.');
+    }
+
+    /**
+     * Import products from Excel/CSV file.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ], [
+            'import_file.required' => 'Pilih file Excel terlebih dahulu.',
+            'import_file.mimes'    => 'Format file harus .xlsx, .xls, atau .csv.',
+            'import_file.max'      => 'Ukuran file maksimal 5MB.',
+        ]);
+
+        try {
+            $import = new ProductsImport();
+            Excel::import($import, $request->file('import_file'));
+
+            $msg = "✅ Import selesai! <strong>{$import->importedCount}</strong> produk berhasil diimpor";
+            if ($import->skippedCount > 0) {
+                $msg .= ", <strong>{$import->skippedCount}</strong> baris dilewati";
+            }
+            if (!empty($import->errors)) {
+                $msg .= '. Catatan: ' . implode('; ', array_slice($import->errors, 0, 3));
+            }
+
+            return redirect()->route('products.index')->with('success', $msg);
+
+        } catch (\Exception $e) {
+            return back()->with('error', '❌ Gagal import: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download Excel template for product import.
+     */
+    public function downloadTemplate()
+    {
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="template_import_produk.csv"',
+        ];
+
+        $columns = [
+            'nama_produk', 'kategori', 'sku', 'barcode',
+            'harga_jual', 'harga_modal', 'stok', 'stok_minimum',
+            'satuan', 'tipe', 'status', 'deskripsi',
+        ];
+
+        $example = [
+            'Nasi Goreng Spesial', 'Makanan', 'NGS-001', '',
+            '25000', '15000', '0', '0',
+            'porsi', 'unlimited', 'aktif', 'Menu andalan',
+        ];
+
+        $callback = function () use ($columns, $example) {
+            $handle = fopen('php://output', 'w');
+            // BOM for Excel UTF-8
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $columns);
+            fputcsv($handle, $example);
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

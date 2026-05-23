@@ -8,7 +8,7 @@
 <div class="flex flex-col gap-6" x-data="financialDashboard()">
     
     {{-- 1. PREMIUM HEADER --}}
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-2">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-2 relative z-[50]">
         <div>
             <div class="flex items-center gap-3">
                 <h1 class="text-3xl font-black text-white tracking-tight">Financial Report</h1>
@@ -17,24 +17,11 @@
                     {{ strtoupper($health == 'healthy' ? 'Bisnis Sehat' : ($health == 'warning' ? 'Waspada' : 'Kritis')) }}
                 </div>
             </div>
-            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Laporan Laba Rugi & Analisis ROI • {{ date('F Y', mktime(0, 0, 0, $month, 1)) }}</p>
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Laporan Laba Rugi & Analisis ROI • {{ $dateFrom->translatedFormat('d M Y') }} - {{ $dateTo->translatedFormat('d M Y') }}</p>
         </div>
         
         <div class="flex flex-wrap items-center gap-3">
-            {{-- Filter Bar --}}
-            <form id="filterForm" method="GET" class="flex bg-slate-800/80 backdrop-blur-md rounded-2xl p-1.5 border border-slate-700/50 shadow-xl">
-                <select name="month" class="bg-transparent border-none text-xs font-black text-slate-300 focus:ring-0 cursor-pointer pr-8" onchange="this.form.submit()">
-                    @for($m=1; $m<=12; $m++)
-                    <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }} class="bg-slate-800">{{ date('F', mktime(0,0,0,$m,1)) }}</option>
-                    @endfor
-                </select>
-                <div class="w-px h-4 bg-slate-700 self-center mx-2"></div>
-                <select name="year" class="bg-transparent border-none text-xs font-black text-slate-300 focus:ring-0 cursor-pointer pr-8" onchange="this.form.submit()">
-                    @for($y=date('Y'); $y>=2020; $y--)
-                    <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }} class="bg-slate-800">{{ $y }}</option>
-                    @endfor
-                </select>
-            </form>
+            <x-custom-filter :dateFrom="$dateFrom" :dateTo="$dateTo" />
 
             <button onclick="window.openExportModal()" class="flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs transition-premium shadow-lg shadow-blue-600/20 transform hover:-translate-y-1">
                 <i class="fas fa-file-export"></i>

@@ -66,11 +66,11 @@
         <div class="stat-card hover:scale-105 hover:shadow-xl hover:shadow-purple-900/20 transition-all duration-300 relative overflow-hidden group">
             <div class="absolute -right-6 -top-6 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
             <div class="w-14 h-14 bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
-                <i class="fas fa-chart-line text-purple-400 text-xl"></i>
+                <i class="fas fa-hand-holding-dollar text-purple-400 text-xl"></i>
             </div>
             <div>
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Penjualan Bulan Ini</p>
-                <p class="text-2xl font-bold text-white">Rp {{ number_format($monthSales/1000000, 1, ',', '.') }}<span class="text-sm font-normal text-slate-500">jt</span></p>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Pendapatan Bersih Hari Ini</p>
+                <p class="text-2xl font-bold text-white">Rp {{ number_format($todayNetProfit, 0, ',', '.') }}</p>
             </div>
         </div>
     </div>
@@ -153,7 +153,7 @@
         <div class="card p-5">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-semibold text-white">Produk Terlaris</h3>
-                <span class="text-xs text-slate-500">All time</span>
+                <span class="text-xs text-slate-500">Hari Ini</span>
             </div>
             <div class="space-y-3">
                 @forelse($topProducts as $i => $p)

@@ -35,9 +35,7 @@ class InvoiceController extends Controller
         }
         
         if ($activeWorksheetId = session('active_worksheet_id')) {
-            if ($activeWorksheetId !== 'all') {
-                $query->where('worksheet_id', $activeWorksheetId);
-            }
+            $query->where('worksheet_id', $activeWorksheetId);
         }
 
         // Calculate Totals (Global, ignoring pagination but respecting other filters)
@@ -104,7 +102,7 @@ class InvoiceController extends Controller
                 'discount' => $request->discount ?? 0,
                 'total_amount' => $request->total_amount ?? 0,
                 'notes' => $request->notes,
-                'worksheet_id' => (session('active_worksheet_id') === 'all' || !session('active_worksheet_id')) ? null : session('active_worksheet_id'),
+                'worksheet_id' => session('active_worksheet_id'),
                 'created_by' => auth()->id(),
                 'status' => $request->status ?? 'pending',
             ]);

@@ -17,7 +17,8 @@ class SettingController extends Controller
             'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines',
             'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
-            'custom_price_require_reason', 'custom_price_access'
+            'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
+            'cashout_source_access', 'cashout_role_access'
         ]);
         $worksheets = \App\Models\Worksheet::all();
         return view('settings.index', compact('settings', 'worksheets'));
@@ -52,6 +53,9 @@ class SettingController extends Controller
             'custom_price_show_badge' => 'nullable|string',
             'custom_price_require_reason' => 'nullable|string',
             'custom_price_access' => 'nullable|string|in:all,admin_owner,owner',
+            'delivery_presets' => 'nullable|string',
+            'cashout_source_access' => 'nullable|string|in:cash_only,bank_only,both',
+            'cashout_role_access' => 'nullable|string|in:all,admin_owner,owner',
         ]);
 
         $keys = [
@@ -60,7 +64,8 @@ class SettingController extends Controller
             'printer_paper_size', 'printer_auto_print', 'printer_font_small', 'printer_feed_lines',
             'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
-            'custom_price_require_reason', 'custom_price_access'
+            'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
+            'cashout_source_access', 'cashout_role_access'
         ];
         foreach ($keys as $key) {
             Setting::set($key, $request->input($key));
