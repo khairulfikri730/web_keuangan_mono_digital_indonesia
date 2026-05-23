@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -235,6 +235,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:settings')->group(function () {
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+        Route::put('/settings/targets', [SettingController::class, 'updateTargets'])->name('settings.targets');
         Route::post('/settings/test-drawer', [SettingController::class, 'testDrawer'])->name('settings.test-drawer');
     });
 
@@ -273,3 +274,7 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 });
+
+
+
+

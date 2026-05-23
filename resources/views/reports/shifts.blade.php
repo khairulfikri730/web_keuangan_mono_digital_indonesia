@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Monitoring Shift')
 @section('page-title', 'Dashboard Shift Kasir')
@@ -15,7 +15,7 @@
             <input type="hidden" name="period" value="{{ request('period', 'today') }}">
             {{-- PERIOD SELECTOR --}}
             <div class="flex items-center gap-3 mb-2 flex-wrap">
-                <x-custom-filter :dateFrom="request('date_from')" :dateTo="request('date_to')" />
+                <x-custom-filter period="today" :dateFrom="request('date_from')" :dateTo="request('date_to')" />
 
                 @if($activeShift)
                 <a href="{{ request()->url() }}?shift=live" 
@@ -345,7 +345,7 @@
                                 </div>
                                 <div class="text-xs font-bold text-slate-500 flex flex-wrap items-center gap-1.5 mt-1">
                                     <span class="flex items-center gap-1.5"><i class="far fa-calendar-alt"></i> {{ $s->opened_at->format('d M Y') }}</span>
-                                    <span class="text-slate-700">•</span>
+                                    <span class="text-slate-700">â€¢</span>
                                     <span class="flex items-center gap-1.5"><i class="far fa-clock"></i> {{ $s->opened_at->format('H:i') }} - {{ $s->closed_at ? $s->closed_at->format('H:i') : 'Skrg' }}</span>
                                     <span class="ml-1 px-1.5 py-0.5 rounded-md bg-slate-900/50 text-[9px] font-black uppercase tracking-wider text-blue-400/80 border border-slate-700/50">{{ $s->getDuration() }}</span>
                                 </div>
@@ -902,3 +902,4 @@ function confirmDelete(id) {
 }
 </script>
 @endsection
+

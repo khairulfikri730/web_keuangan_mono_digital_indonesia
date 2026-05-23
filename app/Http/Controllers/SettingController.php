@@ -18,7 +18,8 @@ class SettingController extends Controller
             'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
-            'cashout_source_access', 'cashout_role_access'
+            'cashout_source_access', 'cashout_role_access',
+            'target_omzet', 'target_profit', 'target_transaksi'
         ]);
         $worksheets = \App\Models\Worksheet::all();
         return view('settings.index', compact('settings', 'worksheets'));
@@ -56,6 +57,9 @@ class SettingController extends Controller
             'delivery_presets' => 'nullable|string',
             'cashout_source_access' => 'nullable|string|in:cash_only,bank_only,both',
             'cashout_role_access' => 'nullable|string|in:all,admin_owner,owner',
+            'target_omzet' => 'nullable|numeric|min:0',
+            'target_profit' => 'nullable|numeric|min:0',
+            'target_transaksi' => 'nullable|integer|min:0',
         ]);
 
         $keys = [
@@ -65,7 +69,8 @@ class SettingController extends Controller
             'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
-            'cashout_source_access', 'cashout_role_access'
+            'cashout_source_access', 'cashout_role_access',
+            'target_omzet', 'target_profit', 'target_transaksi'
         ];
         foreach ($keys as $key) {
             Setting::set($key, $request->input($key));
@@ -84,7 +89,22 @@ class SettingController extends Controller
             Setting::set('qris_image', $path);
         }
 
-        return back()->with('success', 'Pengaturan berhasil disimpan!');
+        return back()->with('success', 'Pengaturan berhasil diperbarui!');
+    }
+
+    public function updateTargets(Request $request)
+    {
+        $request->validate([
+            'target_omzet' => 'required|numeric|min:0',
+            'target_profit' => 'required|numeric|min:0',
+            'target_transaksi' => 'required|numeric|min:0',
+        ]);
+
+        Setting::set('target_omzet', $request->target_omzet);
+        Setting::set('target_profit', $request->target_profit);
+        Setting::set('target_transaksi', $request->target_transaksi);
+
+        return back()->with('success', 'Target bulanan berhasil diperbarui!');
     }
 
     public function testDrawer()

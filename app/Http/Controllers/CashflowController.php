@@ -64,7 +64,7 @@ class CashflowController extends Controller
 
     public function index(Request $request)
     {
-        $filter = $request->filter ?? $request->period ?? 'today';
+        $filter = $request->filter ?? $request->period ?? 'month';
         $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
         $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
         if ($start && $end) {
@@ -130,9 +130,11 @@ class CashflowController extends Controller
         $chartDates = $chartQuery->map(fn($r) => Carbon::parse($r->date)->format('d M'))->toArray();
         $chartIncome = $chartQuery->pluck('income')->toArray();
         $chartExpense = $chartQuery->pluck('expense')->toArray();
+        $chartNetProfit = $chartQuery->map(fn($r) => $r->income - $r->expense)->toArray();
 
         $daysCount = max($chartQuery->count(), 1);
         $avgIncome = $totalIncome / $daysCount;
+        $avgProfit = $netProfit / $daysCount;
 
         $biggestExpense = (clone $query)->where('transaction_category', 'expense')
             ->orderByDesc('amount')->first();
@@ -166,6 +168,197 @@ class CashflowController extends Controller
         $incomeCash     = (clone $txQuery)->where('payment_method', 'cash')->sum('total');
         $incomeTransfer = (clone $txQuery)->where('payment_method', 'transfer')->sum('total');
 
+        // TARGET VS REALISASI
+        $targetOmzet = \App\Models\Setting::get('target_omzet') ?: 0;
+        $targetProfit = \App\Models\Setting::get('target_profit') ?: 0;
+        $targetTransaksi = \App\Models\Setting::get('target_transaksi') ?: 0;
+
+        $totalTransactionsCount = (clone $txQuery)->count();
+
+        $progressOmzet = $targetOmzet > 0 ? min(100, round(($totalIncome / $targetOmzet) * 100)) : 0;
+        $progressProfit = $targetProfit > 0 ? min(100, round(($netProfit / $targetProfit) * 100)) : 0;
+        $progressTransaksi = $targetTransaksi > 0 ? min(100, round(($totalTransactionsCount / $targetTransaksi) * 100)) : 0;
+
+        $targetData = [
+            'omzet' => [
+                'target' => $targetOmzet,
+                'realisasi' => $totalIncome,
+                'progress' => $progressOmzet,
+                'sisa' => max(0, $targetOmzet - $totalIncome),
+            ],
+            'profit' => [
+                'target' => $targetProfit,
+                'realisasi' => $netProfit,
+                'progress' => $progressProfit,
+                'sisa' => max(0, $targetProfit - $netProfit),
+            ],
+            'transaksi' => [
+                'target' => $targetTransaksi,
+                'realisasi' => $totalTransactionsCount,
+                'progress' => $progressTransaksi,
+                'sisa' => max(0, $targetTransaksi - $totalTransactionsCount),
+            ]
+        ];
+
+        // PAYMENT METHOD ANALYTICS
+        $pmStatsCurrent = (clone $txQuery)
+            ->selectRaw('payment_method, COUNT(*) as count, SUM(total) as revenue')
+            ->groupBy('payment_method')
+            ->get()->keyBy('payment_method');
+
+        $daysDiff = max(1, $dateRange['from']->diffInDays($dateRange['to']) + 1);
+        $prevStart = $dateRange['from']->copy()->subDays($daysDiff);
+        $prevEnd = $dateRange['to']->copy()->subDays($daysDiff);
+        
+        // PREVIOUS PERIOD FINANCIAL SUMMARY (For Expense & Revenue Growth)
+        $prevFinSummary = $this->financialService->getSummary($prevStart, $prevEnd, $worksheetId);
+        $prevTotalIncome = $prevFinSummary->total_income;
+        $prevTotalExpense = $prevFinSummary->total_expense;
+
+        $expenseGrowth = $prevTotalExpense > 0 ? round((($totalExpense - $prevTotalExpense) / $prevTotalExpense) * 100) : ($totalExpense > 0 ? 100 : 0);
+        $revenueGrowth = $prevTotalIncome > 0 ? round((($totalIncome - $prevTotalIncome) / $prevTotalIncome) * 100) : ($totalIncome > 0 ? 100 : 0);
+
+        $insightMessage = "";
+        $insightColor = "slate";
+        $insightIcon = "fa-info-circle";
+        if ($expenseGrowth > $revenueGrowth && $expenseGrowth > 0) {
+            $insightMessage = "Biaya operasional meningkat lebih cepat dibanding omzet.";
+            $insightColor = "red";
+            $insightIcon = "fa-exclamation-triangle";
+        } elseif ($expenseGrowth < 0) {
+            $insightMessage = "Pengeluaran berhasil ditekan dibandingkan periode sebelumnya.";
+            $insightColor = "emerald";
+            $insightIcon = "fa-check-circle";
+        } elseif ($expenseGrowth == 0) {
+            $insightMessage = "Biaya operasional stabil.";
+            $insightColor = "blue";
+            $insightIcon = "fa-minus-circle";
+        } else {
+            $insightMessage = "Kenaikan biaya masih sejalan dengan pertumbuhan omzet.";
+            $insightColor = "amber";
+            $insightIcon = "fa-balance-scale";
+        }
+
+        $expenseInsights = [
+            'total' => $totalExpense,
+            'prev_total' => $prevTotalExpense,
+            'growth' => $expenseGrowth,
+            'is_increasing' => $expenseGrowth > 0,
+            'message' => $insightMessage,
+            'color' => $insightColor,
+            'icon' => $insightIcon
+        ];
+
+        // PROFIT TREND INSIGHTS
+        $prevNetProfit = $prevTotalIncome - $prevTotalExpense;
+        $profitGrowth = $prevNetProfit != 0 ? round((($netProfit - $prevNetProfit) / abs($prevNetProfit)) * 100) : ($netProfit > 0 ? 100 : ($netProfit < 0 ? -100 : 0));
+        
+        $predictedProfit = $avgProfit * 30; // 30-day projection
+
+        $profitSummaryText = "Profit stabil pada periode ini.";
+        if ($profitGrowth > 0) {
+            $profitSummaryText = "Profit naik " . abs($profitGrowth) . "% dibanding periode lalu.";
+        } elseif ($profitGrowth < 0) {
+            $profitSummaryText = "Profit turun " . abs($profitGrowth) . "% dibanding periode lalu.";
+        }
+
+        $profitInsights = [
+            'growth' => $profitGrowth,
+            'is_up' => $profitGrowth >= 0,
+            'avg_profit' => $avgProfit,
+            'predicted_profit' => $predictedProfit,
+            'summary' => $profitSummaryText
+        ];
+        
+        $prevTxQuery = Transaction::whereBetween('created_at', [$prevStart, $prevEnd])->where('status', 'completed');
+        if ($worksheetId = session('active_worksheet_id')) {
+            $prevTxQuery->where('worksheet_id', $worksheetId);
+        }
+
+        $pmStatsPrev = $prevTxQuery
+            ->selectRaw('payment_method, COUNT(*) as count, SUM(total) as revenue')
+            ->groupBy('payment_method')
+            ->get()->keyBy('payment_method');
+
+        $pmAnalytics = [];
+        $totalCurrentRevenue = $pmStatsCurrent->sum('revenue') ?: 1;
+        $dominantMethod = '';
+        $dominantPercentage = 0;
+        
+        $allMethods = ['cash', 'qris', 'transfer', 'debit'];
+        $pmChartData = [
+            'labels' => [],
+            'cash' => [],
+            'qris' => [],
+            'transfer' => [],
+            'debit' => []
+        ];
+
+        foreach($allMethods as $m) {
+            $currRev = isset($pmStatsCurrent[$m]) ? $pmStatsCurrent[$m]->revenue : 0;
+            $currCount = isset($pmStatsCurrent[$m]) ? $pmStatsCurrent[$m]->count : 0;
+            $prevRev = isset($pmStatsPrev[$m]) ? $pmStatsPrev[$m]->revenue : 0;
+            
+            $percentage = round(($currRev / $totalCurrentRevenue) * 100);
+            if ($percentage > $dominantPercentage) {
+                $dominantPercentage = $percentage;
+                $dominantMethod = $m;
+            }
+
+            $growth = 0;
+            if ($prevRev > 0) {
+                $growth = round((($currRev - $prevRev) / $prevRev) * 100);
+            } elseif ($currRev > 0) {
+                $growth = 100;
+            }
+
+            $pmAnalytics[$m] = [
+                'revenue' => $currRev,
+                'count' => $currCount,
+                'avg' => $currCount > 0 ? round($currRev / $currCount) : 0,
+                'percentage' => $percentage,
+                'growth' => $growth
+            ];
+        }
+
+        $pmTrendRaw = (clone $txQuery)
+            ->selectRaw('DATE(created_at) as date, payment_method, SUM(total) as revenue')
+            ->groupBy(DB::raw('DATE(created_at)'), 'payment_method')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        $pmTrendGrouped = $pmTrendRaw->groupBy('date');
+        foreach($pmTrendGrouped as $date => $methods) {
+            $pmChartData['labels'][] = Carbon::parse($date)->format('d M');
+            $dataByMethod = $methods->keyBy('payment_method');
+            foreach($allMethods as $m) {
+                $pmChartData[$m][] = isset($dataByMethod[$m]) ? $dataByMethod[$m]->revenue : 0;
+            }
+        }
+
+        $cashPercentage = $pmAnalytics['cash']['percentage'] ?? 0;
+        if ($cashPercentage > 70) {
+            $cfRiskLevel = 'Tinggi';
+            $cfRiskColor = 'rose';
+            $cfRiskMsg = 'Uang tunai mendominasi ('.$cashPercentage.'%). Perketat pengawasan laci kas dan setor bank berkala guna mencegah selisih/kehilangan.';
+        } elseif ($cashPercentage > 40) {
+            $cfRiskLevel = 'Menengah';
+            $cfRiskColor = 'amber';
+            $cfRiskMsg = 'Porsi kas kasir seimbang. Pastikan rekonsiliasi kas dilakukan secara disiplin setiap pergantian shift.';
+        } else {
+            $cfRiskLevel = 'Rendah';
+            $cfRiskColor = 'emerald';
+            $cfRiskMsg = 'Pembayaran non-tunai sangat dominan. Risiko uang fisik sangat rendah, pastikan mutasi mutasi bank/QRIS direkonsiliasi harian.';
+        }
+
+        $pmInsights = [
+            'dominant_method' => $dominantMethod,
+            'dominant_percentage' => $dominantPercentage,
+            'risk_level' => $cfRiskLevel,
+            'risk_color' => $cfRiskColor,
+            'risk_msg' => $cfRiskMsg
+        ];
+
         return view('cashflow.index', compact(
             'cashflows', 'totalIncome', 'totalExpense', 'netProfit',
             'filter', 'start', 'end', 'source', 'incomeByCategory', 'expenseByCategory',
@@ -176,7 +369,9 @@ class CashflowController extends Controller
             'totalInvestment', 'totalCollectedProfit', 'remainingCapital', 'paybackMonths',
             'targetPaybackMonths', 'requiredMonthlyProfit', 'requiredDailyProfit', 'profitGap', 'avgMonthlyProfit',
             'incomeQris', 'incomeCash', 'incomeTransfer', 'totalAdjIn', 'totalAdjOut',
-            'latestCapital', 'periodROI'
+            'latestCapital', 'periodROI',
+            'targetData', 'pmAnalytics', 'pmChartData', 'pmInsights', 'expenseInsights',
+            'chartNetProfit', 'profitInsights'
         ));
     }
 
@@ -199,7 +394,7 @@ class CashflowController extends Controller
 
     public function getData(Request $request)
     {
-        $filter = $request->filter ?? $request->period ?? 'today';
+        $filter = $request->filter ?? $request->period ?? 'month';
         $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
         $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
         if ($start && $end) {
@@ -244,9 +439,37 @@ class CashflowController extends Controller
         $chartDates = $chartQuery->map(fn($r) => Carbon::parse($r->date)->format('d M'))->toArray();
         $chartIncome = $chartQuery->pluck('income')->toArray();
         $chartExpense = $chartQuery->pluck('expense')->toArray();
+        $chartNetProfit = $chartQuery->map(fn($r) => $r->income - $r->expense)->toArray();
 
         $daysCount = max($chartQuery->count(), 1);
         $avgIncome = $totalIncome / $daysCount;
+        $avgProfit = $netProfit / $daysCount;
+
+        $daysDiff = max(1, $dateRange['from']->diffInDays($dateRange['to']) + 1);
+        $prevStart = $dateRange['from']->copy()->subDays($daysDiff);
+        $prevEnd = $dateRange['to']->copy()->subDays($daysDiff);
+        $prevFinSummary = $this->financialService->getSummary($prevStart, $prevEnd, $worksheetId);
+        $prevNetProfit = $prevFinSummary->total_income - $prevFinSummary->total_expense;
+        
+        $profitGrowth = $prevNetProfit != 0 ? round((($netProfit - $prevNetProfit) / abs($prevNetProfit)) * 100) : ($netProfit > 0 ? 100 : ($netProfit < 0 ? -100 : 0));
+        $predictedProfit = $avgProfit * 30;
+
+        $profitSummaryText = "Profit stabil pada periode ini.";
+        if ($profitGrowth > 0) {
+            $profitSummaryText = "Profit naik " . abs($profitGrowth) . "% dibanding periode lalu.";
+        } elseif ($profitGrowth < 0) {
+            $profitSummaryText = "Profit turun " . abs($profitGrowth) . "% dibanding periode lalu.";
+        }
+
+        $profitInsights = [
+            'growth' => $profitGrowth,
+            'is_up' => $profitGrowth >= 0,
+            'avg_profit' => $avgProfit,
+            'avg_profitFmt' => number_format($avgProfit, 0, ',', '.'),
+            'predicted_profit' => $predictedProfit,
+            'predicted_profitFmt' => number_format($predictedProfit, 0, ',', '.'),
+            'summary' => $profitSummaryText
+        ];
 
         $expenseByCategory = (clone $query)->where('transaction_category', 'expense')
             ->selectRaw('category, SUM(amount) as total')->groupBy('category')->orderByDesc('total')->get();
@@ -292,7 +515,9 @@ class CashflowController extends Controller
                 'labels' => $chartDates,
                 'income' => $chartIncome,
                 'expense' => $chartExpense,
+                'netProfit' => $chartNetProfit,
             ],
+            'profitInsights' => $profitInsights,
             'insights' => [
                 'avgIncome' => $avgIncome,
                 'avgIncomeFmt' => number_format($avgIncome, 0, ',', '.'),
@@ -424,7 +649,7 @@ class CashflowController extends Controller
 
     public function export(Request $request)
     {
-        $filter = $request->filter ?? 'today';
+        $filter = $request->filter ?? 'month';
         $start = $request->start;
         $end = $request->end;
         $source = $request->source ?? 'all';

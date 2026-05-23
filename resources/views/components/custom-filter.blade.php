@@ -5,7 +5,7 @@
 ])
 
 @php
-    $requestPeriod = request('period', 'today');
+    $requestPeriod = request('period', $period ?? 'month');
     $dateFromVal = request('date_from', $dateFrom ?? now()->format('Y-m-d'));
     $dateToVal = request('date_to', $dateTo ?? now()->format('Y-m-d'));
 

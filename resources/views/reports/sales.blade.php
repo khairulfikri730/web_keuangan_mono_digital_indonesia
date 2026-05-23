@@ -266,20 +266,238 @@
                     </div>
                 </div>
 
-                {{-- Most Profitable --}}
+                {{-- Most Profitable Product --}}
                 <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 hover:border-purple-500/30 transition-all">
                     <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:bg-purple-600 group-hover:text-white transition-all"><i class="fas fa-gem text-xl"></i></div>
                     <div class="flex-1">
                         <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Produk Paling Untung</p>
-                        <h4 class="text-base font-black text-white truncate">{{ $topProducts->sortByDesc('total_margin')->first() ? $topProducts->sortByDesc('total_margin')->first()->product_name : 'Belum Ada' }}</h4>
+                        <h4 class="text-base font-black text-white truncate">{{ isset($topProfitProduct) && $topProfitProduct ? $topProfitProduct->product_name : 'Belum Ada' }}</h4>
+                        <p class="text-[10px] font-bold text-slate-400 mt-1">{{ isset($topProfitProduct) && $topProfitProduct ? 'Terjual: ' . $topProfitProduct->total_qty : '-' }}</p>
                     </div>
-                    <div class="text-right text-purple-400">
-                        <i class="fas fa-arrow-up text-xs"></i>
+                    <div class="text-right">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Profit</p>
+                        <h4 class="text-base font-black text-purple-400">{{ isset($topProfitProduct) && $topProfitProduct ? 'Rp ' . number_format($topProfitProduct->profit, 0, ',', '.') : 'Rp 0' }}</h4>
+                        <p class="text-[10px] font-bold text-purple-500/70 mt-1">Margin: {{ isset($topProfitProduct) && $topProfitProduct ? $topProfitProduct->margin : 0 }}%</p>
+                    </div>
+                </div>
+
+                {{-- Worst Margin Product --}}
+                @if(isset($worstMarginProduct) && $worstMarginProduct)
+                @php
+                    $isLoss = $worstMarginProduct->profit < 0;
+                    $isLowMargin = $worstMarginProduct->margin <= 20 && !$isLoss;
+                    
+                    $badgeColor = $isLoss ? 'bg-red-500/20 text-red-400 border-red-500/30' : ($isLowMargin ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30');
+                    $iconColor = $isLoss ? 'text-red-400 group-hover:bg-red-600' : ($isLowMargin ? 'text-yellow-400 group-hover:bg-yellow-600' : 'text-slate-400 group-hover:bg-slate-600');
+                    $borderColor = $isLoss ? 'hover:border-red-500/30' : ($isLowMargin ? 'hover:border-yellow-500/30' : 'hover:border-slate-500/30');
+                    $valueColor = $isLoss ? 'text-red-400' : ($isLowMargin ? 'text-yellow-400' : 'text-slate-400');
+                    $insight = $isLoss || $isLowMargin ? 'Harga jual terlalu rendah dibanding HPP.' : '';
+                    $statusText = $isLoss ? 'Rugi' : ($isLowMargin ? 'Margin Rendah' : 'Tidak Efisien');
+                @endphp
+                <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 {{ $borderColor }} transition-all relative overflow-hidden">
+                    <div class="absolute right-0 top-0 text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-bl-lg border-b border-l {{ $badgeColor }}">
+                        {{ $statusText }}
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-white/5 {{ $iconColor }} flex items-center justify-center shrink-0 border border-white/10 group-hover:text-white transition-all">
+                        <i class="fas {{ $isLoss ? 'fa-arrow-trend-down' : 'fa-exclamation-triangle' }} text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Produk Margin Terendah</p>
+                        <h4 class="text-base font-black text-white truncate pr-16">{{ $worstMarginProduct->product_name }}</h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <p class="text-[10px] font-bold text-slate-400">Terjual: {{ $worstMarginProduct->total_qty }}</p>
+                            @if($insight)
+                            <span class="text-[9px] font-bold {{ $valueColor }} opacity-80 italic hidden sm:inline-block"><i class="fas fa-info-circle mr-0.5"></i> {{ $insight }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Profit</p>
+                        <h4 class="text-base font-black {{ $valueColor }}">{{ $worstMarginProduct->profit < 0 ? '-' : '' }}Rp {{ number_format(abs($worstMarginProduct->profit), 0, ',', '.') }}</h4>
+                        <p class="text-[10px] font-bold {{ $valueColor }} opacity-70 mt-1">Margin: {{ $worstMarginProduct->margin }}%</p>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Most Profitable Hour --}}
+                <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:bg-emerald-600 group-hover:text-white transition-all"><i class="fas fa-chart-line text-xl"></i></div>
+                    <div class="flex-1">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Jam Paling Profit</p>
+                        <h4 class="text-base font-black text-white uppercase tracking-tight">{{ isset($topProfitableHour) && $topProfitableHour ? sprintf('%02d:00 - %02d:59', $topProfitableHour->hour, $topProfitableHour->hour) : 'Belum Ada' }}</h4>
+                        <p class="text-[10px] font-bold text-slate-400 mt-1">{{ isset($topProfitableHour) && $topProfitableHour ? $topProfitableHour->trx_count . ' transaksi' : '-' }}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Profit</p>
+                        <h4 class="text-base font-black text-emerald-400">{{ isset($topProfitableHour) && $topProfitableHour ? 'Rp ' . number_format($topProfitableHour->profit, 0, ',', '.') : 'Rp 0' }}</h4>
+                        <p class="text-[10px] font-bold text-emerald-500/70 mt-1">Margin: {{ isset($topProfitableHour) && $topProfitableHour ? $topProfitableHour->margin : 0 }}%</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- HEATMAP PENJUALAN SECTION --}}
+    @if(isset($heatmapMatrix) && isset($heatmapInsights))
+    <div class="bg-slate-800/40 backdrop-blur-md rounded-3xl border border-white/5 shadow-2xl overflow-hidden mt-2">
+        <div class="p-8 border-b border-white/5 flex flex-col lg:flex-row gap-8 justify-between">
+            <div class="flex-1">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3 mb-2">
+                    <span class="w-2 h-6 bg-teal-500 rounded-full"></span>
+                    Heatmap Kepadatan Penjualan
+                </h3>
+                <p class="text-[10px] font-bold text-slate-500">Intensitas warna menunjukkan kepadatan jumlah transaksi berdasarkan hari dan jam.</p>
+                
+                <div class="mt-8 overflow-x-auto pb-4">
+                    <div class="min-w-[800px]">
+                        {{-- Hours Header --}}
+                        <div class="flex ml-12 mb-2">
+                            @for($h=0; $h<24; $h++)
+                            <div class="flex-1 text-center text-[9px] font-black text-slate-500">{{ sprintf('%02d', $h) }}</div>
+                            @endfor
+                        </div>
+
+                        {{-- Matrix --}}
+                        <div class="space-y-1">
+                            @php
+                                $dayLabels = [1 => 'Sen', 2 => 'Sel', 3 => 'Rab', 4 => 'Kam', 5 => 'Jum', 6 => 'Sab', 7 => 'Min'];
+                            @endphp
+                            @for($d=1; $d<=7; $d++)
+                            <div class="flex items-center">
+                                <div class="w-12 text-[10px] font-black text-slate-400 text-right pr-4">{{ $dayLabels[$d] }}</div>
+                                <div class="flex-1 flex gap-1">
+                                    @for($h=0; $h<24; $h++)
+                                        @php
+                                            $cell = $heatmapMatrix[$d][$h];
+                                            $trx = $cell['trx_count'];
+                                            $rev = $cell['revenue'];
+                                            $max = $heatmapInsights['max_trx'] > 0 ? $heatmapInsights['max_trx'] : 1;
+                                            $intensity = ($trx / $max); // 0 to 1
+                                            
+                                            // Determine opacity class
+                                            if ($intensity == 0) $bgClass = 'bg-slate-800/50';
+                                            elseif ($intensity <= 0.2) $bgClass = 'bg-teal-500/20';
+                                            elseif ($intensity <= 0.4) $bgClass = 'bg-teal-500/40';
+                                            elseif ($intensity <= 0.6) $bgClass = 'bg-teal-500/60';
+                                            elseif ($intensity <= 0.8) $bgClass = 'bg-teal-500/80';
+                                            else $bgClass = 'bg-teal-500';
+                                        @endphp
+                                        <div class="flex-1 aspect-square {{ $bgClass }} rounded-sm relative group cursor-crosshair transition-colors hover:ring-1 hover:ring-white/50 z-10 hover:z-20">
+                                            {{-- Tooltip --}}
+                                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-slate-900 border border-white/10 shadow-xl rounded-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none">
+                                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-white/5 pb-1">{{ $dayLabels[$d] }}, {{ sprintf('%02d:00', $h) }} - {{ sprintf('%02d:59', $h) }}</p>
+                                                <div class="flex items-center gap-4">
+                                                    <div>
+                                                        <p class="text-[9px] font-bold text-slate-500 uppercase">Transaksi</p>
+                                                        <p class="text-sm font-black text-teal-400">{{ $trx }}x</p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-bold text-slate-500 uppercase">Omzet</p>
+                                                        <p class="text-sm font-black text-emerald-400">Rp {{ number_format($rev, 0, ',', '.') }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endfor
+                                </div>
+                            </div>
+                            @endfor
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Insights Sidebar --}}
+            <div class="lg:w-72 flex flex-col gap-4">
+                <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+                        <i class="fas fa-calendar-day text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Hari Paling Ramai</p>
+                        <h4 class="text-sm font-black text-white">{{ $heatmapInsights['busiest_day'] }}</h4>
+                    </div>
+                </div>
+                <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
+                        <i class="fas fa-bed text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Hari Paling Sepi</p>
+                        <h4 class="text-sm font-black text-white">{{ $heatmapInsights['quietest_day'] }}</h4>
+                    </div>
+                </div>
+                <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                        <i class="fas fa-clock text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Jam Terbaik</p>
+                        <h4 class="text-sm font-black text-white">{{ $heatmapInsights['best_hour'] }}</h4>
+                    </div>
+                </div>
+                <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 border-l-4 border-l-purple-500 relative overflow-hidden group">
+                    <div class="absolute right-0 bottom-0 text-purple-500/5 -mb-2 -mr-2 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-bullhorn text-6xl"></i>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0 relative z-10">
+                        <i class="fas fa-bullhorn text-lg"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Hari Promo Terbaik</p>
+                        <h4 class="text-sm font-black text-white">{{ $heatmapInsights['promo_day'] }}</h4>
+                        <p class="text-[8px] font-bold text-purple-400/70 mt-1 uppercase">Berdasarkan Hari Sepi</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- INACTIVE PRODUCTS SECTION --}}
+    @if(isset($inactiveProducts) && $inactiveProducts->count() > 0)
+    <div class="bg-slate-800/40 backdrop-blur-md rounded-3xl border border-white/5 shadow-2xl overflow-hidden mt-2">
+        <div class="p-8 border-b border-white/5">
+            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
+                <span class="w-2 h-6 bg-rose-500 rounded-full"></span>
+                Produk Tidak Aktif / Mati
+            </h3>
+            <p class="text-[10px] font-bold text-slate-500 mt-2">Daftar produk yang belum terjual selama lebih dari 7 hari berturut-turut.</p>
+        </div>
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            @foreach($inactiveProducts as $ip)
+            <div class="bg-slate-900/40 border border-white/5 hover:border-{{ $ip->inactive_color }}-500/30 rounded-2xl p-5 relative overflow-hidden group transition-all">
+                <div class="absolute right-0 top-0 text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-bl-lg border-b border-l bg-{{ $ip->inactive_color }}-500/20 text-{{ $ip->inactive_color }}-400 border-{{ $ip->inactive_color }}-500/30">
+                    {{ $ip->inactive_status }}
+                </div>
+                <div class="flex flex-col gap-1">
+                    <h4 class="text-base font-black text-white truncate pr-16" title="{{ $ip->name }}">{{ $ip->name }}</h4>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{{ $ip->category ? $ip->category->name : 'Tanpa Kategori' }}</p>
+                </div>
+                <div class="mt-4 pt-4 border-t border-white/5">
+                    <p class="text-xs font-bold text-slate-400 mb-1">
+                        <i class="far fa-clock w-4"></i> Tdk terjual: <span class="text-{{ $ip->inactive_color }}-400">{{ $ip->days_since_last_sale == 999 ? 'Belum pernah' : $ip->days_since_last_sale . ' hari' }}</span>
+                    </p>
+                    <p class="text-xs font-bold text-slate-400 mb-1">
+                        <i class="fas fa-boxes w-4"></i> Sisa stok: <span class="text-white">{{ $ip->product_kind === 'unlimited' ? '∞ (Unlimited)' : $ip->stock }}</span>
+                    </p>
+                    @if($ip->product_kind !== 'unlimited')
+                    <div class="mt-3 bg-rose-500/10 rounded-lg p-2 border border-rose-500/20">
+                        <p class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-0.5">Potensi Rugi Stok</p>
+                        <p class="text-sm font-black text-rose-400">Rp {{ number_format($ip->potential_loss, 0, ',', '.') }}</p>
+                    </div>
+                    @else
+                    <div class="mt-3 bg-slate-500/10 rounded-lg p-2 border border-slate-500/20">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Status Perhatian</p>
+                        <p class="text-sm font-black text-slate-400">Kurang Peminat</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     {{-- TRANSACTION TABLE SECTION --}}
     <div class="bg-slate-800/40 backdrop-blur-md rounded-3xl border border-white/5 shadow-2xl overflow-hidden mt-2">

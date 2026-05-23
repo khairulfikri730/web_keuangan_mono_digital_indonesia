@@ -20,7 +20,7 @@ class MonthlyExpenseController extends Controller
 
     public function index(Request $request)
     {
-        $filter = $request->filter ?? $request->period ?? 'today';
+        $filter = $request->filter ?? $request->period ?? 'month';
         $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
         $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
         if ($start && $end) {

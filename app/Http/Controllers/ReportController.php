@@ -30,8 +30,8 @@ class ReportController extends Controller
     {
         $dfParam = $request->date_from;
         $dtParam = $request->date_to;
-        $dateFrom = ($dfParam && !is_array($dfParam)) ? Carbon::parse($dfParam) : now();
-        $dateTo = ($dtParam && !is_array($dtParam)) ? Carbon::parse($dtParam) : now();
+        $dateFrom = ($dfParam && !is_array($dfParam)) ? Carbon::parse($dfParam) : now()->startOfMonth();
+        $dateTo = ($dtParam && !is_array($dtParam)) ? Carbon::parse($dtParam) : now()->endOfMonth();
 
         $baseQuery = Transaction::completed()
             ->whereBetween('created_at', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
@@ -69,13 +69,55 @@ class ReportController extends Controller
             ->selectRaw('COALESCE(categories.name, "Tanpa Kategori") as category_name, SUM(transaction_items.subtotal) as total')
             ->groupBy('category_name')->get();
 
-        $topProducts = TransactionItem::whereIn('transaction_id', (clone $baseQuery)->pluck('id'))
+        $productPerformance = TransactionItem::whereIn('transaction_id', (clone $baseQuery)->pluck('id'))
             ->selectRaw('product_name, SUM(quantity) as total_qty, SUM(subtotal) as total_revenue, SUM(quantity * cost_price) as total_cost')
-            ->groupBy('product_name')->orderByDesc('total_revenue')->take(10)->get();
+            ->groupBy('product_name')
+            ->get()
+            ->map(function($item) {
+                $item->profit = $item->total_revenue - $item->total_cost;
+                $item->margin = $item->total_revenue > 0 ? round(($item->profit / $item->total_revenue) * 100) : 0;
+                return $item;
+            });
+
+        $topProducts = $productPerformance->sortByDesc('total_revenue')->take(10)->values();
+        $topProfitProduct = $productPerformance->sortByDesc('profit')->first();
+        $worstMarginProduct = $productPerformance->sortBy('margin')->first();
 
         $peakHours = (clone $baseQuery)
             ->selectRaw('HOUR(created_at) as hour, COUNT(*) as count')
             ->groupBy('hour')->orderByDesc('count')->take(5)->get();
+
+        // JAM PALING MENGUNTUNGKAN (MOST PROFITABLE HOUR)
+        $profitableHoursData = DB::table('transactions')
+            ->join('transaction_items', 'transactions.id', '=', 'transaction_items.transaction_id')
+            ->whereIn('transactions.id', (clone $baseQuery)->pluck('id'))
+            ->selectRaw('
+                HOUR(transactions.created_at) as hour,
+                COUNT(DISTINCT transactions.id) as trx_count,
+                SUM(transaction_items.quantity * transaction_items.cost_price) as total_cogs
+            ')
+            ->groupBy('hour')
+            ->get();
+            
+        $salesPerHour = (clone $baseQuery)
+            ->selectRaw('
+                HOUR(created_at) as hour,
+                SUM(total) as total_sales
+            ')
+            ->groupBy('hour')
+            ->get()->keyBy('hour');
+
+        $profitableHours = $profitableHoursData->map(function($item) use ($salesPerHour) {
+            $salesData = $salesPerHour->get($item->hour);
+            $totalSales = $salesData ? $salesData->total_sales : 0;
+            
+            $item->total_sales = $totalSales;
+            $item->profit = $totalSales - $item->total_cogs;
+            $item->margin = $totalSales > 0 ? round(($item->profit / $totalSales) * 100) : 0;
+            return $item;
+        })->sortByDesc('profit')->values();
+        
+        $topProfitableHour = $profitableHours->first();
 
         // SALDO LACI & BANK (ALL-TIME synced — kondisi uang saat ini, tidak berubah saat filter diganti)
         $saldoLaci = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
@@ -92,15 +134,140 @@ class ReportController extends Controller
 
         $users = \App\Models\User::all();
 
+        // PRODUK TIDAK AKTIF / MATI
+        $inactiveProductsQuery = Product::with('category')
+            ->where('is_active', true)
+            ->where(function($q) {
+                $q->where('product_kind', 'unlimited')
+                  ->orWhere(function($sq) {
+                      $sq->where('product_kind', '!=', 'unlimited')
+                         ->where('stock', '>', 0);
+                  });
+            });
+
+        if ($worksheetId) {
+            $inactiveProductsQuery->where('worksheet_id', $worksheetId);
+        }
+        $allProducts = $inactiveProductsQuery->get();
+
+        $lastSales = DB::table('transaction_items')
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->select('transaction_items.product_id', DB::raw('MAX(transactions.created_at) as last_sold_at'))
+            ->groupBy('transaction_items.product_id')
+            ->get()
+            ->keyBy('product_id');
+
+        $inactiveProducts = $allProducts->map(function($product) use ($lastSales) {
+            $lastSoldAt = $lastSales->has($product->id) ? Carbon::parse($lastSales->get($product->id)->last_sold_at) : null;
+            $daysSinceLastSale = $lastSoldAt ? $lastSoldAt->diffInDays(now()) : 999; 
+
+            $product->last_sold_at = $lastSoldAt;
+            $product->days_since_last_sale = $daysSinceLastSale;
+            
+            if ($product->product_kind === 'unlimited') {
+                $product->potential_loss = 0;
+            } else {
+                $product->potential_loss = $product->stock * $product->cost_price;
+            }
+
+            if ($daysSinceLastSale >= 30) {
+                $product->inactive_status = 'Mati';
+                $product->inactive_color = 'red';
+            } elseif ($daysSinceLastSale >= 14) {
+                $product->inactive_status = 'Risiko Kadaluarsa';
+                $product->inactive_color = 'orange';
+            } elseif ($daysSinceLastSale >= 7) {
+                $product->inactive_status = 'Lambat';
+                $product->inactive_color = 'yellow';
+            } else {
+                $product->inactive_status = 'Aktif';
+                $product->inactive_color = 'emerald';
+            }
+
+            return $product;
+        })
+        ->filter(function($product) {
+            return $product->days_since_last_sale >= 7; 
+        })
+        ->sortByDesc('days_since_last_sale')
+        ->take(4) // Show 4 worst
+        ->values();
+
+        // HEATMAP PENJUALAN
+        $heatmapRaw = (clone $baseQuery)
+            ->selectRaw('DAYOFWEEK(created_at) as day_of_week, HOUR(created_at) as hour, COUNT(*) as trx_count, SUM(total) as revenue')
+            ->groupBy('day_of_week', 'hour')
+            ->get();
+
+        $heatmapMatrix = [];
+        for ($d = 1; $d <= 7; $d++) {
+            for ($h = 0; $h < 24; $h++) {
+                $heatmapMatrix[$d][$h] = ['trx_count' => 0, 'revenue' => 0];
+            }
+        }
+
+        $maxHeatmapTrx = 0;
+        $dayTotals = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0];
+        $hourTotals = array_fill(0, 24, 0);
+
+        foreach ($heatmapRaw as $data) {
+            $isoDay = $data->day_of_week - 1;
+            if ($isoDay === 0) $isoDay = 7; // MySQL Sun=1 -> ISO Sun=7
+
+            $h = $data->hour;
+            $trx = $data->trx_count;
+            $rev = $data->revenue;
+
+            $heatmapMatrix[$isoDay][$h] = ['trx_count' => $trx, 'revenue' => $rev];
+            
+            if ($trx > $maxHeatmapTrx) {
+                $maxHeatmapTrx = $trx;
+            }
+
+            $dayTotals[$isoDay] += $trx;
+            $hourTotals[$h] += $trx;
+        }
+
+        $dayNames = [
+            1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 
+            4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'
+        ];
+
+        $busiestDayIso = array_search(max($dayTotals), $dayTotals);
+        $busiestDayName = max($dayTotals) > 0 ? $dayNames[$busiestDayIso] : '-';
+
+        $nonZeroDays = array_filter($dayTotals);
+        if (count($nonZeroDays) > 0) {
+            $quietestDayIso = array_search(min($nonZeroDays), $dayTotals);
+            $quietestDayName = $dayNames[$quietestDayIso];
+        } else {
+            $quietestDayName = '-';
+        }
+
+        $bestHour = array_search(max($hourTotals), $hourTotals);
+        $bestHourText = max($hourTotals) > 0 ? sprintf('%02d:00 - %02d:59', $bestHour, $bestHour) : '-';
+
+        $promoDayName = $quietestDayName !== '-' ? $quietestDayName : '-';
+
+        $heatmapInsights = [
+            'busiest_day' => $busiestDayName,
+            'quietest_day' => $quietestDayName,
+            'best_hour' => $bestHourText,
+            'promo_day' => $promoDayName,
+            'max_trx' => $maxHeatmapTrx
+        ];
+
         return view('reports.sales', compact(
             'transactions', 'summary', 'byPayment', 'topProducts', 'dateFrom', 'dateTo', 'salesPerDay', 
-            'byCategory', 'peakHours', 'users', 'saldoLaci', 'saldoBank', 'totalExpense', 'netProfit'
+            'byCategory', 'peakHours', 'users', 'saldoLaci', 'saldoBank', 'totalExpense', 'netProfit',
+            'topProfitableHour', 'topProfitProduct', 'worstMarginProduct', 'inactiveProducts',
+            'heatmapMatrix', 'heatmapInsights'
         ));
     }
 
     public function financial(Request $request)
     {
-        $filter = $request->filter ?? $request->period ?? 'today';
+        $filter = $request->filter ?? $request->period ?? 'month';
         $start = is_array($request->start ?? $request->date_from) ? null : ($request->start ?? $request->date_from);
         $end = is_array($request->end ?? $request->date_to) ? null : ($request->end ?? $request->date_to);
         if ($start && $end) {

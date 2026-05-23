@@ -356,33 +356,208 @@
         </div>
     </div>
 
-    <!-- Pemasukan Berdasarkan Metode Pembayaran -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-[#111827] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group hover:bg-[#1F2937] transition-colors flex items-center justify-between">
+    <!-- 2.6 INCOME BREAKDOWN -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Pemasukan QRIS/Bank -->
+        <div class="bg-[#111827] border border-slate-800 rounded-[1.5rem] p-6 flex justify-between items-center shadow-lg transition-colors hover:bg-slate-800/80">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pemasukan QRIS/Bank</p>
-                <h3 class="text-2xl font-black text-purple-400 tracking-tight" id="valIncomeQris">Rp {{ number_format($incomeQris, 0, ',', '.') }}</h3>
+                <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pemasukan QRIS/Bank</p>
+                <h3 class="text-2xl font-black text-[#C084FC]" id="valIncomeQris">Rp {{ number_format($incomeQris, 0, ',', '.') }}</h3>
             </div>
-            <div class="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400 text-2xl">
-                <i class="fas fa-qrcode"></i>
+            <div class="w-12 h-12 rounded-full bg-[#111827] flex items-center justify-center text-[#C084FC] border border-slate-700/50">
+                <i class="fas fa-qrcode text-lg"></i>
             </div>
         </div>
-        <div class="bg-[#111827] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group hover:bg-[#1F2937] transition-colors flex items-center justify-between">
+
+        <!-- Pemasukan Tunai -->
+        <div class="bg-[#111827] border border-slate-800 rounded-[1.5rem] p-6 flex justify-between items-center shadow-lg transition-colors hover:bg-slate-800/80">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pemasukan Tunai</p>
-                <h3 class="text-2xl font-black text-emerald-400 tracking-tight" id="valIncomeCash">Rp {{ number_format($incomeCash, 0, ',', '.') }}</h3>
+                <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pemasukan Tunai</p>
+                <h3 class="text-2xl font-black text-[#34D399]" id="valIncomeCash">Rp {{ number_format($incomeCash, 0, ',', '.') }}</h3>
             </div>
-            <div class="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-2xl">
-                <i class="fas fa-money-bill-wave"></i>
+            <div class="w-12 h-12 rounded-full bg-[#111827] flex items-center justify-center text-[#34D399] border border-slate-700/50">
+                <i class="fas fa-money-bill-wave text-lg"></i>
             </div>
         </div>
-        <div class="bg-[#111827] rounded-2xl p-5 border border-slate-700/50 relative overflow-hidden group hover:bg-[#1F2937] transition-colors flex items-center justify-between">
+
+        <!-- Pemasukan Transfer -->
+        <div class="bg-[#111827] border border-slate-800 rounded-[1.5rem] p-6 flex justify-between items-center shadow-lg transition-colors hover:bg-slate-800/80">
             <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pemasukan Transfer</p>
-                <h3 class="text-2xl font-black text-blue-400 tracking-tight" id="valIncomeTransfer">Rp {{ number_format($incomeTransfer, 0, ',', '.') }}</h3>
+                <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pemasukan Transfer</p>
+                <h3 class="text-2xl font-black text-[#60A5FA]" id="valIncomeTransfer">Rp {{ number_format($incomeTransfer, 0, ',', '.') }}</h3>
             </div>
-            <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 text-2xl">
-                <i class="fas fa-building-columns"></i>
+            <div class="w-12 h-12 rounded-full bg-[#111827] flex items-center justify-center text-[#60A5FA] border border-slate-700/50">
+                <i class="fas fa-university text-lg"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TARGET VS REALISASI (NEW SECTION) -->
+    <div class="bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-[2rem] p-8 shadow-2xl mb-8 relative overflow-hidden">
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h3 class="text-xl font-black text-white tracking-tighter flex items-center gap-3">
+                    <span class="w-3 h-8 bg-blue-500 rounded-full"></span>
+                    Target vs Realisasi
+                </h3>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Pantau pencapaian target bulan ini</p>
+            </div>
+            <button onclick="document.getElementById('targetModal').classList.remove('hidden')" class="px-5 py-2.5 bg-slate-900/50 border border-white/5 hover:border-blue-500/30 hover:bg-blue-500/10 text-blue-400 rounded-xl text-[10px] font-black uppercase tracking-widest transition-premium">
+                <i class="fas fa-bullseye mr-2"></i> Atur Target
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Omzet -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Omzet</p>
+                    <p class="text-[10px] font-bold {{ $targetData['omzet']['progress'] >= 100 ? 'text-emerald-400' : 'text-blue-400' }}">{{ $targetData['omzet']['progress'] }}%</p>
+                </div>
+                <div class="w-full bg-slate-900/50 rounded-full h-3 mb-3 border border-white/5 overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-1000 {{ $targetData['omzet']['progress'] >= 100 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' }}" style="width: {{ min(100, $targetData['omzet']['progress']) }}%"></div>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-sm font-black text-white">Rp {{ number_format($targetData['omzet']['realisasi'], 0, ',', '.') }}</p>
+                        <p class="text-[9px] font-bold text-slate-500">dari Rp {{ number_format($targetData['omzet']['target'], 0, ',', '.') }}</p>
+                    </div>
+                    @if($targetData['omzet']['sisa'] > 0)
+                        <p class="text-[9px] font-black text-amber-400">Sisa: Rp {{ number_format($targetData['omzet']['sisa'], 0, ',', '.') }}</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Profit -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Profit Bersih</p>
+                    <p class="text-[10px] font-bold {{ $targetData['profit']['progress'] >= 100 ? 'text-emerald-400' : 'text-purple-400' }}">{{ $targetData['profit']['progress'] }}%</p>
+                </div>
+                <div class="w-full bg-slate-900/50 rounded-full h-3 mb-3 border border-white/5 overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-1000 {{ $targetData['profit']['progress'] >= 100 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' }}" style="width: {{ min(100, $targetData['profit']['progress']) }}%"></div>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-sm font-black text-white">Rp {{ number_format($targetData['profit']['realisasi'], 0, ',', '.') }}</p>
+                        <p class="text-[9px] font-bold text-slate-500">dari Rp {{ number_format($targetData['profit']['target'], 0, ',', '.') }}</p>
+                    </div>
+                    @if($targetData['profit']['sisa'] > 0)
+                        <p class="text-[9px] font-black text-amber-400">Sisa: Rp {{ number_format($targetData['profit']['sisa'], 0, ',', '.') }}</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Transaksi -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Transaksi</p>
+                    <p class="text-[10px] font-bold {{ $targetData['transaksi']['progress'] >= 100 ? 'text-emerald-400' : 'text-amber-400' }}">{{ $targetData['transaksi']['progress'] }}%</p>
+                </div>
+                <div class="w-full bg-slate-900/50 rounded-full h-3 mb-3 border border-white/5 overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-1000 {{ $targetData['transaksi']['progress'] >= 100 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' }}" style="width: {{ min(100, $targetData['transaksi']['progress']) }}%"></div>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-sm font-black text-white">{{ number_format($targetData['transaksi']['realisasi'], 0, ',', '.') }} Tx</p>
+                        <p class="text-[9px] font-bold text-slate-500">dari {{ number_format($targetData['transaksi']['target'], 0, ',', '.') }} Tx</p>
+                    </div>
+                    @if($targetData['transaksi']['sisa'] > 0)
+                        <p class="text-[9px] font-black text-amber-400">Sisa: {{ number_format($targetData['transaksi']['sisa'], 0, ',', '.') }} Tx</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. METODE PEMBAYARAN & RISIKO CASHFLOW (UPGRADED) -->
+    <div class="bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-[2rem] p-8 shadow-2xl mb-8 relative overflow-hidden">
+        <h3 class="text-xl font-black text-white tracking-tighter flex items-center gap-3 mb-8">
+            <span class="w-3 h-8 bg-purple-500 rounded-full"></span>
+            Metode Pembayaran & Analisis Risiko
+        </h3>
+        
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            <!-- AI Insights Cards -->
+            <div class="xl:col-span-4 space-y-4">
+                <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-5 flex gap-4 items-start hover:border-blue-500/30 transition-premium group">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Metode Dominan</p>
+                        <h4 class="text-base font-black text-white mb-1">
+                            {{ ucfirst($pmInsights['dominant_method']) }} mendominasi {{ $pmInsights['dominant_percentage'] }}%
+                        </h4>
+                        <p class="text-xs text-slate-400">Nilai transaksi tertinggi berasal dari metode ini.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-5 flex gap-4 items-start hover:border-emerald-500/30 transition-premium group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pertumbuhan QRIS</p>
+                        <h4 class="text-base font-black text-white mb-1">
+                            QRIS {{ ($pmAnalytics['qris']['growth'] ?? 0) >= 0 ? 'naik' : 'turun' }} {{ abs($pmAnalytics['qris']['growth'] ?? 0) }}% periode ini
+                        </h4>
+                        <p class="text-xs text-slate-400">Tren adopsi pembayaran digital oleh pelanggan.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 border border-{{ $pmInsights['risk_color'] }}-500/30 rounded-2xl p-5 flex gap-4 items-start bg-gradient-to-br from-{{ $pmInsights['risk_color'] }}-500/5 to-transparent">
+                    <div class="w-10 h-10 rounded-xl bg-{{ $pmInsights['risk_color'] }}-500/20 text-{{ $pmInsights['risk_color'] }}-400 flex items-center justify-center shrink-0 border border-{{ $pmInsights['risk_color'] }}-500/30">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-{{ $pmInsights['risk_color'] }}-400 uppercase tracking-widest mb-1">Risiko Cashflow: {{ $pmInsights['risk_level'] }}</p>
+                        <p class="text-xs text-slate-300 leading-relaxed">{{ $pmInsights['risk_msg'] }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trend Multi-line Chart & Detailed Stats -->
+            <div class="xl:col-span-8 flex flex-col gap-6">
+                <!-- Detailed Horizontal Progress -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    @foreach(['cash' => ['name' => 'Tunai / Cash', 'color' => 'amber', 'icon' => 'fa-money-bill-wave'], 
+                              'qris' => ['name' => 'QRIS', 'color' => 'purple', 'icon' => 'fa-qrcode'], 
+                              'transfer' => ['name' => 'Transfer Bank', 'color' => 'blue', 'icon' => 'fa-building-columns'],
+                              'debit' => ['name' => 'Debit/Kredit', 'color' => 'teal', 'icon' => 'fa-credit-card']] as $key => $meta)
+                    @if(isset($pmAnalytics[$key]) && $pmAnalytics[$key]['revenue'] > 0)
+                    <div class="bg-slate-900/30 rounded-xl p-4 border border-white/5">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fas {{ $meta['icon'] }} text-{{ $meta['color'] }}-400"></i>
+                                <span class="text-xs font-bold text-white">{{ $meta['name'] }}</span>
+                            </div>
+                            <span class="text-[10px] font-black text-slate-400">{{ $pmAnalytics[$key]['percentage'] }}%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 mb-3">
+                            <div class="bg-{{ $meta['color'] }}-500 h-1.5 rounded-full" style="width: {{ $pmAnalytics[$key]['percentage'] }}%"></div>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 mb-0.5">Total Revenue</p>
+                                <p class="text-sm font-black text-white">Rp {{ number_format($pmAnalytics[$key]['revenue'], 0, ',', '.') }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] font-bold text-slate-500 mb-0.5">Avg: Rp {{ number_format($pmAnalytics[$key]['avg'], 0, ',', '.') }}</p>
+                                <p class="text-[10px] font-black {{ $pmAnalytics[$key]['growth'] >= 0 ? 'text-emerald-400' : 'text-red-400' }}">
+                                    <i class="fas fa-arrow-{{ $pmAnalytics[$key]['growth'] >= 0 ? 'up' : 'down' }}"></i> {{ abs($pmAnalytics[$key]['growth']) }}%
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                    @endforeach
+                </div>
+
+                <!-- ApexChart Wrapper -->
+                <div class="bg-slate-900/30 border border-white/5 rounded-2xl p-4 flex-1">
+                    <div class="w-full h-[250px]" id="paymentMethodTrendChart"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -424,12 +599,28 @@
 
     <!-- 3. MAIN AREA SPLIT -->
     <div class="flex flex-col lg:flex-row gap-6 mb-6">
-        <!-- LEFT (70%): Grafik Cashflow -->
-        <div class="w-full lg:w-[70%] bg-[#111827] border border-slate-700/50 rounded-2xl p-5">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-white">Grafik Cashflow</h2>
+        <!-- LEFT (70%): Grafik Trend Laba Bersih -->
+        <div class="w-full lg:w-[70%] bg-[#111827] border border-slate-700/50 rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex justify-between items-start mb-6 relative z-10">
+                <div>
+                    <h2 class="text-xl font-black text-white tracking-tight">Trend Laba Bersih</h2>
+                    <p class="text-xs text-slate-400 font-medium mt-1" id="valProfitSummary">{{ $profitInsights['summary'] }}</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="bg-slate-800/50 border border-emerald-500/10 rounded-xl px-4 py-2 text-right">
+                        <p class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Rata-rata Profit</p>
+                        <p class="text-sm font-black text-emerald-400" id="valAvgProfit">Rp {{ number_format($profitInsights['avg_profit'], 0, ',', '.') }}</p>
+                    </div>
+                    <div class="bg-slate-800/50 border border-blue-500/10 rounded-xl px-4 py-2 text-right">
+                        <p class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Prediksi (Bulan Depan)</p>
+                        <p class="text-sm font-black text-blue-400" id="valPredictedProfit">Rp {{ number_format($profitInsights['predicted_profit'], 0, ',', '.') }}</p>
+                    </div>
+                </div>
             </div>
-            <div class="w-full h-[300px]" id="cashflowChart"></div>
+            <div class="w-full h-[300px] relative z-10" id="cashflowChart"></div>
+            
+            <!-- Decorative Glow -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
         </div>
 
         <!-- RIGHT (30%): Quick Insight Panel -->
@@ -446,40 +637,99 @@
                 </div>
             </div>
 
-            <!-- Insight 2: Top Kategori Pengeluaran -->
-            <div class="bg-[#111827] border border-slate-700/50 rounded-2xl p-4">
-                <h3 class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-3">Top Pengeluaran (Kategori)</h3>
-                <div class="space-y-3" id="valTopExpenseList">
-                    @forelse($expenseByCategory->take(3) as $cat)
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-slate-300">{{ $cat->category }}</span>
-                            <span class="text-white font-bold">Rp {{ number_format($cat->total, 0, ',', '.') }}</span>
-                        </div>
-                    @empty
-                        <div class="text-sm text-slate-500 text-center py-2">Belum ada data</div>
-                    @endforelse
-                </div>
+            <!-- Tambahan Insight jika diperlukan (bisa untuk metric lain di masa depan) -->
+            <div class="bg-[#111827] border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-center items-center h-full min-h-[200px] border-dashed">
+                <i class="fas fa-chart-pie text-slate-600 text-3xl mb-3"></i>
+                <p class="text-sm text-slate-500 font-medium">Ruang Insight Tambahan</p>
             </div>
+        </div>
+    </div>
 
-            <!-- Insight 3: Transaksi Terbesar Hari Ini -->
-            <div class="bg-[#111827] border border-slate-700/50 rounded-2xl p-4" id="valBiggestExpenseContainer">
-                <h3 class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-3">Pengeluaran Terbesar</h3>
-                @if($biggestExpense)
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 flex-shrink-0 mt-0.5">
-                        <i class="fas fa-exclamation-triangle text-xs"></i>
+    <!-- 5. BIAYA OPERASIONAL & ANALISIS PENGELUARAN -->
+    <div class="bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-[2rem] p-8 shadow-2xl mb-8 relative overflow-hidden">
+        <h3 class="text-xl font-black text-white tracking-tighter flex items-center gap-3 mb-8">
+            <span class="w-3 h-8 bg-red-500 rounded-full"></span>
+            Biaya Operasional & Analisis Pengeluaran
+        </h3>
+        
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            <!-- Left: Overview & Insights -->
+            <div class="xl:col-span-4 space-y-4">
+                <!-- Total Operational Cost -->
+                <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-center relative overflow-hidden group hover:border-red-500/30 transition-premium">
+                    <div class="absolute -right-6 -top-6 w-32 h-32 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-all duration-500"></div>
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 relative z-10">Total Operasional</p>
+                    <h4 class="text-3xl font-black text-white mb-2 relative z-10">Rp {{ number_format($expenseInsights['total'], 0, ',', '.') }}</h4>
+                    <div class="flex items-center gap-2 relative z-10">
+                        <span class="px-2 py-1 rounded-lg text-[10px] font-bold {{ $expenseInsights['is_increasing'] ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400' }}">
+                            <i class="fas fa-arrow-{{ $expenseInsights['is_increasing'] ? 'up' : 'down' }}"></i> {{ abs($expenseInsights['growth']) }}%
+                        </span>
+                        <span class="text-xs text-slate-400">vs periode lalu</span>
+                    </div>
+                </div>
+
+                <!-- AI Insight -->
+                <div class="bg-slate-900/50 border border-{{ $expenseInsights['color'] }}-500/30 rounded-2xl p-5 flex gap-4 items-start bg-gradient-to-br from-{{ $expenseInsights['color'] }}-500/5 to-transparent">
+                    <div class="w-10 h-10 rounded-xl bg-{{ $expenseInsights['color'] }}-500/20 text-{{ $expenseInsights['color'] }}-400 flex items-center justify-center shrink-0 border border-{{ $expenseInsights['color'] }}-500/30">
+                        <i class="fas {{ $expenseInsights['icon'] }}"></i>
                     </div>
                     <div>
-                        <p class="text-sm font-bold text-white">{{ $biggestExpense->category }}</p>
-                        <p class="text-xs text-slate-400">{{ $biggestExpense->description }}</p>
-                        <p class="text-red-400 font-bold mt-1 text-sm">- Rp {{ number_format($biggestExpense->amount, 0, ',', '.') }}</p>
+                        <p class="text-[9px] font-black text-{{ $expenseInsights['color'] }}-400 uppercase tracking-widest mb-1">Analisis Sistem</p>
+                        <p class="text-xs text-slate-300 leading-relaxed">{{ $expenseInsights['message'] }}</p>
                     </div>
                 </div>
-                @else
-                <div class="text-sm text-slate-500 text-center py-2">Belum ada pengeluaran</div>
+                
+                <!-- Most Wasteful -->
+                @if($biggestExpense)
+                <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-5 flex gap-4 items-start hover:border-amber-500/30 transition-premium">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pengeluaran Terbesar</p>
+                        <h4 class="text-sm font-bold text-white">{{ $biggestExpense->category }}</h4>
+                        <p class="text-amber-400 font-bold mt-1 text-sm">- Rp {{ number_format($biggestExpense->amount, 0, ',', '.') }}</p>
+                    </div>
+                </div>
                 @endif
             </div>
 
+            <!-- Right: Breakdown Progress -->
+            <div class="xl:col-span-8 flex flex-col">
+                <div class="bg-slate-900/30 rounded-2xl p-6 border border-white/5 h-full">
+                    <h4 class="text-sm font-black text-white mb-6 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-list-ul text-slate-400"></i> Proporsi Pengeluaran
+                    </h4>
+                    
+                    <div class="space-y-5">
+                        @forelse($expenseByCategory as $index => $cat)
+                            @php
+                                $percentage = $expenseInsights['total'] > 0 ? round(($cat->total / $expenseInsights['total']) * 100) : 0;
+                                // Variasi warna untuk visualisasi yang menarik
+                                $colors = ['red', 'orange', 'amber', 'rose', 'pink'];
+                                $color = $colors[$index % count($colors)];
+                            @endphp
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-slate-300">{{ $cat->category }}</span>
+                                    <div class="text-right">
+                                        <span class="text-sm font-black text-white">Rp {{ number_format($cat->total, 0, ',', '.') }}</span>
+                                        <span class="text-[10px] font-bold text-slate-500 ml-2">({{ $percentage }}%)</span>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                                    <div class="bg-{{ $color }}-500 h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(239,68,68,0.3)]" style="width: {{ $percentage }}%"></div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="flex flex-col items-center justify-center py-10 text-slate-500">
+                                <i class="fas fa-box-open text-4xl mb-3 opacity-20"></i>
+                                <p class="text-sm font-medium">Belum ada pengeluaran pada periode ini</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -925,17 +1175,23 @@
         
         // --- 1. CHART INITIALIZATION (APEXCHARTS) ---
         let chart;
-        const initChart = (dates, income, expense) => {
+        const initChart = (dates, income, expense, netProfit) => {
             const chartOptions = {
                 series: [{
+                    name: 'Laba Bersih',
+                    data: netProfit,
+                    type: 'line'
+                }, {
                     name: 'Pemasukan',
-                    data: income
+                    data: income,
+                    type: 'area'
                 }, {
                     name: 'Pengeluaran',
-                    data: expense
+                    data: expense,
+                    type: 'area'
                 }],
                 chart: {
-                    type: 'area',
+                    type: 'line',
                     height: 300,
                     toolbar: { show: false },
                     fontFamily: 'inherit',
@@ -945,20 +1201,20 @@
                         speed: 800,
                     }
                 },
-                colors: ['#10B981', '#EF4444'], // Emerald & Red
+                colors: ['#3B82F6', '#10B981', '#EF4444'], // Blue, Emerald, Red
                 fill: {
-                    type: 'gradient',
+                    type: ['solid', 'gradient', 'gradient'],
                     gradient: {
                         shadeIntensity: 1,
-                        opacityFrom: 0.4,
-                        opacityTo: 0.05,
+                        opacityFrom: 0.15,
+                        opacityTo: 0.01,
                         stops: [0, 100]
                     }
                 },
                 dataLabels: { enabled: false },
                 stroke: {
                     curve: 'smooth',
-                    width: 2
+                    width: [4, 1.5, 1.5]
                 },
                 xaxis: {
                     categories: dates,
@@ -1007,7 +1263,77 @@
         };
 
         // Initial Chart
-        initChart({!! json_encode($chartDates) !!}, {!! json_encode($chartIncome) !!}, {!! json_encode($chartExpense) !!});
+        initChart({!! json_encode($chartDates) !!}, {!! json_encode($chartIncome) !!}, {!! json_encode($chartExpense) !!}, {!! json_encode($chartNetProfit) !!});
+
+        // --- 2. PAYMENT METHOD TREND CHART ---
+        let pmChart;
+        const pmLabels = {!! json_encode($pmChartData['labels'] ?? []) !!};
+        const pmCash = {!! json_encode($pmChartData['cash'] ?? []) !!};
+        const pmQris = {!! json_encode($pmChartData['qris'] ?? []) !!};
+        const pmTransfer = {!! json_encode($pmChartData['transfer'] ?? []) !!};
+        const pmDebit = {!! json_encode($pmChartData['debit'] ?? []) !!};
+
+        if (document.querySelector("#paymentMethodTrendChart") && pmLabels.length > 0) {
+            const pmChartOptions = {
+                series: [{
+                    name: 'Tunai',
+                    data: pmCash
+                }, {
+                    name: 'QRIS',
+                    data: pmQris
+                }, {
+                    name: 'Transfer',
+                    data: pmTransfer
+                }, {
+                    name: 'Debit',
+                    data: pmDebit
+                }],
+                chart: {
+                    type: 'area',
+                    height: 250,
+                    toolbar: { show: false },
+                    fontFamily: 'inherit',
+                    animations: { enabled: true, easing: 'easeinout', speed: 800 }
+                },
+                colors: ['#F59E0B', '#A855F7', '#3B82F6', '#14B8A6'], // Amber, Purple, Blue, Teal
+                fill: {
+                    type: 'gradient',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05, stops: [0, 100] }
+                },
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 2 },
+                xaxis: {
+                    categories: pmLabels,
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    labels: { style: { colors: '#64748B', fontSize: '10px' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#64748B', fontSize: '10px' },
+                        formatter: (value) => {
+                            if (value >= 1000000) return 'Rp' + (value / 1000000).toFixed(1) + 'M';
+                            if (value >= 1000) return 'Rp' + (value / 1000).toFixed(0) + 'K';
+                            return value;
+                        }
+                    }
+                },
+                grid: {
+                    borderColor: '#1E293B',
+                    strokeDashArray: 3,
+                    yaxis: { lines: { show: true } },
+                    xaxis: { lines: { show: false } }
+                },
+                legend: { show: false },
+                tooltip: {
+                    theme: 'dark',
+                    y: { formatter: function (val) { return "Rp " + new Intl.NumberFormat('id-ID').format(val) } }
+                }
+            };
+
+            pmChart = new ApexCharts(document.querySelector("#paymentMethodTrendChart"), pmChartOptions);
+            pmChart.render();
+        }
 
 
         // --- 2. AJAX DATA FETCH ---
@@ -1059,6 +1385,16 @@
 
                 // Update Insights
                 document.getElementById('valAvgIncome').innerText = 'Rp ' + data.insights.avgIncomeFmt;
+                
+                if(document.getElementById('valProfitSummary')) {
+                    document.getElementById('valProfitSummary').innerText = data.profitInsights.summary;
+                }
+                if(document.getElementById('valAvgProfit')) {
+                    document.getElementById('valAvgProfit').innerText = 'Rp ' + data.profitInsights.avg_profitFmt;
+                }
+                if(document.getElementById('valPredictedProfit')) {
+                    document.getElementById('valPredictedProfit').innerText = 'Rp ' + data.profitInsights.predicted_profitFmt;
+                }
                 
                 // Top Expenses
                 let topExpHtml = '';
@@ -1125,7 +1461,7 @@
                 }
 
                 // Update Chart
-                initChart(data.chart.labels, data.chart.income, data.chart.expense);
+                initChart(data.chart.labels, data.chart.income, data.chart.expense, data.chart.netProfit);
 
                 // Animation for balance update
                 const laciCard = document.getElementById('valSaldoLaci');
@@ -1664,7 +2000,81 @@ async function submitAdjKas(event) {
                 </form>
             </div>
         </div>
+        </div>
     </div>
+
+    <!-- MODAL TARGET OMZET/PROFIT/TRANSAKSI -->
+    <div id="targetModal" class="fixed inset-0 bg-[#0F172A]/90 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden transform transition-all duration-500 relative">
+            <button type="button" onclick="document.getElementById('targetModal').classList.add('hidden')" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all flex items-center justify-center z-20">
+                <i class="fas fa-times"></i>
+            </button>
+            <form action="{{ route('settings.targets') }}" method="POST">
+                @csrf
+                <input type="hidden" name="_method" value="PUT">
+                <div class="p-10">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                            <i class="fas fa-bullseye text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-black text-white tracking-tighter italic uppercase leading-none">Target Bulanan</h3>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Konfigurasi Target Perusahaan</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-5 relative z-10">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Target Omzet (Rp)</label>
+                            <div class="relative group">
+                                <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-black group-focus-within:text-blue-400 transition-colors z-30">Rp</div>
+                                <input type="text" class="target-currency-input w-full bg-slate-900/50 border border-white/5 rounded-2xl pl-12 pr-5 py-4 text-white font-black text-lg focus:border-blue-500 focus:ring-0 transition-premium placeholder-slate-600 relative z-20"
+                                    value="{{ number_format($targetData['omzet']['target'] ?? 0, 0, '', '') }}" placeholder="0" autocomplete="off" required>
+                                <input type="hidden" name="target_omzet" class="target-raw-input" value="{{ $targetData['omzet']['target'] ?? 0 }}">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Target Profit (Rp)</label>
+                            <div class="relative group">
+                                <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-black group-focus-within:text-blue-400 transition-colors z-30">Rp</div>
+                                <input type="text" class="target-currency-input w-full bg-slate-900/50 border border-white/5 rounded-2xl pl-12 pr-5 py-4 text-white font-black text-lg focus:border-blue-500 focus:ring-0 transition-premium placeholder-slate-600 relative z-20"
+                                    value="{{ number_format($targetData['profit']['target'] ?? 0, 0, '', '') }}" placeholder="0" autocomplete="off" required>
+                                <input type="hidden" name="target_profit" class="target-raw-input" value="{{ $targetData['profit']['target'] ?? 0 }}">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Target Transaksi</label>
+                            <input type="number" name="target_transaksi" value="{{ $targetData['transaksi']['target'] ?? 0 }}" required
+                                class="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-white font-black text-lg focus:border-blue-500 focus:ring-0 transition-premium placeholder-slate-600 relative z-20">
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex flex-col gap-3 relative z-10">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-500/20 transition-premium uppercase tracking-widest text-[10px] active:scale-95 relative z-20">
+                            Simpan Target
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.target-currency-input').forEach(input => {
+            // Format initial value
+            if (input.value) {
+                input.value = new Intl.NumberFormat('id-ID').format(parseInt(input.value));
+            }
+            
+            input.addEventListener('input', function() {
+                let val = this.value.replace(/[^0-9]/g, '');
+                this.nextElementSibling.value = val; // Set the hidden raw input
+                this.value = val ? new Intl.NumberFormat('id-ID').format(parseInt(val)) : '';
+            });
+        });
+    });
+</script>
 
 @endpush
 @endsection

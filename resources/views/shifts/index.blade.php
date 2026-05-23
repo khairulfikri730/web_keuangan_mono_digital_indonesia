@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Manajemen Shift')
 @section('page-title', 'Manajemen Shift Kasir')
@@ -133,16 +133,16 @@
                             $start = \Carbon\Carbon::parse($startVal ?? now()->startOfMonth());
                             $end = \Carbon\Carbon::parse($endVal ?? now());
                         @endphp
-                        <x-custom-filter :dateFrom="$start" :dateTo="$end" />
+                        <x-custom-filter period="today" :dateFrom="$start" :dateTo="$end" />
 
                         <select name="status" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-2xl px-4 py-2.5 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
-                            <option value="">— Semua Status —</option>
+                            <option value="">â€” Semua Status â€”</option>
                             <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Aktif (Open)</option>
                             <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Selesai (Closed)</option>
                         </select>
 
                         <select name="user_id" onchange="this.form.submit()" class="bg-slate-800/50 border border-white/5 rounded-2xl px-4 py-2.5 text-[11px] font-black text-slate-300 focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider">
-                            <option value="">— Semua Kasir —</option>
+                            <option value="">â€” Semua Kasir â€”</option>
                             @foreach($users as $u)
                                 <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
                             @endforeach
@@ -345,3 +345,4 @@ function confirmDelete(id) {
 @endpush
 @endif
 @endsection
+
