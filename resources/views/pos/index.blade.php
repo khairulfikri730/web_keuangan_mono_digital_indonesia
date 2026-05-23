@@ -156,7 +156,7 @@
                         <h3 class="font-black text-rose-600 text-sm uppercase tracking-widest">PROMO</h3>
                         <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100" x-text="promoProducts.length + ' Item'"></span>
                     </div>
-                    <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                    <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                         <template x-for="p in promoProducts" :key="'promo-view-'+p.id">
                             @include('pos._product_card')
                         </template>
@@ -172,7 +172,7 @@
                         <h3 class="font-black text-amber-600 text-sm uppercase tracking-widest">BEST SELLER</h3>
                         <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100" x-text="bestSellerProducts.length + ' Item'"></span>
                     </div>
-                    <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                    <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                         <template x-for="p in bestSellerProducts" :key="'best-view-'+p.id">
                             @include('pos._product_card')
                         </template>
@@ -192,7 +192,7 @@
                         </div>
                         
                         {{-- Inner Grid --}}
-                        <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                        <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                             <template x-for="p in group.products.filter(x => filterProduct(x))" :key="'group-item-'+p.id">
                                 @include('pos._product_card')
                             </template>
@@ -209,7 +209,7 @@
                     <span class="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md" x-text="products.filter(p => filterProduct(p)).length + ' Item'"></span>
                 </div>
 
-                <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                     <template x-for="p in products.filter(p => filterProduct(p))" :key="p.id">
                         @include('pos._product_card')
                     </template>
@@ -315,7 +315,7 @@
                     <i class="far fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"></i>
                     <input type="text" x-model="activeWorksheet.customerName" class="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all" placeholder="Ketik nama atau no HP...">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4">
                     <div class="relative group">
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. HP</label>
                         <i class="fas fa-phone-alt absolute left-4 top-[38px] text-[10px] text-slate-300"></i>
@@ -411,7 +411,7 @@
             </div>
 
             {{-- ACTIONS --}}
-            <div class="grid grid-cols-2 gap-3 pt-2">
+            <div class="grid grid-cols-1 gap-3 pt-2">
                 <button @click="resetCurrentWorksheet()" class="py-3.5 bg-red-50 text-red-600 border border-red-100 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]">Batal</button>
                 <button @click="openPayment()" 
                         :disabled="!activeShift || activeWorksheet.cart.length === 0" 
@@ -1148,7 +1148,7 @@
                     {{-- Main Category --}}
                     <div>
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Jenis Pengeluaran</label>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-1 gap-2">
                             <template x-for="cat in ['operasional', 'consumable', 'bahan_baku', 'variabel']">
                                 <button @click="cashOutMainCategory = cat; cashOutSubCategory = ''"
                                         :class="cashOutMainCategory === cat ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20' : 'bg-slate-50 text-slate-500 border-slate-100 hover:border-orange-200'"
@@ -2819,6 +2819,7 @@ function closeCashOut() {
 </script>
 @endpush
 @endsection
+
 
 
 
