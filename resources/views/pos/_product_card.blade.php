@@ -8,7 +8,7 @@
      x-transition:leave-start="opacity-100 transform scale-100"
      x-transition:leave-end="opacity-0 transform scale-95"
      class="product-card group rounded-2xl border overflow-hidden cursor-pointer hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.03] active:scale-95 active:shadow-sm transition-all duration-300 relative flex"
-     :style="`border-color: ${p.is_stockless ? (p.category?.color || '#6366f1') : (activeCategory !== '' && activeCategory === (p.category_id || p.category?.id || '') ? (p.category?.color || '#10b981') : (lastAddedId === p.id ? (p.category?.color || '#10b981') : '#e2e8f0'))}; box-shadow: ${lastAddedId === p.id ? '0 0 0 4px '+(p.category?.color || (p.is_stockless ? '#6366f1' : '#10b981'))+'40' : (activeCategory !== '' && activeCategory === (p.category_id || p.category?.id || '') ? '0 4px 15px -3px '+(p.category?.color || '#10b981')+'40' : (p.is_stockless ? '0 4px 15px -3px '+(p.category?.color || '#6366f1')+'20' : ''))}; background: white;`"
+     :style="`border-color: ${p.is_stockless ? (p.category?.color || '#6366f1') : (activeCategory !== '' && activeCategory === (p.category_id || p.category?.id || '') ? (p.category?.color || '#10b981') : (lastAddedId === p.id ? (p.category?.color || '#10b981') : 'rgba(255,255,255,0.1)'))}; box-shadow: ${lastAddedId === p.id ? '0 0 0 4px '+(p.category?.color || (p.is_stockless ? '#6366f1' : '#10b981'))+'40' : (activeCategory !== '' && activeCategory === (p.category_id || p.category?.id || '') ? '0 4px 15px -3px '+(p.category?.color || '#10b981')+'40' : (p.is_stockless ? '0 4px 15px -3px '+(p.category?.color || '#6366f1')+'20' : ''))}; background: #1e293b;`"
      :class="[viewMode === 'grid' ? 'flex-col' : 'flex-row items-center p-3 gap-4', lastAddedId === p.id ? 'ring-2 ring-offset-1 ring-emerald-400' : '']">
     
     {{-- Accent Glow --}}
@@ -58,11 +58,11 @@
            :style="`color: ${p.category?.color || (p.is_stockless ? '#818cf8' : '#94a3b8')}`"
            x-text="p.category ? p.category.name : '-'"></p>
         <p class="text-sm font-black leading-snug mb-2 line-clamp-2 flex-1 transition-colors"
-           :class="p.is_stockless ? 'text-indigo-800 group-hover:text-indigo-600' : 'text-slate-800 group-hover:text-emerald-600'"
+           :class="p.is_stockless ? 'text-indigo-300 group-hover:text-indigo-200' : 'text-white group-hover:text-emerald-400'"
            x-text="p.name"></p>
         
         <div class="flex items-center justify-between mt-auto pt-2 border-t"
-             :class="p.is_stockless ? 'border-indigo-100' : 'border-slate-50'">
+             :class="p.is_stockless ? 'border-indigo-500/20' : 'border-white/10'">
             <div class="flex flex-col">
                 <template x-if="p.is_promo && p.discount_price > 0">
                     <span class="text-[9px] text-slate-400 line-through font-bold mb-[-4px]" x-text="formatRp(p.price)"></span>

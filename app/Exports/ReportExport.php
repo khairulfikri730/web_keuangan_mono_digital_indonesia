@@ -45,6 +45,11 @@ class ReportExport implements WithMultipleSheets
         if (!empty($this->data['top_products'])) {
             $sheets[] = new TopProductsSheet($this->data['top_products']);
         }
+        
+        // 5. Shift Reports
+        if (!empty($this->data['shifts'])) {
+            $sheets[] = new ShiftReportSheet($this->data['shifts']);
+        }
 
         return $sheets;
     }
@@ -122,4 +127,40 @@ class TopProductsSheet implements FromCollection, WithHeadings, WithTitle, Shoul
     public function headings(): array { return ['Nama Produk', 'Total Terjual (Qty)', 'Total Omzet (Rp)', 'Total Margin (Laba)']; }
     public function title(): string { return 'Ranking Produk'; }
     public function styles(Worksheet $sheet) { return [1 => ['font' => ['bold' => true], 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FDE68A']]]]; }
+}
+
+class ShiftReportSheet implements FromCollection, WithHeadings, WithTitle, ShouldAutoSize, WithStyles
+{
+    protected $data;
+    public function __construct($data) { $this->data = $data; }
+    public function collection() { 
+        return collect($this->data)->map(function($s) {
+            $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+            $rowBankSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', '!=', 'cash')->where('status', 'completed')->sum('total');
+            
+            $rowCashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+            $rowBankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
+            
+            $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses; 
+            $selisih = $s->closed_at ? ($s->closing_cash - $expected) : 0;
+
+            return [
+                'ID' => $s->id,
+                'Kasir' => $s->opener->name,
+                'Waktu Buka' => $s->opened_at->format('Y-m-d H:i:s'),
+                'Waktu Tutup' => $s->closed_at ? $s->closed_at->format('Y-m-d H:i:s') : 'Masih Aktif',
+                'Kas Awal' => $s->opening_cash,
+                'Penjualan Tunai' => $rowCashSales,
+                'Penjualan Non-Tunai' => $rowBankSales,
+                'Pengeluaran Tunai' => $rowCashExpenses,
+                'Pengeluaran Bank' => $rowBankExpenses,
+                'Estimasi Kas Akhir' => $expected,
+                'Aktual Kas Akhir' => $s->closing_cash ?? 0,
+                'Selisih Kas' => $selisih
+            ];
+        }); 
+    }
+    public function headings(): array { return ['ID', 'Kasir', 'Waktu Buka', 'Waktu Tutup', 'Kas Awal', 'Penjualan Tunai', 'Penjualan Non-Tunai', 'Pengeluaran Tunai', 'Pengeluaran Bank', 'Estimasi Kas Akhir', 'Aktual Kas Akhir', 'Selisih Kas']; }
+    public function title(): string { return 'Laporan Shift'; }
+    public function styles(Worksheet $sheet) { return [1 => ['font' => ['bold' => true], 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'CBD5E1']]]]; }
 }

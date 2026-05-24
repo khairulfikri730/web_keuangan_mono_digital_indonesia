@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,16 @@
     <title>@yield('title', 'KasirPro') — {{ \App\Models\Setting::get('store_name', 'KasirPro') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Apply theme BEFORE page render to prevent flash
+        (function() {
+            const saved = localStorage.getItem('monoframe-theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -28,10 +37,217 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         * { font-family: 'Inter', sans-serif; }
-        body { background-color: #0f172a; color: #e2e8f0; }
+
+        /* ===== DARK MODE (default) ===== */
+        html.dark body { background-color: #0f172a; color: #e2e8f0; }
+        html.dark .sidebar-bg { background-color: #0B1120; }
+        html.dark .topbar-bg { background-color: rgba(15,23,42,0.6); border-color: rgba(30,41,59,0.5); }
+        html.dark .card { background-color: rgba(30,41,59,0.5); border-color: rgba(255,255,255,0.05); }
+        html.dark ::-webkit-scrollbar-track { background: #0B1120; }
+        html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+        /* ===== LIGHT MODE ===== */
+        html:not(.dark) body { background-color: #f1f5f9; color: #1e293b; }
+        html:not(.dark) .sidebar-bg { background-color: #1e293b; }
+        html:not(.dark) .topbar-bg { background-color: rgba(255,255,255,0.85); border-color: #e2e8f0; backdrop-filter: blur(12px); }
+        html:not(.dark) .topbar-bg h1,
+        html:not(.dark) .topbar-bg button { color: #334155; }
+        html:not(.dark) .topbar-bg .text-slate-400 { color: #64748b !important; }
+        html:not(.dark) .card { background-color: #ffffff; border-color: #e2e8f0; color: #1e293b; }
+        html:not(.dark) ::-webkit-scrollbar-track { background: #f1f5f9; }
+        html:not(.dark) ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+        /* Light mode - Global Wildcard Overrides & Layout Elements */
+        html:not(.dark) body, 
+        html:not(.dark) main,
+        html:not(.dark) .sidebar-bg,
+        html:not(.dark) .topbar-bg {
+            background-color: #f8fafc !important; 
+            border-color: #e2e8f0 !important;
+        }
+
+        /* Override sidebar active/hover states in light mode */
+        html:not(.dark) .sidebar-bg a:hover,
+        html:not(.dark) .sidebar-bg .bg-gray-800 {
+            background-color: #f1f5f9 !important;
+            color: #2563eb !important;
+            font-weight: 800 !important;
+        }
+        
+        /* Force ALL text in sidebar to be BLACK */
+        html:not(.dark) .sidebar-bg,
+        html:not(.dark) .sidebar-bg a,
+        html:not(.dark) .sidebar-bg p,
+        html:not(.dark) .sidebar-bg span,
+        html:not(.dark) .sidebar-bg i,
+        html:not(.dark) .sidebar-bg .text-gray-300,
+        html:not(.dark) .sidebar-bg .text-gray-500,
+        html:not(.dark) .sidebar-bg .text-slate-400,
+        html:not(.dark) .sidebar-bg .text-slate-500,
+        html:not(.dark) .sidebar-bg.text-gray-300 {
+            color: #000000 !important;
+            font-weight: 700 !important;
+        }
+
+        html:not(.dark) .topbar-bg .text-white {
+            color: #000000 !important;
+        }
+        
+        /* Fix brand logo text in light mode */
+        html:not(.dark) .sidebar-bg .text-blue-500,
+        html:not(.dark) .sidebar-bg .text-white {
+            color: #000000 !important;
+            font-weight: 900 !important;
+        }
+
+        /* Generic Backgrounds - Exclude Semantic Colored Elements to protect buttons with 'disabled:bg-slate-...' */
+        html:not(.dark) [class*="bg-slate-950"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
+        html:not(.dark) [class*="bg-slate-900"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
+        html:not(.dark) [class*="bg-[#0f172a]" i]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
+        html:not(.dark) [class*="bg-[#111827]" i]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
+        html:not(.dark) [class*="bg-[#1e293b]" i]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+            background-color: #ffffff !important; border-color: #e2e8f0 !important; 
+        }
+        
+        html:not(.dark) [class*="bg-slate-800"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+            background-color: #ffffff !important; border-color: #e2e8f0 !important; 
+        }
+        html:not(.dark) [class*="hover:bg-slate-800"]:hover:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+            background-color: #f1f5f9 !important; 
+        }
+        
+        html:not(.dark) [class*="bg-slate-700"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+            background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; 
+        }
+        html:not(.dark) [class*="hover:bg-slate-700"]:hover:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+            background-color: #e2e8f0 !important; 
+        }
+
+        html:not(.dark) [class*="border-white/"],
+        html:not(.dark) [class*="border-slate-800"],
+        html:not(.dark) [class*="border-slate-700"] { border-color: #e2e8f0 !important; }
+
+        /* Typography overrides (excluding elements with colored backgrounds like badges) */
+        html:not(.dark) h1.text-white, html:not(.dark) h2.text-white, html:not(.dark) h3.text-white, 
+        html:not(.dark) h4.text-white, html:not(.dark) p.text-white, html:not(.dark) label.text-white,
+        html:not(.dark) span.text-white:not([class*="bg-"]), html:not(.dark) div.text-white:not([class*="bg-"]),
+        html:not(.dark) i.text-white:not([class*="bg-"]):not(.fas):not(.far), html:not(.dark) a.text-white:not([class*="bg-"]) { color: #1e293b !important; }
+        
+        /* Force text on slate buttons to be dark in light mode */
+        html:not(.dark) button.text-white:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) {
+            color: #1e293b !important;
+            font-weight: 800 !important;
+        }
+
+        html:not(.dark) [class*="text-slate-200"], html:not(.dark) [class*="text-slate-300"] { color: #334155 !important; }
+        html:not(.dark) [class*="text-slate-400"] { color: #64748b !important; }
+        html:not(.dark) [class*="text-slate-500"] { color: #94a3b8 !important; }
+
+        /* Inline Style Overrides (For pages like Catalog) & Custom Classes */
+        html:not(.dark) [style*="rgba(15,23,42"], html:not(.dark) [style*="rgba(15, 23, 42"] { background-color: #f8fafc !important; }
+        html:not(.dark) [style*="rgba(30,41,59"], html:not(.dark) [style*="rgba(30, 41, 59"] { background-color: #ffffff !important; }
+        html:not(.dark) [style*="rgba(71,85,105"], html:not(.dark) [style*="rgba(71, 85, 105"] { border-color: #e2e8f0 !important; }
+        html:not(.dark) .stat-card { background: #ffffff !important; border-color: #e2e8f0 !important; }
+
+        /* Form Controls */
+        html:not(.dark) input:not([type=checkbox]):not([type=radio]):not([type=color]),
+        html:not(.dark) select,
+        html:not(.dark) textarea {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #1e293b !important;
+        }
+        html:not(.dark) input::placeholder,
+        html:not(.dark) textarea::placeholder { color: #94a3b8 !important; }
+
+        html:not(.dark) main .shadow-2xl { box-shadow: 0 4px 24px rgba(0,0,0,0.06) !important; }
+
+        /* Light mode - POS specific */
+        html:not(.dark) .pos-height { background-color: #f1f5f9 !important; color: #1e293b !important; }
+        html:not(.dark) .pos-height .bg-slate-900 { background-color: #f1f5f9 !important; }
+        html:not(.dark) .pos-height .bg-slate-800 { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
+        html:not(.dark) .pos-height .bg-slate-700 { background-color: #f1f5f9 !important; }
+        html:not(.dark) .pos-height .text-white { color: #1e293b !important; }
+        html:not(.dark) .pos-height .text-slate-200,
+        html:not(.dark) .pos-height .text-slate-300 { color: #334155 !important; }
+        html:not(.dark) .pos-height .text-slate-400 { color: #64748b !important; }
+        html:not(.dark) .pos-height .border-white\/5,
+        html:not(.dark) .pos-height .border-white\/10 { border-color: #e2e8f0 !important; }
+        html:not(.dark) .pos-height input,
+        html:not(.dark) .pos-height select,
+        html:not(.dark) .pos-height textarea {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #1e293b !important;
+        }
+
+        /* Light mode - Product cards */
+        html:not(.dark) .product-card { background-color: #ffffff !important; }
+        html:not(.dark) .product-card .text-white { color: #1e293b !important; }
+        html:not(.dark) .product-card .text-indigo-300 { color: #4f46e5 !important; }
+
+        /* Light mode - Worksheet selector */
+        html:not(.dark) .bg-\[\#111827\] { background-color: #f8fafc !important; color: #1e293b !important; }
+        html:not(.dark) .bg-\[\#111827\] .text-white { color: #1e293b !important; }
+
+        /* Light mode - Notification dropdown */
+        html:not(.dark) .topbar-bg .bg-slate-800 { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
+        html:not(.dark) .topbar-bg .bg-slate-700\/50:hover { background-color: #f1f5f9 !important; }
+        html:not(.dark) .topbar-bg .border-slate-700 { border-color: #e2e8f0 !important; }
+
+        /* Light mode - Topbar clock */
+        html:not(.dark) .topbar-bg .bg-slate-900\/50 { background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html:not(.dark) .topbar-bg .bg-slate-800\/50 { background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+
+        /* Light mode - Tables */
+        html:not(.dark) main table { border-color: #e2e8f0; }
+        html:not(.dark) main thead { background-color: #f8fafc !important; }
+        html:not(.dark) main th { color: #475569 !important; border-color: #e2e8f0 !important; }
+        html:not(.dark) main td { border-color: #f1f5f9 !important; }
+        html:not(.dark) main tbody tr:hover { background-color: #f8fafc !important; }
+
+        /* Light mode - Modals (teleported to body) */
+        html:not(.dark) [x-teleport] .bg-slate-800,
+        html:not(.dark) body > div[x-show] .bg-slate-800 { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
+        html:not(.dark) [x-teleport] .bg-slate-800\/50,
+        html:not(.dark) body > div[x-show] .bg-slate-800\/50 { background-color: #f8fafc !important; }
+        html:not(.dark) [x-teleport] .text-white,
+        html:not(.dark) body > div[x-show] .text-white { color: #1e293b !important; }
+        html:not(.dark) [x-teleport] .text-slate-300,
+        html:not(.dark) [x-teleport] .text-slate-400,
+        html:not(.dark) body > div[x-show] .text-slate-300,
+        html:not(.dark) body > div[x-show] .text-slate-400 { color: #64748b !important; }
+        html:not(.dark) [x-teleport] .border-slate-700,
+        html:not(.dark) [x-teleport] .border-slate-700\/50,
+        html:not(.dark) body > div[x-show] .border-slate-700,
+        html:not(.dark) body > div[x-show] .border-slate-700\/50 { border-color: #e2e8f0 !important; }
+        html:not(.dark) [x-teleport] input,
+        html:not(.dark) [x-teleport] select,
+        html:not(.dark) [x-teleport] textarea,
+        html:not(.dark) body > div[x-show] input,
+        html:not(.dark) body > div[x-show] select,
+        html:not(.dark) body > div[x-show] textarea {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #1e293b !important;
+        }
+        html:not(.dark) [x-teleport] .bg-slate-900\/50,
+        html:not(.dark) body > div[x-show] .bg-slate-900\/50 { background-color: #f1f5f9 !important; }
+        html:not(.dark) [x-teleport] .bg-slate-700,
+        html:not(.dark) body > div[x-show] .bg-slate-700 { background-color: #e2e8f0 !important; }
+
+        /* Light mode - Hover states */
+        html:not(.dark) main .hover\:bg-slate-700:hover { background-color: #e2e8f0 !important; }
+        html:not(.dark) main .hover\:bg-slate-800:hover { background-color: #f1f5f9 !important; }
+
+        /* Smooth theme transition */
+        body, .sidebar-bg, .topbar-bg, main, .card, .product-card, .pos-height, .pos-height > div {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* ===== COMMON (both modes) ===== */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: #0B1120; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb { border-radius: 9999px; }
         .active-link { background-color: #00FF7F !important; color: #000000 !important; font-weight: 900 !important; border-radius: 0.5rem !important; }
         .active-link i { color: #000000 !important; }
         [x-cloak] { display: none !important; }
@@ -41,17 +257,21 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
         }
+
+        /* Theme toggle button animation */
+        .theme-toggle-icon { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease; }
+        .theme-toggle:hover .theme-toggle-icon { transform: rotate(30deg) scale(1.1); }
     </style>
     @stack('styles')
 </head>
-<body class="min-h-screen flex font-inter" x-data="{ sidebarOpen: false }">
+<body class="min-h-screen flex font-inter" x-data="{ sidebarOpen: false, darkMode: document.documentElement.classList.contains('dark') }">
     @include('components.report-export-modal')
 
     {{-- Mobile Overlay --}}
     <div class="fixed inset-0 bg-black/60 z-[140] lg:hidden" x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak></div>
 
     {{-- Sidebar --}}
-    <aside class="fixed top-0 left-0 w-64 bg-[#0B1120] text-gray-300 h-screen p-4 z-[150] flex flex-col lg:translate-x-0 -translate-x-full transition-transform duration-300 shadow-2xl"
+    <aside class="fixed top-0 left-0 w-64 sidebar-bg text-gray-300 h-screen p-4 z-[150] flex flex-col lg:translate-x-0 -translate-x-full transition-transform duration-300 shadow-2xl"
            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
 
         <!-- LOGO -->
@@ -240,7 +460,7 @@
     {{-- Main Content --}}
     <div class="flex-1 lg:ml-64 min-h-screen flex flex-col">
         {{-- Topbar --}}
-        <header class="sticky top-0 z-[100] bg-slate-900/60 backdrop-blur-md border-b border-slate-800/50 px-6 py-4 flex items-center justify-between">
+        <header class="sticky top-0 z-[100] topbar-bg backdrop-blur-md border-b px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <button @click="sidebarOpen = true" class="lg:hidden text-slate-400 hover:text-white transition-colors">
                     <i class="fas fa-bars-staggered text-xl"></i>
@@ -332,6 +552,14 @@
                         @endif
                     </div>
                 </div>
+
+                {{-- Theme Toggle --}}
+                <button @click="darkMode = !darkMode; document.documentElement.classList.toggle('dark'); localStorage.setItem('monoframe-theme', darkMode ? 'dark' : 'light')" 
+                        class="theme-toggle w-9 h-9 rounded-xl border inline-flex items-center justify-center transition-all"
+                        :class="darkMode ? 'bg-slate-800/50 border-slate-700/50 text-amber-400 hover:bg-slate-700 hover:text-amber-300' : 'bg-white border-slate-200 text-indigo-500 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm'"
+                        :title="darkMode ? 'Ganti ke Light Mode' : 'Ganti ke Dark Mode'">
+                    <i class="theme-toggle-icon" :class="darkMode ? 'fas fa-sun' : 'fas fa-moon'"></i>
+                </button>
 
                 <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/50 border border-slate-800/50 text-[11px] font-bold text-slate-400 tracking-wider uppercase">
                     <i class="far fa-clock text-blue-500"></i>
@@ -449,14 +677,15 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        const isDark = document.documentElement.classList.contains('dark');
         const Toast = Swal.mixin({
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
             timer: 3000,
             timerProgressBar: true,
-            background: '#1e293b',
-            color: '#f8fafc',
+            background: isDark ? '#1e293b' : '#ffffff',
+            color: isDark ? '#f8fafc' : '#1e293b',
             iconColor: 'currentColor',
             didOpen: (toast) => {
                 toast.addEventListener('mouseenter', Swal.stopTimer)

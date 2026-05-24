@@ -838,3 +838,4 @@ class ReportController extends Controller
         return $insights;
     }
 }
+

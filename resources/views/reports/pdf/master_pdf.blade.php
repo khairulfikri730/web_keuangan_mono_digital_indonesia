@@ -436,6 +436,59 @@
     </table>
     @endif
 
+    {{-- SECTION: SHIFT DETAILS --}}
+    @if(in_array('shift_details', $meta['sections']) && isset($shifts))
+    <div class="page-break"></div>
+    <div class="section-header uppercase">Laporan Performa Shift</div>
+    <table class="zebra">
+        <thead>
+            <tr>
+                <th>Waktu Shift</th>
+                <th>Kasir</th>
+                <th>Kas Awal</th>
+                <th>Penjualan (Cash/Non-Cash)</th>
+                <th>Pengeluaran (Cash/Bank)</th>
+                <th>Kas Laci Akhir</th>
+                <th class="text-right">Selisih</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($shifts as $s)
+            @php 
+                $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+                $rowBankSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', '!=', 'cash')->where('status', 'completed')->sum('total');
+                
+                $rowCashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+                $rowBankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
+                
+                $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses; 
+                $selisih = $s->closed_at ? ($s->closing_cash - $expected) : 0;
+            @endphp
+            <tr>
+                <td style="font-size: 8px;">
+                    {{ $s->opened_at->format('d/m/Y') }}<br>
+                    {{ $s->opened_at->format('H:i') }} - {{ $s->closed_at ? $s->closed_at->format('H:i') : 'Aktif' }}
+                </td>
+                <td class="font-bold">{{ $s->opener->name }}</td>
+                <td>Rp {{ number_format($s->opening_cash, 0, ',', '.') }}</td>
+                <td style="font-size: 8px;">
+                    Tunai: Rp {{ number_format($rowCashSales, 0, ',', '.') }}<br>
+                    Non: Rp {{ number_format($rowBankSales, 0, ',', '.') }}
+                </td>
+                <td style="font-size: 8px;">
+                    Tunai: Rp {{ number_format($rowCashExpenses, 0, ',', '.') }}<br>
+                    Bank: Rp {{ number_format($rowBankExpenses, 0, ',', '.') }}
+                </td>
+                <td>Rp {{ number_format($s->closing_cash, 0, ',', '.') }}</td>
+                <td class="text-right font-bold {{ abs($selisih) < 1 ? 'text-slate-500' : ($selisih > 0 ? 'text-emerald' : 'text-red') }}">
+                    {{ abs($selisih) < 1 ? 'Pas' : ($selisih > 0 ? '+'.number_format($selisih, 0, ',', '.') : '-'.number_format(abs($selisih), 0, ',', '.')) }}
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     {{-- SECTION: CASHFLOW --}}
     @if(in_array('full_cashflow', $meta['sections']) && isset($full_cashflow))
     <div class="page-break"></div>

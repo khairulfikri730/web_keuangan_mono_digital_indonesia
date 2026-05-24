@@ -5,9 +5,9 @@
 @section('page-subtitle', 'Kelola akses Super Admin dan Kasir')
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-1">
-        <div class="card p-6 lg:p-8 sticky top-24 border border-slate-700/80 shadow-2xl relative overflow-hidden bg-slate-800/50 backdrop-blur-sm">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div>
+        <div class="card p-6 lg:p-8 sticky top-24 border border-slate-700/80 shadow-2xl relative overflow-hidden bg-slate-800/50 backdrop-blur-sm max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
             <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full pointer-events-none"></div>
             <h3 class="text-xl font-black text-white mb-6 flex items-center gap-2 relative z-10"><i class="fas fa-user-plus text-blue-400"></i> Tambah Anggota Baru</h3>
             <form action="{{ route('team.store') }}" method="POST" class="relative z-10" x-data="{ role: '{{ old('role', 'kasir') }}' }">
@@ -66,7 +66,7 @@
                             </label>
                         </div>
 
-                        <div class="space-y-4">
+                        <div class="max-h-[35vh] overflow-y-auto custom-scrollbar pr-1 space-y-3">
                             @foreach($permissionGroups as $groupName => $perms)
                             <div class="bg-slate-900/40 rounded-2xl border border-slate-700/50 overflow-hidden shadow-sm">
                                 <div class="px-4 py-2.5 bg-slate-800/40 border-b border-slate-700/50 flex items-center justify-between">
@@ -82,7 +82,7 @@
                                         <span class="text-[9px] font-bold text-slate-500 group-hover/toggle:text-blue-400 transition-colors uppercase tracking-tighter">Grup</span>
                                     </label>
                                 </div>
-                                <div class="p-3 grid grid-cols-1 gap-1">
+                                <div class="p-3 grid grid-cols-2 gap-1">
                                     @foreach($perms as $key => $label)
                                     @php $isSub = str_contains($key, '.'); @endphp
                                     <label class="flex items-center gap-3 cursor-pointer group/perm hover:bg-slate-800/30 px-2 py-1.5 rounded-lg transition-all {{ $isSub ? 'ml-6' : 'mt-1' }}">
@@ -137,8 +137,8 @@
         </div>
     </div>
 
-    <div class="lg:col-span-2">
-        <div class="grid gap-4">
+    <div>
+        <div class="grid gap-4 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar pr-1">
             @foreach($users as $user)
             <div class="card p-5 lg:p-6 flex flex-col sm:flex-row sm:items-center justify-between group hover:bg-slate-800 transition-all duration-300 border-l-2 border-transparent hover:border-blue-500 cursor-default gap-4 sm:gap-0"
                  x-data="{ showEdit: false }">

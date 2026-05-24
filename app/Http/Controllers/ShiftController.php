@@ -97,16 +97,23 @@ class ShiftController extends Controller
         // Total Expenses & Net Profit
         $currentSales = 0;
         $currentCashExpenses = 0;
+        $currentBankSales = 0;
+        $currentBankExpenses = 0;
         $currentTotalExpenses = 0;
         $laciBalance = $this->getCurrentLaciBalance();
         $currentExpected = $laciBalance;
 
         $laciMovements = collect(); // transfers/adjustments during active shift
 
+        $recentTransactions = collect();
+        $recentExpenses = collect();
+        
         if ($activeShift) {
             $sumLive = $this->financialService->getShiftSummary($activeShift->id, $worksheetId);
             $currentSales = $sumLive->cash_sales;
             $currentCashExpenses = $sumLive->cash_expense;
+            $currentBankSales = $sumLive->bank_sales;
+            $currentBankExpenses = $sumLive->bank_expense;
             $currentTotalExpenses = $sumLive->total_expense;
 
             $nonPosNet = (float) Cashflow::withoutGlobalScopes()
@@ -125,46 +132,40 @@ class ShiftController extends Controller
                 ->where('category', '!=', 'Penjualan')
                 ->orderBy('created_at')
                 ->get();
-        }
-
-        if ($isLiveShift && $activeShift) {
-            $totalExpensesToday = $currentTotalExpenses;
-            $cashExpensesToday = $sumLive->cash_expense;
-            $bankExpensesToday = $sumLive->bank_expense;
-            $netProfitToday = $sumLive->total_income - $totalExpensesToday;
-        } else {
-            // Aggregate totals specifically for the filtered shifts to match the list exactly
-            $expenseBreakdownQuery = Cashflow::withoutGlobalScopes()->where('type', 'expense')
-                ->whereIn('shift_id', $shiftIds)
-                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
                 
-            $cashExpensesToday = (clone $expenseBreakdownQuery)->where('source', 'pos_cash')->sum('amount');
-            $bankExpensesToday = (clone $expenseBreakdownQuery)->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
-            $totalExpensesToday = $cashExpensesToday + $bankExpensesToday;
-            
-            $netProfitToday = $totalSalesToday - $totalExpensesToday;
+            // Fetch recent transactions for timeline
+            $recentTransactions = Transaction::withoutGlobalScopes()
+                ->where('shift_id', $activeShift->id)
+                ->with('user')
+                ->latest()
+                ->take(10)
+                ->get();
+                
+            // Fetch recent expenses for timeline
+            $recentExpenses = Cashflow::withoutGlobalScopes()
+                ->where('shift_id', $activeShift->id)
+                ->where('type', 'expense')
+                ->latest()
+                ->take(10)
+                ->get();
         }
 
+        $laciBalance = $this->getCurrentLaciBalance();
         $users = \App\Models\User::all();
+        $activeCrewShifts = Shift::with('opener')->where('status', 'open')->get();
+        $todayTarget = \App\Models\Setting::get('daily_target') ?? 3000000;
+        
+        // Calculate total sales for today to compare with target
+        $todaySalesTotal = Transaction::completed()
+            ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->sum('total');
 
-        // Extra stats for insights (consistent with ReportController and respects active filters)
-        $avgDiscrepancy = $closedShifts->count() > 0 ? $totalDiscrepancy / $closedShifts->count() : 0;
-        $highestShift = $closedShifts->sortByDesc('total_sales')->first();
-
-        $bestCashier = Transaction::withoutGlobalScopes()->completed()
-            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
-            ->when($worksheetId, fn($q) => $q->where('transactions.worksheet_id', $worksheetId))
-            ->join('users', 'transactions.user_id', '=', 'users.id')
-            ->selectRaw('users.name, SUM(transactions.total) as total')
-            ->groupBy('users.name')->orderByDesc('total')->first();
-
-        return view('reports.shifts', compact(
-            'shifts', 'activeShift', 'users', 'laciBalance', 'closedShifts',
-            'activeShiftsCount', 'totalClosingCash', 'totalSalesToday', 'totalDiscrepancy',
-            'totalExpensesToday', 'netProfitToday', 'cashExpensesToday', 'bankExpensesToday',
-            'bestCashier', 'highestShift', 'avgDiscrepancy',
-            'currentSales', 'currentCashExpenses', 'currentTotalExpenses', 'currentExpected',
-            'laciMovements'
+        return view('shifts.index', compact(
+            'activeShift', 'users', 'laciBalance',
+            'currentSales', 'currentCashExpenses', 'currentBankSales', 'currentBankExpenses', 'currentTotalExpenses', 'currentExpected',
+            'laciMovements', 'recentTransactions', 'recentExpenses', 'activeCrewShifts', 
+            'todayTarget', 'todaySalesTotal'
         ));
     }
 

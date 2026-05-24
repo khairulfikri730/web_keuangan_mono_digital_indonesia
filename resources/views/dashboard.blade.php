@@ -80,15 +80,6 @@
                     <i class="fas fa-clock group-hover:text-emerald-400 transition-colors"></i> Shift
                 </a>
             </div>
-            {{-- System Health --}}
-            <div class="flex items-center gap-3 bg-slate-900/60 p-2 rounded-xl border border-white/5 overflow-x-auto scrollbar-hide">
-                @foreach($systemHealth as $sys)
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-950/50 rounded-lg border border-white/5 whitespace-nowrap">
-                    <span class="w-2 h-2 rounded-full {{ $sys->color }} {{ $sys->status == 'online' ? 'shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'animate-pulse' }}"></span>
-                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ $sys->name }}</span>
-                </div>
-                @endforeach
-            </div>
         </div>
 
         {{-- ========================================================= --}}

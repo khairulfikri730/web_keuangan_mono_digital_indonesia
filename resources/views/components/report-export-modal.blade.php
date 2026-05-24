@@ -1,39 +1,182 @@
-<!-- Report Export Modal (Enterprise SaaS Style) -->
-<div 
-    x-data="{ 
-        isOpen: false, 
-        isGenerating: false, 
-        format: 'pdf', 
-        period: '{{ auth()->check() && auth()->user()->isOwner() ? "bulan_ini" : "hari_ini" }}', 
-        showPreview: false,
-        sections: ['summary', 'sales', 'expenses', 'profit', 'chart_sales', 'top_products', 'ai_insights'],
-        roles: ['Owner', 'Manager', 'Kasir'],
-        async submitExport(type) {
-            this.isGenerating = true;
-            this.format = type;
-            
-            // Capture Charts
-            const container = document.getElementById('chartImagesContainer');
-            container.innerHTML = '';
-            if (typeof Chart !== 'undefined') {
-                Object.values(Chart.instances).forEach((chart, index) => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = `chart_images[${chart.canvas.id || 'chart_' + index}]`;
-                    input.value = chart.toBase64Image();
-                    container.appendChild(input);
-                });
-            }
+@php
+    $isKasir = auth()->check() && auth()->user()->isKasir();
+    
+    $allOptions = [
+        ['id' => 'summary', 'label' => 'Ringkasan Utama', 'icon' => 'fa-tachometer-alt'],
+        ['id' => 'sales', 'label' => 'Performa Omzet', 'icon' => 'fa-shopping-bag'],
+        ['id' => 'expenses', 'label' => 'Total Biaya', 'icon' => 'fa-arrow-circle-up'],
+        ['id' => 'profit', 'label' => 'Laba Bersih', 'icon' => 'fa-heart'],
+        ['id' => 'ai_insights', 'label' => 'AI Business Insight', 'icon' => 'fa-brain'],
+        ['id' => 'invoice_analytics', 'label' => 'Analisa Invoice', 'icon' => 'fa-file-invoice'],
+        ['id' => 'chart_sales', 'label' => 'Grafik Penjualan', 'icon' => 'fa-chart-line'],
+        ['id' => 'chart_expenses', 'label' => 'Grafik Pengeluaran', 'icon' => 'fa-chart-pie'],
+        ['id' => 'top_products', 'label' => 'Ranking Produk', 'icon' => 'fa-trophy'],
+        ['id' => 'history_trx', 'label' => 'Detail Penjualan', 'icon' => 'fa-list-ul'],
+        ['id' => 'internal_mutations', 'label' => 'Mutasi Internal', 'icon' => 'fa-sync'],
+        ['id' => 'full_cashflow', 'label' => 'Arus Kas Lengkap', 'icon' => 'fa-exchange-alt'],
+        ['id' => 'roi', 'label' => 'Analisa ROI', 'icon' => 'fa-chart-bar'],
+        ['id' => 'shift_details', 'label' => 'Laporan Shift', 'icon' => 'fa-user-clock'],
+    ];
 
-            const form = document.getElementById('exportReportForm');
-            if (type === 'pdf') form.action = '{{ route('reports.export-pdf') }}';
-            else if (type === 'excel') form.action = '{{ route('reports.export-excel') }}';
-            
-            form.submit();
-            
-            setTimeout(() => { this.isGenerating = false; }, 5000);
-        }
-    }"
+    if ($isKasir) {
+        $options = array_filter($allOptions, function($opt) {
+            return in_array($opt['id'], ['summary', 'sales', 'expenses', 'profit', 'chart_sales', 'chart_expenses', 'top_products', 'history_trx', 'ai_insights']);
+        });
+    } else {
+        $options = $allOptions;
+    }
+
+    $defaultSectionsJson = $isKasir
+        ? ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','history_trx','ai_insights']
+        : ['summary','sales','expenses','profit','chart_sales','top_products','ai_insights'];
+    $allSectionsJson = $isKasir
+        ? ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','history_trx','ai_insights']
+        : ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','ai_insights','history_trx','roi','shift_details','full_cashflow','internal_mutations','invoice_analytics'];
+    $defaultPeriod = (auth()->check() && auth()->user()->isOwner()) ? 'bulan_ini' : 'hari_ini';
+@endphp
+
+<script>
+    window._exportCfg = {
+        urls: {
+            pdf: {!! json_encode(route('reports.export-pdf')) !!},
+            excel: {!! json_encode(route('reports.export-excel')) !!},
+            csv: {!! json_encode(route('reports.export-csv')) !!}
+        },
+        defaultSections: {!! json_encode($defaultSectionsJson) !!},
+        allSections: {!! json_encode($allSectionsJson) !!},
+        defaultPeriod: {!! json_encode($defaultPeriod) !!}
+    };
+
+    window.openExportModal = function() {
+        window.dispatchEvent(new CustomEvent('open-export-modal'));
+    };
+
+    window.exportReportHandler = function() {
+        return {
+            isOpen: false,
+            isGenerating: false,
+            format: 'pdf',
+            period: window._exportCfg.defaultPeriod,
+            sections: window._exportCfg.defaultSections.slice(),
+            exportProgress: 0,
+            exportStatus: '',
+
+            selectAll() {
+                this.sections = window._exportCfg.allSections.slice();
+            },
+
+            async submitExport(type) {
+                if (this.isGenerating) return;
+                this.isGenerating = true;
+                this.format = type;
+                this.exportProgress = 10;
+                this.exportStatus = 'Mengumpulkan data...';
+
+                var self = this;
+                var extMap = { pdf: '.pdf', excel: '.xlsx', csv: '.csv' };
+                var ext = extMap[type] || '.pdf';
+                var today = new Date().toISOString().slice(0, 10);
+                var fallbackName = 'MONOFRAME_REPORT_' + today + ext;
+
+                try {
+                    var form = document.getElementById('exportReportForm');
+                    var formData = new FormData(form);
+
+                    // Capture chart images
+                    if (typeof Chart !== 'undefined' && Chart.instances) {
+                        Object.values(Chart.instances).forEach(function(chart, idx) {
+                            var k = chart.canvas.id || 'chart_' + idx;
+                            formData.append('chart_images[' + k + ']', chart.toBase64Image());
+                        });
+                    }
+
+                    self.exportProgress = 30;
+                    self.exportStatus = 'Memproses laporan...';
+
+                    var url = window._exportCfg.urls[type];
+                    if (!url) throw new Error('URL tidak ditemukan');
+
+                    self.exportProgress = 50;
+                    self.exportStatus = 'Membuat file ' + type.toUpperCase() + '...';
+
+                    var csrfEl = document.querySelector('meta[name="csrf-token"]');
+                    var headers = { 'X-Requested-With': 'XMLHttpRequest' };
+                    if (csrfEl) headers['X-CSRF-TOKEN'] = csrfEl.content;
+
+                    var resp = await fetch(url, { method: 'POST', body: formData, headers: headers });
+
+                    if (!resp.ok) {
+                        var errMsg = 'Server Error ' + resp.status;
+                        try { var j = await resp.json(); errMsg = j.error || j.message || errMsg; } catch(e) {}
+                        throw new Error(errMsg);
+                    }
+
+                    self.exportProgress = 75;
+                    self.exportStatus = 'Menerima file...';
+
+                    var blob = await resp.blob();
+
+                    // Validate blob is NOT HTML
+                    if (blob.type && blob.type.indexOf('text/html') !== -1) {
+                        throw new Error('Server mengembalikan halaman error');
+                    }
+                    if (blob.size < 50) {
+                        throw new Error('File terlalu kecil, kemungkinan error');
+                    }
+
+                    self.exportProgress = 90;
+                    self.exportStatus = 'Mengunduh...';
+
+                    // Parse filename from header
+                    var filename = fallbackName;
+                    var disp = resp.headers.get('Content-Disposition');
+                    if (disp && disp.indexOf('filename=') !== -1) {
+                        var raw = disp.split('filename=')[1].trim().split(';')[0];
+                        raw = raw.replace(/^["']|["']$/g, '');
+                        if (raw) filename = decodeURIComponent(raw);
+                    }
+
+                    // Force correct mime type
+                    var mimes = {
+                        pdf: 'application/pdf',
+                        excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        csv: 'text/csv'
+                    };
+                    var typedBlob = new Blob([blob], { type: mimes[type] });
+
+                    var blobUrl = URL.createObjectURL(typedBlob);
+                    var a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = filename;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(function() { URL.revokeObjectURL(blobUrl); a.remove(); }, 2000);
+
+                    self.exportProgress = 100;
+                    self.exportStatus = 'Selesai!';
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'success', title: 'Berhasil!', text: filename + ' (' + Math.round(blob.size/1024) + ' KB)', toast: true, position: 'top-end', showConfirmButton: false, timer: 4000, background: '#1e293b', color: '#f1f5f9' });
+                    }
+                } catch (err) {
+                    console.error('Export error:', err);
+                    self.exportProgress = 0;
+                    self.exportStatus = '';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Gagal Export', text: err.message, toast: true, position: 'top-end', showConfirmButton: false, timer: 6000, background: '#1e293b', color: '#f1f5f9' });
+                    }
+                } finally {
+                    setTimeout(function() { self.isGenerating = false; self.exportProgress = 0; self.exportStatus = ''; }, 1500);
+                }
+            }
+        };
+    };
+</script>
+
+<!-- Report Export Modal -->
+<div
+    x-data="exportReportHandler()"
     x-show="isOpen"
     @open-export-modal.window="isOpen = true"
     @keydown.escape.window="isOpen = false"
@@ -47,7 +190,7 @@
     x-transition:leave-end="opacity-0 scale-95"
 >
     <div class="bg-slate-900 border border-white/10 w-full max-w-6xl h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
-        
+
         <!-- Header -->
         <div class="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-blue-600/20 to-transparent">
             <div class="flex items-center gap-5">
@@ -67,41 +210,22 @@
         <form id="exportReportForm" method="POST" class="flex-1 flex flex-col min-h-0">
             @csrf
             <div class="flex-1 flex min-h-0">
-                
-                <!-- Left Column: Configuration -->
+
+                <!-- Left Column -->
                 <div class="w-2/3 p-8 overflow-y-auto border-r border-white/5 custom-scrollbar">
-                    
                     <div class="space-y-10">
-                        <!-- 1. Selection -->
+
+                        <!-- 1. Module Selection -->
                         <div>
                             <div class="flex items-center justify-between mb-6">
                                 <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em]">1. PILIH MODUL LAPORAN</label>
-                                <button type="button" @click="sections = ['summary', 'sales', 'expenses', 'profit', 'chart_sales', 'top_products', 'ai_insights', 'history_trx', 'history_expenses', 'balances', 'roi', 'shift_details', 'full_cashflow', 'category_analysis', 'internal_mutations', 'invoice_analytics']" class="text-[9px] font-bold text-slate-500 hover:text-white transition-colors">PILIH SEMUA</button>
+                                <button type="button" @click="selectAll()" class="text-[9px] font-bold text-slate-500 hover:text-white transition-colors">PILIH SEMUA</button>
                             </div>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                @php
-                                    $options = [
-                                        ['id' => 'summary', 'label' => 'Ringkasan Utama', 'icon' => 'fa-tachometer-alt'],
-                                        ['id' => 'sales', 'label' => 'Performa Omzet', 'icon' => 'fa-shopping-bag'],
-                                        ['id' => 'expenses', 'label' => 'Total Biaya', 'icon' => 'fa-arrow-circle-up'],
-                                        ['id' => 'profit', 'label' => 'Laba Bersih', 'icon' => 'fa-heart'],
-                                        ['id' => 'ai_insights', 'label' => 'AI Business Insight', 'icon' => 'fa-brain'],
-                                        ['id' => 'invoice_analytics', 'label' => 'Analisa Invoice', 'icon' => 'fa-file-invoice'],
-                                        ['id' => 'chart_sales', 'label' => 'Grafik Penjualan', 'icon' => 'fa-chart-line'],
-                                        ['id' => 'chart_expenses', 'label' => 'Grafik Pengeluaran', 'icon' => 'fa-chart-pie'],
-                                        ['id' => 'top_products', 'label' => 'Ranking Produk', 'icon' => 'fa-trophy'],
-                                        ['id' => 'history_trx', 'label' => 'Detail Penjualan', 'icon' => 'fa-list-ul'],
-                                        ['id' => 'internal_mutations', 'label' => 'Mutasi Internal', 'icon' => 'fa-sync'],
-                                        ['id' => 'full_cashflow', 'label' => 'Arus Kas Lengkap', 'icon' => 'fa-exchange-alt'],
-                                        ['id' => 'roi', 'label' => 'Analisa ROI', 'icon' => 'fa-chart-bar'],
-                                        ['id' => 'shift_details', 'label' => 'Laporan Shift', 'icon' => 'fa-user-clock'],
-                                    ];
-                                @endphp
-
                                 @foreach($options as $opt)
                                 <label class="group cursor-pointer">
                                     <input type="checkbox" name="sections[]" value="{{ $opt['id'] }}" x-model="sections" class="hidden">
-                                    <div 
+                                    <div
                                         :class="sections.includes('{{ $opt['id'] }}') ? 'bg-blue-600/20 border-blue-500/50 text-white' : 'bg-slate-800/50 border-white/5 text-slate-500'"
                                         class="flex items-center gap-3 p-4 rounded-2xl border transition-all duration-300 group-hover:border-blue-500/30"
                                     >
@@ -115,7 +239,7 @@
                             </div>
                         </div>
 
-                        <!-- 2. Filters -->
+                        <!-- 2. Period & Branch -->
                         <div class="grid grid-cols-2 gap-8">
                             <div>
                                 <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 block">2. PERIODE WAKTU</label>
@@ -129,7 +253,6 @@
                                     <option value="custom">Rentang Kustom</option>
                                     @endif
                                 </select>
-                                
                                 <div x-show="period === 'custom'" x-transition class="grid grid-cols-2 gap-3 mt-4">
                                     <div class="relative">
                                         <input type="date" name="start_date" class="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:border-blue-500">
@@ -153,7 +276,7 @@
                             </div>
                         </div>
 
-                        <!-- 3. Styles -->
+                        <!-- 3. Orientation & Signatures -->
                         <div class="grid grid-cols-2 gap-8">
                             <div>
                                 <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 block">4. ORIENTASI & TEMA</label>
@@ -186,9 +309,7 @@
                                     @foreach(['Owner', 'Manager', 'Finance', 'Kasir'] as $role)
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="signature_roles[]" value="{{ $role }}" checked class="peer hidden">
-                                        <span class="px-3 py-2 rounded-lg border border-white/10 bg-slate-950 text-[10px] font-bold text-slate-500 peer-checked:bg-emerald-600/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition-all">
-                                            {{ strtoupper($role) }}
-                                        </span>
+                                        <span class="px-3 py-2 rounded-lg border border-white/10 bg-slate-950 text-[10px] font-bold text-slate-500 peer-checked:bg-emerald-600/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition-all">{{ strtoupper($role) }}</span>
                                     </label>
                                     @endforeach
                                 </div>
@@ -202,102 +323,68 @@
                     </div>
                 </div>
 
-                <!-- Right Column: Live Summary & Actions -->
+                <!-- Right Column -->
                 <div class="w-1/3 p-8 bg-black/20 flex flex-col justify-between">
                     <div>
                         <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-8 block">RINGKASAN EXPORT</label>
-                        
                         <div class="space-y-6">
                             <div class="bg-slate-950/50 rounded-3xl p-6 border border-white/5 relative overflow-hidden group">
-                                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                    <i class="fas fa-shield-alt text-4xl"></i>
-                                </div>
+                                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform"><i class="fas fa-shield-alt text-4xl"></i></div>
                                 <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Sistem Keamanan</p>
                                 <h4 class="text-white font-black text-sm mb-4">MONOFRAME SECURE EXPORT</h4>
                                 <div class="space-y-3">
-                                    <div class="flex items-center gap-3 text-[10px]">
-                                        <i class="fas fa-check-circle text-emerald-500"></i>
-                                        <span class="text-slate-400">Data Integrity Check</span>
-                                    </div>
-                                    <div class="flex items-center gap-3 text-[10px]">
-                                        <i class="fas fa-check-circle text-emerald-500"></i>
-                                        <span class="text-slate-400">Digital Watermarking</span>
-                                    </div>
-                                    <div class="flex items-center gap-3 text-[10px]">
-                                        <i class="fas fa-check-circle text-emerald-500"></i>
-                                        <span class="text-slate-400">Auto-Calculated Insights</span>
-                                    </div>
+                                    <div class="flex items-center gap-3 text-[10px]"><i class="fas fa-check-circle text-emerald-500"></i><span class="text-slate-400">Data Integrity Check</span></div>
+                                    <div class="flex items-center gap-3 text-[10px]"><i class="fas fa-check-circle text-emerald-500"></i><span class="text-slate-400">Digital Watermarking</span></div>
+                                    <div class="flex items-center gap-3 text-[10px]"><i class="fas fa-check-circle text-emerald-500"></i><span class="text-slate-400">Auto-Calculated Insights</span></div>
                                 </div>
                             </div>
-
                             <div class="p-6 space-y-4">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Jumlah Modul</span>
-                                    <span class="text-white font-black" x-text="sections.length"></span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kualitas Grafik</span>
-                                    <span class="text-emerald-400 font-black">HD VECTOR</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">File Size</span>
-                                    <span class="text-slate-300 font-black">OPTIMIZED</span>
-                                </div>
+                                <div class="flex justify-between items-center"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Jumlah Modul</span><span class="text-white font-black" x-text="sections.length"></span></div>
+                                <div class="flex justify-between items-center"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kualitas Grafik</span><span class="text-emerald-400 font-black">HD VECTOR</span></div>
+                                <div class="flex justify-between items-center"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">File Size</span><span class="text-slate-300 font-black">OPTIMIZED</span></div>
                             </div>
                         </div>
                     </div>
 
                     <div class="space-y-3">
+                        <!-- Progress -->
                         <div x-show="isGenerating" x-transition class="mb-4">
                             <div class="flex justify-between text-[10px] font-black text-blue-400 mb-2">
-                                <span>GENERATING <span x-text="format.toUpperCase()"></span>...</span>
-                                <span>85%</span>
+                                <span x-text="exportStatus"></span>
+                                <span x-text="exportProgress + '%'"></span>
                             </div>
                             <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-500 animate-pulse" style="width: 85%"></div>
+                                <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-500 ease-out" :style="'width:' + exportProgress + '%'"></div>
                             </div>
                         </div>
 
-                        <button 
-                            type="button" 
-                            @click="submitExport('pdf')"
-                            :disabled="isGenerating"
-                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-blue-900/40 flex items-center justify-center gap-3 text-xs uppercase tracking-[0.2em] active:scale-95 disabled:opacity-50"
-                        >
-                            <i class="fas fa-file-pdf text-lg"></i>
-                            GENERATE PDF REPORT
+                        <!-- PDF -->
+                        <button type="button" @click="submitExport('pdf')" :disabled="isGenerating"
+                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-blue-900/40 flex items-center justify-center gap-3 text-xs uppercase tracking-[0.2em] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <template x-if="isGenerating && format === 'pdf'"><i class="fas fa-spinner fa-spin text-lg"></i></template>
+                            <template x-if="!(isGenerating && format === 'pdf')"><i class="fas fa-file-pdf text-lg"></i></template>
+                            <span x-text="isGenerating && format === 'pdf' ? 'GENERATING...' : 'GENERATE PDF REPORT'"></span>
                         </button>
-                        
+
+                        <!-- Excel & CSV -->
                         <div class="grid grid-cols-2 gap-3">
-                            <button 
-                                type="button" 
-                                @click="submitExport('excel')"
-                                :disabled="isGenerating"
-                                class="bg-slate-800 hover:bg-slate-700 text-emerald-400 font-black py-4 rounded-2xl border border-white/5 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
-                            >
-                                <i class="fas fa-file-excel"></i> EXCEL
+                            <button type="button" @click="submitExport('excel')" :disabled="isGenerating"
+                                class="bg-slate-800 hover:bg-slate-700 text-emerald-400 font-black py-4 rounded-2xl border border-white/5 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <template x-if="isGenerating && format === 'excel'"><i class="fas fa-spinner fa-spin"></i></template>
+                                <template x-if="!(isGenerating && format === 'excel')"><i class="fas fa-file-excel"></i></template>
+                                EXCEL
                             </button>
-                            <button 
-                                type="button" 
-                                class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-black py-4 rounded-2xl border border-white/5 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
-                            >
-                                <i class="fas fa-file-csv"></i> CSV
+                            <button type="button" @click="submitExport('csv')" :disabled="isGenerating"
+                                class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-black py-4 rounded-2xl border border-white/5 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <template x-if="isGenerating && format === 'csv'"><i class="fas fa-spinner fa-spin"></i></template>
+                                <template x-if="!(isGenerating && format === 'csv')"><i class="fas fa-file-csv"></i></template>
+                                CSV
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Hidden chart images -->
             <div id="chartImagesContainer" class="hidden"></div>
         </form>
     </div>
 </div>
-
-</style>
-
-<script>
-    window.openExportModal = function() {
-        window.dispatchEvent(new CustomEvent('open-export-modal'));
-    }
-</script>

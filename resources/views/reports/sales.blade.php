@@ -191,11 +191,11 @@
     {{-- NEW PHOTOLAB-STYLE DASHBOARD --}}
     
     {{-- 1. MAIN AREA CHART (PENDAPATAN) --}}
-    <div class="bg-white dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-white/5 shadow-2xl relative overflow-hidden flex flex-col">
+    <div class="bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 lg:p-8 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col">
         <div class="mb-4">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pendapatan</h3>
             <div class="flex items-center gap-3">
-                <h1 class="text-3xl lg:text-4xl font-black text-slate-800 dark:text-white tracking-tight">Rp {{ number_format($summary->total_sales, 0, ',', '.') }}</h1>
+                <h1 class="text-3xl lg:text-4xl font-black text-white tracking-tight">Rp {{ number_format($summary->total_sales, 0, ',', '.') }}</h1>
                 @if($summary->total_sales > 0)
                 <span class="bg-emerald-500/10 text-emerald-500 text-[10px] font-black px-2 py-1 rounded-md border border-emerald-500/20"><i class="fas fa-caret-up"></i> TERTINGGI</span>
                 @endif
@@ -211,11 +211,11 @@
     {{-- 2. FOUR KPI CARDS --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {{-- Sesi --}}
-        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between">
+        <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/5 shadow-lg flex flex-col justify-between">
             <div>
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sesi / Transaksi</p>
                 <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
-                <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ $summary->total_trx ?? $summary->total_count }}</h3>
+                <h3 class="text-2xl font-black text-white">{{ $summary->total_trx ?? $summary->total_count }}</h3>
             </div>
             <div class="h-12 w-full mt-4">
                 <canvas id="sparkline1"></canvas>
@@ -223,7 +223,7 @@
         </div>
 
         {{-- Hari Puncak --}}
-        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between h-full">
+        <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/5 shadow-lg flex flex-col justify-between h-full">
             <div>
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hari Puncak</p>
                 <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
@@ -241,7 +241,7 @@
                         @endforeach
                     </div>
                 @else
-                    <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ $heatmapInsights['busiest_day'] ?? '-' }}</h3>
+                    <h3 class="text-2xl font-black text-white">{{ $heatmapInsights['busiest_day'] ?? '-' }}</h3>
                     <p class="text-[10px] font-bold text-emerald-400 mt-1">{{ $heatmapInsights['max_trx'] ?? 0 }} transaksi terbanyak</p>
                 @endif
             </div>
@@ -253,11 +253,11 @@
         </div>
 
         {{-- Produk Terlaris --}}
-        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between">
+        <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/5 shadow-lg flex flex-col justify-between">
             <div>
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Produk Paling Laku</p>
                 <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
-                <h3 class="text-xl font-black text-slate-800 dark:text-white truncate" title="{{ $topProducts->first() ? $topProducts->first()->product_name : '-' }}">
+                <h3 class="text-xl font-black text-white truncate" title="{{ $topProducts->first() ? $topProducts->first()->product_name : '-' }}">
                     {{ $topProducts->first() ? $topProducts->first()->product_name : '-' }}
                 </h3>
                 <p class="text-[10px] font-bold text-blue-500 mt-1">{{ $topProducts->first() ? $topProducts->first()->total_qty . ' item terjual' : '-' }}</p>
@@ -268,11 +268,11 @@
         </div>
 
         {{-- Pengeluaran Terbanyak (Total Pengeluaran) --}}
-        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between">
+        <div class="bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/5 shadow-lg flex flex-col justify-between">
             <div>
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pengeluaran</p>
                 <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
-                <h3 class="text-2xl font-black text-slate-800 dark:text-white truncate">
+                <h3 class="text-2xl font-black text-white truncate">
                     Rp {{ number_format($totalExpense, 0, ',', '.') }}
                 </h3>
                 <p class="text-[10px] font-bold text-rose-500 mt-1">Biaya Operasional</p>
@@ -286,10 +286,10 @@
     {{-- 3. BAR CHART & METODE PEMBAYARAN --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">
         {{-- BAR CHART (TOTAL TRANSAKSI HARIAN) --}}
-        <div class="lg:col-span-2 bg-white dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-white/5 shadow-2xl relative overflow-hidden flex flex-col">
-            <div class="flex flex-col md:flex-row justify-between mb-6 border-b border-slate-200 dark:border-white/5 pb-4">
+        <div class="lg:col-span-2 bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 lg:p-8 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col">
+            <div class="flex flex-col md:flex-row justify-between mb-6 border-b border-white/5 pb-4">
                 <div>
-                    <h3 class="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2 mb-1">
+                    <h3 class="text-sm font-black text-white flex items-center gap-2 mb-1">
                         <i class="far fa-calendar-alt text-blue-500"></i> Total Transaksi (Omzet) Berdasarkan Waktu
                     </h3>
                     <p class="text-[10px] font-bold text-slate-500">Perbandingan omzet kotor per hari dalam periode ini.</p>
@@ -306,16 +306,16 @@
         </div>
 
         {{-- METODE PEMBAYARAN --}}
-        <div class="lg:col-span-1 bg-white dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col">
+        <div class="lg:col-span-1 bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 border border-white/5 shadow-2xl flex flex-col">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4"><i class="fas fa-wallet mr-2 text-emerald-500"></i>Metode Pembayaran</h3>
             <div class="relative flex-1 min-h-[250px] w-full flex items-center justify-center">
                 <canvas id="paymentMethodChart"></canvas>
             </div>
             <div class="mt-6 grid grid-cols-2 gap-2">
                 @foreach($byPayment as $pm)
-                    <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl text-center border border-slate-100 dark:border-white/5">
+                    <div class="bg-slate-800/50 p-3 rounded-xl text-center border border-white/5">
                         <p class="text-[9px] font-black text-slate-500 uppercase">{{ strtoupper($pm->payment_method) }}</p>
-                        <p class="text-xs font-bold text-slate-700 dark:text-slate-300">Rp {{ number_format($pm->total, 0, ',', '.') }}</p>
+                        <p class="text-xs font-bold text-slate-300">Rp {{ number_format($pm->total, 0, ',', '.') }}</p>
                     </div>
                 @endforeach
             </div>

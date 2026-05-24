@@ -16,31 +16,31 @@
 @section('content')
 
 
-<div x-data="posApp()" class="pos-height flex flex-col lg:flex-row bg-slate-100 -mx-6 -mt-4 text-slate-800 font-sans">
+<div x-data="posApp()" class="pos-height flex flex-col lg:flex-row bg-slate-900 -mx-6 -mt-4 text-slate-200 font-sans">
     
     {{-- MAIN CONTENT (TENGAH) --}}
-    <div class="flex-1 flex flex-col h-full bg-slate-100 border-r border-slate-200 p-4 lg:p-6">
+    <div class="flex-1 flex flex-col h-full bg-slate-900 border-r border-white/5 p-4 lg:p-6">
         
         {{-- HEADER BAR --}}
-        <div class="flex items-center gap-4 mb-4 bg-white p-3 rounded-2xl shadow-sm border border-slate-200 shrink-0">
-            <h2 class="text-xl font-black text-slate-800 hidden md:block px-2">POS Kasir</h2>
+        <div class="flex items-center gap-4 mb-4 bg-slate-800 p-3 rounded-2xl shadow-sm border border-white/10 shrink-0">
+            <h2 class="text-xl font-black text-white hidden md:block px-2">POS Kasir</h2>
             
             <div class="relative flex-1">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchProducts()" x-ref="searchInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner text-sm transition-all" placeholder="Cari produk atau scan barcode..." autofocus>
+                <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchProducts()" x-ref="searchInput" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner text-sm transition-all" placeholder="Cari produk atau scan barcode..." autofocus>
             </div>
             
             <div class="flex items-center gap-2 shrink-0">
-                <div class="flex items-center bg-slate-100 p-1 rounded-xl">
-                    <button @click="viewMode='grid'" :class="viewMode==='grid' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-700'" class="p-2 rounded-lg transition-all"><i class="fas fa-th-large"></i></button>
-                    <button @click="viewMode='list'" :class="viewMode==='list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-700'" class="p-2 rounded-lg transition-all"><i class="fas fa-list"></i></button>
+                <div class="flex items-center bg-slate-700 p-1 rounded-xl">
+                    <button @click="viewMode='grid'" :class="viewMode==='grid' ? 'bg-slate-500 shadow text-white' : 'text-slate-400 hover:text-white'" class="p-2 rounded-lg transition-all"><i class="fas fa-th-large"></i></button>
+                    <button @click="viewMode='list'" :class="viewMode==='list' ? 'bg-slate-500 shadow text-white' : 'text-slate-400 hover:text-white'" class="p-2 rounded-lg transition-all"><i class="fas fa-list"></i></button>
                 </div>
                 
-                <button @click="openGroupManager()" class="bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-all text-sm font-bold flex items-center gap-2" title="Groupkan Item">
+                <button @click="openGroupManager()" class="bg-emerald-500/10 text-emerald-400 shadow-sm border border-emerald-500/20 hover:bg-emerald-500/20 px-3 py-2 rounded-xl transition-all text-sm font-bold flex items-center gap-2" title="Groupkan Item">
                     <i class="fas fa-layer-group"></i> <span class="hidden md:inline">Groupkan Item</span>
                 </button>
 
-                <button @click="showPrinterSettings = true" :class="printerStatus === 'connected' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-400 border-slate-200'" class="px-3 py-2 rounded-xl border transition-all flex items-center gap-2 text-sm font-bold shadow-sm" title="Pengaturan Printer">
+                <button @click="showPrinterSettings = true" :class="printerStatus === 'connected' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-white/10'" class="px-3 py-2 rounded-xl border transition-all flex items-center gap-2 text-sm font-bold shadow-sm" title="Pengaturan Printer">
                     <i class="fas fa-print"></i>
                     <div :class="printerStatus === 'connected' ? 'bg-emerald-500' : 'bg-slate-300'" class="w-2 h-2 rounded-full animate-pulse shadow-sm"></div>
                 </button>
@@ -54,10 +54,10 @@
                 </a>
                 {{-- Jika ada shift aktif: tampilkan 2 tombol Cash Out & Tutup Shift --}}
                 @if($activeShift)
-                <button @click="openCashOut()" class="px-3 py-2 bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+                <button @click="openCashOut()" class="px-3 py-2 bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
                     <i class="fas fa-cash-register"></i> <span class="hidden sm:inline">Cash Out</span>
                 </button>
-                <button onclick="openTutupShift()" class="px-3 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+                <button onclick="openTutupShift()" class="px-3 py-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
                     <i class="fas fa-door-closed"></i> <span class="hidden sm:inline">Tutup Shift</span>
                 </button>
                 @endif
@@ -67,9 +67,9 @@
         {{-- SHIFT BANNER & BEP INFO --}}
         <div class="mb-4 shrink-0">
             {{-- Shift Status --}}
-            <div :class="activeShift ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-100 border-amber-300 text-amber-800'" class="border px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
+            <div :class="activeShift ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'" class="border px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
                 <div class="flex items-center gap-3">
-                    <div :class="activeShift ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-200 text-amber-600'" class="w-10 h-10 rounded-full flex items-center justify-center shadow-inner">
+                    <div :class="activeShift ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'" class="w-10 h-10 rounded-full flex items-center justify-center">
                         <i :class="activeShift ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="text-xl"></i>
                     </div>
                     <div>
@@ -84,10 +84,10 @@
                 </template>
                 @if($activeShift)
                 <div class="flex items-center gap-2">
-                    <button @click="openCashOut()" class="px-3 py-1.5 bg-orange-100 text-orange-600 border border-orange-200 hover:bg-orange-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
+                    <button @click="openCashOut()" class="px-3 py-1.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
                         <i class="fas fa-cash-register text-[10px]"></i> Cash Out
                     </button>
-                    <button onclick="openTutupShift()" class="px-3 py-1.5 bg-red-100 text-red-600 border border-red-200 hover:bg-red-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
+                    <button onclick="openTutupShift()" class="px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
                         <i class="fas fa-door-closed text-[10px]"></i> Tutup Shift
                     </button>
                 </div>
@@ -99,15 +99,15 @@
 
         {{-- FILTER KATEGORI (CHIPS) --}}
         <div class="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide shrink-0" id="category-buttons">
-            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-slate-800 text-white shadow-lg border-slate-800 active' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all">
+            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-white text-slate-900 shadow-lg border-white active' : 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all">
                 Semua
             </button>
             
             {{-- SPECIAL FILTERS (PROMO & BEST SELLER) --}}
-            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white shadow-lg border-rose-500 active' : 'bg-white border-rose-200 text-rose-500 hover:bg-rose-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white shadow-lg border-rose-500 active' : 'bg-slate-800 border-rose-500/30 text-rose-400 hover:bg-slate-700'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
                 <i class="fas fa-fire"></i> Promo
             </button>
-            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white shadow-lg border-amber-500 active' : 'bg-white border-amber-200 text-amber-500 hover:bg-amber-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white shadow-lg border-amber-500 active' : 'bg-slate-800 border-amber-500/30 text-amber-400 hover:bg-slate-700'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
                 <i class="fas fa-star"></i> Terlaris
             </button>
 
@@ -115,7 +115,7 @@
                 <button @click="setCategory(cat.id)" 
                         :data-category="cat.id"
                         :style="activeCategory===cat.id ? `background-color: ${cat.color || '#10b981'}; border-color: ${cat.color || '#10b981'}; color: ${getContrastYIQ(cat.color || '#10b981')}; box-shadow: 0 4px 15px -3px ${cat.color || '#10b981'}60;` : `border-color: ${cat.color || '#e2e8f0'}; color: ${cat.color || '#64748b'};`"
-                        :class="activeCategory===cat.id ? 'shadow-lg border active' : 'bg-white border hover:bg-slate-50'" 
+                        :class="activeCategory===cat.id ? 'shadow-lg border active' : 'bg-slate-800 border hover:bg-slate-700'" 
                         class="category-btn px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
                     <i :class="getPlaceholderIcon(cat.name)" class="text-xs" :style="activeCategory!==cat.id ? `color: ${cat.color || '#64748b'};` : ''"></i>
                     <span x-text="cat.name"></span>
@@ -126,7 +126,7 @@
         {{-- GRID PRODUK --}}
         <div id="product-grid-container" class="flex-1 overflow-y-auto pr-2 pb-6 scrollbar-hide scroll-smooth relative">
             <div x-show="filteredProductsCount === 0" class="absolute inset-0 flex flex-col items-center justify-center h-full text-slate-400 z-10">
-                <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-200 shadow-inner">
+                <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-600 shadow-inner">
                     <i class="fas fa-box-open text-3xl opacity-50"></i>
                 </div>
                 <p class="text-sm font-black text-slate-500 uppercase tracking-widest mb-2">Produk Belum Tersedia</p>
@@ -139,10 +139,10 @@
             {{-- VIRTUAL SECTION: PROMO (Only show in 'All' or 'PROMO' mode) --}}
             <div class="space-y-6 w-full mb-6" x-show="activeCategory === '' || activeCategory === 'PROMO'">
                 <div class="w-full" x-show="promoProducts.length > 0">
-                    <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-rose-200 flex items-center gap-3">
+                    <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-rose-500/20 flex items-center gap-3">
                         <span class="w-3 h-3 rounded-full shadow-inner bg-rose-500 animate-pulse"></span>
-                        <h3 class="font-black text-rose-600 text-sm uppercase tracking-widest">PROMO</h3>
-                        <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100" x-text="promoProducts.length + ' Item'"></span>
+                        <h3 class="font-black text-rose-400 text-sm uppercase tracking-widest">PROMO</h3>
+                        <span class="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20" x-text="promoProducts.length + ' Item'"></span>
                     </div>
                     <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                         <template x-for="p in promoProducts" :key="'promo-view-'+p.id">
@@ -155,10 +155,10 @@
             {{-- VIRTUAL SECTION: BEST SELLER (Only show in 'All' or 'BEST SELLER' mode) --}}
             <div class="space-y-6 w-full mb-6" x-show="activeCategory === '' || activeCategory === 'BEST SELLER'">
                 <div class="w-full" x-show="bestSellerProducts.length > 0">
-                    <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-amber-200 flex items-center gap-3">
+                    <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-amber-500/20 flex items-center gap-3">
                         <span class="w-3 h-3 rounded-full shadow-inner bg-amber-500"></span>
-                        <h3 class="font-black text-amber-600 text-sm uppercase tracking-widest">BEST SELLER</h3>
-                        <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100" x-text="bestSellerProducts.length + ' Item'"></span>
+                        <h3 class="font-black text-amber-400 text-sm uppercase tracking-widest">BEST SELLER</h3>
+                        <span class="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20" x-text="bestSellerProducts.length + ' Item'"></span>
                     </div>
                     <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                         <template x-for="p in bestSellerProducts" :key="'best-view-'+p.id">
@@ -173,10 +173,10 @@
                 <template x-for="group in posGroups" :key="'pos-group-'+group.id">
                     <div class="w-full" x-show="group.products.filter(p => filterProduct(p)).length > 0">
                         {{-- Group Header --}}
-                        <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-slate-200 flex items-center gap-3">
+                        <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-white/10 flex items-center gap-3">
                             <span class="w-3 h-3 rounded-full shadow-inner" :style="`background-color: ${group.color || '#f97316'}`"></span>
-                            <h3 class="font-black text-slate-700 text-sm uppercase tracking-widest" x-text="group.name"></h3>
-                            <span class="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md" x-text="group.products.filter(p => filterProduct(p)).length + ' Item'"></span>
+                            <h3 class="font-black text-slate-300 text-sm uppercase tracking-widest" x-text="group.name"></h3>
+                            <span class="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md" x-text="group.products.filter(p => filterProduct(p)).length + ' Item'"></span>
                         </div>
                         
                         {{-- Inner Grid --}}
@@ -191,10 +191,10 @@
 
             {{-- SEMUA PRODUK (REMAINING / ALL) --}}
             <div class="w-full" x-show="!['PROMO', 'BEST SELLER'].includes(activeCategory) && products.filter(p => filterProduct(p)).length > 0">
-                <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-slate-200 flex items-center gap-3">
+                <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-white/10 flex items-center gap-3">
                     <span class="w-3 h-3 rounded-full shadow-inner bg-slate-300"></span>
-                    <h3 class="font-black text-slate-700 text-sm uppercase tracking-widest">Semua Produk</h3>
-                    <span class="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md" x-text="products.filter(p => filterProduct(p)).length + ' Item'"></span>
+                    <h3 class="font-black text-slate-300 text-sm uppercase tracking-widest">Semua Produk</h3>
+                    <span class="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md" x-text="products.filter(p => filterProduct(p)).length + ' Item'"></span>
                 </div>
 
                 <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
@@ -207,15 +207,15 @@
     </div>
 
     {{-- RIGHT PANEL: ORDER PANEL (CLEAN & TIDY) --}}
-    <div class="w-full lg:w-[420px] flex flex-col bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] z-10 h-full border-l border-slate-100 shrink-0 overflow-hidden">
+    <div class="w-full lg:w-[420px] flex flex-col bg-slate-800 shadow-[-10px_0_30px_rgba(0,0,0,0.2)] z-10 h-full border-l border-white/5 shrink-0 overflow-hidden">
         
         {{-- PANEL HEADER --}}
-        <div class="p-6 border-b border-slate-100 bg-white shrink-0">
+        <div class="p-6 border-b border-white/10 bg-slate-800 shrink-0">
             <div class="flex justify-between items-start mb-1">
-                <h3 class="text-lg font-black text-slate-800 tracking-tight">Pesanan Saat Ini</h3>
+                <h3 class="text-lg font-black text-white tracking-tight">Pesanan Saat Ini</h3>
                 <div class="flex gap-2">
-                    <button @click="showPrinterSettings = true" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-print text-xs"></i></button>
-                    <button class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-cog text-xs"></i></button>
+                    <button @click="showPrinterSettings = true" class="w-8 h-8 rounded-lg bg-slate-700 text-slate-400 hover:text-white transition-colors flex items-center justify-center border border-white/10"><i class="fas fa-print text-xs"></i></button>
+                    <button class="w-8 h-8 rounded-lg bg-slate-700 text-slate-400 hover:text-white transition-colors flex items-center justify-center border border-white/10"><i class="fas fa-cog text-xs"></i></button>
                 </div>
             </div>
             <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -228,12 +228,12 @@
             
             <div class="flex gap-2 mt-5">
                 <button @click="cartView = 'history'" 
-                        :class="cartView === 'history' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-500 border-slate-100'"
+                        :class="cartView === 'history' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-slate-700 text-slate-400 border-white/10'"
                         class="flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-2">
                     <i class="fas fa-history"></i> Riwayat
                 </button>
                 <button @click="cartView = 'active'"
-                        :class="cartView === 'active' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-slate-50 text-slate-500 border-slate-100'"
+                        :class="cartView === 'active' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-slate-700 text-slate-400 border-white/10'"
                         class="flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all flex items-center justify-center gap-2">
                     <i class="fas fa-list-ul"></i> Pesanan Terbuka
                 </button>
@@ -246,7 +246,7 @@
             {{-- TAB: PESANAN SAAT INI --}}
             <div x-show="cartView === 'active'" class="flex flex-col">
                 <div x-show="activeWorksheet.cart.length === 0" class="flex flex-col items-center justify-start py-6 text-slate-400 opacity-60">
-                    <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-2"><i class="fas fa-shopping-cart text-xl text-slate-200"></i></div>
+                    <div class="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center mb-2"><i class="fas fa-shopping-cart text-xl text-slate-500"></i></div>
                     <p class="text-xs font-bold">Keranjang masih kosong</p>
                 </div>
 
@@ -255,7 +255,7 @@
                         <div class="flex gap-4 group">
                             <div class="flex-1">
                                 <div class="flex items-center gap-1">
-                                    <h4 class="text-sm font-black text-slate-800" x-text="item.name"></h4>
+                                    <h4 class="text-sm font-black text-white" x-text="item.name"></h4>
                                     <template x-if="item.is_custom_price">
                                         <span class="bg-orange-100 text-orange-600 border border-orange-200 text-[8px] font-black px-1.5 py-0.5 rounded uppercase ml-1" title="Harga Khusus">Khusus</span>
                                     </template>
@@ -263,15 +263,15 @@
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
                                     <span class="text-[10px] text-slate-300">×</span>
-                                    <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5">
+                                    <div class="flex items-center gap-1 bg-slate-700 border border-white/10 rounded-md px-1.5 py-0.5">
                                         <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
-                                        <span class="text-xs font-black text-slate-800 w-5 text-center" x-text="item.quantity"></span>
+                                        <span class="text-xs font-black text-white w-5 text-center" x-text="item.quantity"></span>
                                         <button @click="changeQty(index, 1)" class="text-[10px] text-slate-400 hover:text-emerald-500"><i class="fas fa-plus"></i></button>
                                     </div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <p class="text-sm font-black text-slate-800" x-text="formatRp(((item.is_custom_price ? item.custom_price : item.price) * item.quantity) - item.discount)"></p>
+                                <p class="text-sm font-black text-white" x-text="formatRp(((item.is_custom_price ? item.custom_price : item.price) * item.quantity) - item.discount)"></p>
                                 <button @click="removeItem(index)" class="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase tracking-tighter mt-1">Hapus</button>
                             </div>
                         </div>
@@ -287,7 +287,7 @@
         </div>
 
         {{-- ORDER INFO & ACTION AREA --}}
-        <div class="p-6 bg-slate-50/50 border-t border-slate-100 shrink-0 space-y-5">
+        <div class="p-6 bg-slate-900/50 border-t border-white/10 shrink-0 space-y-5">
             
             {{-- DATA PELANGGAN --}}
             <div class="space-y-3">
@@ -297,17 +297,17 @@
                 </div>
                 <div class="relative group">
                     <i class="far fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"></i>
-                    <input type="text" x-model="activeWorksheet.customerName" class="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all" placeholder="Ketik nama atau no HP...">
+                    <input type="text" x-model="activeWorksheet.customerName" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all" placeholder="Ketik nama atau no HP...">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="relative group">
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. HP</label>
                         <i class="fas fa-phone-alt absolute left-4 top-[38px] text-[10px] text-slate-300"></i>
-                        <input type="text" x-model="activeWorksheet.customerPhone" class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all" placeholder="08xxx...">
+                        <input type="text" x-model="activeWorksheet.customerPhone" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="08xxx...">
                     </div>
                     <div class="relative group">
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. Meja</label>
-                        <input type="text" x-model="activeWorksheet.tableNumber" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all" placeholder="Contoh: 12">
+                        <input type="text" x-model="activeWorksheet.tableNumber" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="Contoh: 12">
                     </div>
                 </div>
             </div>
@@ -316,28 +316,28 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Diskon</label>
-                    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                    <div class="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl p-1 shadow-sm">
                         <div class="flex-1 relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400" x-text="activeWorksheet.discountType === 'nominal' ? 'Rp' : '%'"></span>
-                            <input type="number" x-model.number="activeWorksheet.globalDiscount" class="w-full pl-8 pr-2 py-1.5 text-sm font-black text-slate-800 focus:outline-none bg-transparent">
+                            <input type="number" x-model.number="activeWorksheet.globalDiscount" class="w-full pl-8 pr-2 py-1.5 text-sm font-black text-white focus:outline-none bg-transparent">
                         </div>
-                        <div class="flex bg-slate-100 rounded-lg p-0.5">
-                            <button @click="activeWorksheet.discountType = 'nominal'" :class="activeWorksheet.discountType === 'nominal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">Rp</button>
-                            <button @click="activeWorksheet.discountType = 'percentage'" :class="activeWorksheet.discountType === 'percentage' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">%</button>
+                        <div class="flex bg-slate-700 rounded-lg p-0.5">
+                            <button @click="activeWorksheet.discountType = 'nominal'" :class="activeWorksheet.discountType === 'nominal' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">Rp</button>
+                            <button @click="activeWorksheet.discountType = 'percentage'" :class="activeWorksheet.discountType === 'percentage' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">%</button>
                         </div>
                     </div>
                 </div>
 
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan Pesanan</label>
-                    <textarea x-model="activeWorksheet.notes" rows="2" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-500 transition-all resize-none" placeholder="Tambahkan catatan untuk pesanan ini..."></textarea>
+                    <textarea x-model="activeWorksheet.notes" rows="2" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-medium text-white focus:outline-none focus:border-emerald-500 transition-all resize-none" placeholder="Tambahkan catatan untuk pesanan ini..."></textarea>
                 </div>
             </div>
 
             {{-- DELIVERY MODE --}}
-            <div class="bg-slate-100/50 border border-slate-200/50 rounded-xl p-3 space-y-3">
+            <div class="bg-slate-700/50 border border-white/10 rounded-xl p-3 space-y-3">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 text-slate-600">
+                    <div class="flex items-center gap-3 text-slate-300">
                         <i class="fas fa-shipping-fast text-xs"></i>
                         <span class="text-[10px] font-black uppercase tracking-wider">Mode Delivery</span>
                     </div>
@@ -352,8 +352,8 @@
                     <div class="pt-3 border-t border-slate-200/50">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Ongkos Kirim (Rp)</label>
                         <div class="relative mb-3">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">Rp</span>
-                            <input type="number" x-model.number="activeWorksheet.deliveryFee" min="0" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 transition-all appearance-none" placeholder="0">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">Rp</span>
+                            <input type="number" x-model.number="activeWorksheet.deliveryFee" min="0" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all appearance-none" placeholder="0">
                         </div>
                         
                         {{-- Presets --}}
@@ -373,7 +373,7 @@
             </div>
 
             {{-- PAYMENT SUMMARY --}}
-            <div class="pt-4 border-t border-slate-200 space-y-1">
+            <div class="pt-4 border-t border-white/10 space-y-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-slate-400">Subtotal</span>
                     <span class="text-xs font-bold text-slate-600" x-text="formatRp(currentSubtotal)"></span>
@@ -386,17 +386,17 @@
                 </template>
                 <div class="flex justify-between items-end pt-1">
                     <div>
-                        <h4 class="text-xl font-black text-slate-800 tracking-tight">Total</h4>
+                        <h4 class="text-xl font-black text-white tracking-tight">Total</h4>
                     </div>
                     <div class="text-right">
-                        <span class="text-xl font-black text-slate-800 tracking-tight" x-text="formatRp(currentTotal)"></span>
+                        <span class="text-xl font-black text-white tracking-tight" x-text="formatRp(currentTotal)"></span>
                     </div>
                 </div>
             </div>
 
             {{-- ACTIONS --}}
             <div class="grid grid-cols-2 gap-3 pt-2">
-                <button @click="resetCurrentWorksheet()" class="py-3.5 bg-red-50 text-red-600 border border-red-100 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]">Batal</button>
+                <button @click="resetCurrentWorksheet()" class="py-3.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]">Batal</button>
                 <button @click="openPayment()" 
                         :disabled="!activeShift || activeWorksheet.cart.length === 0" 
                         :title="!activeShift ? 'Buka shift terlebih dahulu' : (activeWorksheet.cart.length === 0 ? 'Keranjang masih kosong' : '')"
