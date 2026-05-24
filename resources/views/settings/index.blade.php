@@ -6,7 +6,7 @@
 
 @section('content')
 <div class="max-w-4xl">
-    <form action="{{ route('settings.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+    <form id="settings-form" action="{{ route('settings.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf @method('PUT')
 
         {{-- Section: Informasi Toko --}}
@@ -580,13 +580,136 @@
         </script>
         @endpush
 
-        {{-- Footer Save Button --}}
-        <div class="flex justify-end pt-4">
-            <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black px-10 py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center gap-3 uppercase tracking-[0.1em] text-sm">
-                <i class="fas fa-save text-lg"></i> Simpan Semua Pengaturan
-            </button>
-        </div>
     </form>
+
+    {{-- Section: Danger Zone (Reset System) --}}
+    <div class="card overflow-hidden border border-red-500/30 shadow-xl shadow-red-500/10 mt-12 bg-red-950/10 backdrop-blur-md">
+        <div class="p-6 border-b border-red-500/20 bg-red-900/20">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center text-red-500">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-red-500">Danger Zone (Reset Sistem)</h3>
+                    <p class="text-xs text-red-400/80">Tindakan di bawah ini akan menghapus data secara permanen. Harap berhati-hati!</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6 lg:p-8 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {{-- Opsi 1: Reset Semua Data --}}
+                <div class="p-5 border border-red-500/20 rounded-2xl bg-slate-900/40 flex flex-col justify-between group hover:border-red-500/50 transition-all">
+                    <div class="mb-4">
+                        <h4 class="text-white font-black text-sm mb-1 group-hover:text-red-400 transition-colors">Reset Semua Data (Total)</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">Menghapus <strong class="text-slate-300">semua riwayat transaksi</strong> (penjualan, pengeluaran, kas, invoice, shift) dan <strong class="text-slate-300">katalog produk</strong>. Data tidak dapat dikembalikan.</p>
+                    </div>
+                    <button type="button" onclick="confirmReset('all_data', 'Semua Data Transaksi & Katalog Produk')" class="w-full py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all">
+                        <i class="fas fa-trash-alt mr-1"></i> Eksekusi Reset Total
+                    </button>
+                </div>
+
+                {{-- Opsi 2: Semua Transaksi --}}
+                <div class="p-5 border border-red-500/20 rounded-2xl bg-slate-900/40 flex flex-col justify-between group hover:border-red-500/50 transition-all">
+                    <div class="mb-4">
+                        <h4 class="text-white font-black text-sm mb-1 group-hover:text-red-400 transition-colors">Reset Semua Transaksi Saja</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">Menghapus <strong class="text-slate-300">semua riwayat transaksi, invoice, arus kas, dan shift</strong>, tetapi tetap mempertahankan katalog produk dan pengaturan.</p>
+                    </div>
+                    <button type="button" onclick="confirmReset('all_transactions', 'Semua Riwayat Transaksi (Pemasukan & Pengeluaran)')" class="w-full py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all">
+                        <i class="fas fa-receipt mr-1"></i> Hapus Semua Transaksi
+                    </button>
+                </div>
+
+                {{-- Opsi 3: Pemasukan Saja --}}
+                <div class="p-5 border border-amber-500/20 rounded-2xl bg-slate-900/40 flex flex-col justify-between group hover:border-amber-500/50 transition-all">
+                    <div class="mb-4">
+                        <h4 class="text-white font-black text-sm mb-1 group-hover:text-amber-400 transition-colors">Hapus Data Pemasukan Saja</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">Menghapus <strong class="text-slate-300">penjualan, arus kas masuk, dan invoice</strong>. Tidak mempengaruhi data pengeluaran dan produk.</p>
+                    </div>
+                    <button type="button" onclick="confirmReset('income_only', 'Hanya Data Pemasukan (Penjualan & Invoice)')" class="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border border-amber-500/50 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all">
+                        <i class="fas fa-arrow-down mr-1"></i> Hapus Pemasukan
+                    </button>
+                </div>
+
+                {{-- Opsi 4: Pengeluaran Saja --}}
+                <div class="p-5 border border-orange-500/20 rounded-2xl bg-slate-900/40 flex flex-col justify-between group hover:border-orange-500/50 transition-all">
+                    <div class="mb-4">
+                        <h4 class="text-white font-black text-sm mb-1 group-hover:text-orange-400 transition-colors">Hapus Data Pengeluaran Saja</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">Menghapus riwayat <strong class="text-slate-300">pengeluaran bulanan dan arus kas keluar</strong>. Tidak mempengaruhi penjualan.</p>
+                    </div>
+                    <button type="button" onclick="confirmReset('expense_only', 'Hanya Data Pengeluaran')" class="w-full py-2.5 bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-white border border-orange-500/50 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all">
+                        <i class="fas fa-arrow-up mr-1"></i> Hapus Pengeluaran
+                    </button>
+                </div>
+
+                {{-- Opsi 5: Produk Saja --}}
+                <div class="p-5 border border-purple-500/20 rounded-2xl bg-slate-900/40 flex flex-col justify-between group hover:border-purple-500/50 transition-all">
+                    <div class="mb-4">
+                        <h4 class="text-white font-black text-sm mb-1 group-hover:text-purple-400 transition-colors">Hapus Katalog Produk Saja</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">Menghapus <strong class="text-slate-300">semua data produk dan kategori</strong>. (Hanya bisa dilakukan jika tidak ada transaksi terkait).</p>
+                    </div>
+                    <button type="button" onclick="confirmReset('product_catalog', 'Katalog Produk & Kategori')" class="w-full py-2.5 bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-white border border-purple-500/50 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all">
+                        <i class="fas fa-box-open mr-1"></i> Hapus Katalog Produk
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Form tersembunyi untuk reset system --}}
+    <form id="form-reset-system" action="{{ route('settings.reset') }}" method="POST" class="hidden">
+        @csrf
+        <input type="hidden" name="reset_type" id="input-reset-type">
+    </form>
+
+    @push('scripts')
+    <script>
+        function confirmReset(type, typeLabel) {
+            Swal.fire({
+                title: 'PERINGATAN BAHAYA!',
+                html: `Anda akan menghapus secara permanen:<br><b class="text-red-400 mt-2 block text-lg">${typeLabel}</b><br><span class="text-sm text-slate-400 mt-2 block">Tindakan ini tidak dapat dibatalkan. Ketik <strong>RESET</strong> di bawah ini untuk mengonfirmasi.</span>`,
+                icon: 'warning',
+                input: 'text',
+                inputPlaceholder: 'Ketik RESET',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#334155',
+                confirmButtonText: 'Ya, Hapus Permanen',
+                cancelButtonText: 'Batal',
+                background: '#1e293b',
+                color: '#f8fafc',
+                inputValidator: (value) => {
+                    if (value !== 'RESET') {
+                        return 'Anda harus mengetik RESET dengan huruf kapital!';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed && result.value === 'RESET') {
+                    document.getElementById('input-reset-type').value = type;
+                    document.getElementById('form-reset-system').submit();
+                    
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Sedang menghapus data, mohon tunggu.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        },
+                        background: '#1e293b',
+                        color: '#f8fafc'
+                    });
+                }
+            });
+        }
+    </script>
+    @endpush
+
+    {{-- Footer Save Button --}}
+    <div class="flex justify-end mt-12 mb-8">
+        <button type="submit" form="settings-form" class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black px-10 py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center gap-3 uppercase tracking-[0.1em] text-sm">
+            <i class="fas fa-save text-lg"></i> Simpan Semua Pengaturan
+        </button>
+    </div>
 
 </div>
 @endsection

@@ -49,6 +49,15 @@
                            class="w-full bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-[11px] text-white font-bold placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all" 
                            placeholder="Cari No. Invoice atau Client...">
                 </div>
+                
+                <select name="per_page" class="bg-slate-900/60 border border-white/5 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2.5 hover:bg-slate-800 transition-all focus:outline-none focus:border-blue-500/50 cursor-pointer" onchange="this.form.submit()">
+                    <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
+                    <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                    <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15 Baris</option>
+                    <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 Baris</option>
+                    <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                    <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                </select>
 
                 <button type="submit" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
                     Cari Data

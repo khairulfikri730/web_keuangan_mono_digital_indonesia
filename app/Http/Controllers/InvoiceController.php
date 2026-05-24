@@ -45,7 +45,8 @@ class InvoiceController extends Controller
         $totalSisa = (clone $statsQuery)->sum(DB::raw('total_amount - paid_amount'));
         $invoiceMenunggu = (clone $statsQuery)->where('status', 'pending')->count();
 
-        $invoices = $query->with(['items', 'payments'])->latest()->paginate(15)->withQueryString();
+        $perPage = $request->input('per_page', 20);
+        $invoices = $query->with(['items', 'payments'])->latest()->paginate($perPage)->withQueryString();
         return view('invoices.index', compact('invoices', 'totalPiutang', 'totalDibayar', 'totalSisa', 'invoiceMenunggu'));
     }
 

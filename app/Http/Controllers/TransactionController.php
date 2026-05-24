@@ -153,7 +153,7 @@ class TransactionController extends Controller
 
         // Manual pagination
         $page = $request->input('page', 1);
-        $perPage = 20;
+        $perPage = $request->input('per_page', 20);
         $total = $items->count();
         $paginatedItems = $items->slice(($page - 1) * $perPage, $perPage)->values();
         $transactions = new \Illuminate\Pagination\LengthAwarePaginator(

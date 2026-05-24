@@ -1,12 +1,12 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'POS Kasir')
 @section('page-title', 'POS Kasir')
 
 @push('styles')
 <style>
-        body { background-color: #ffffff !important; overflow: hidden; }
-        body { background-color: #ffffff !important; overflow: hidden; }
+    header { display: none; }
+    .pos-height { height: 100vh; }
     /* Scrollbar minimal */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -16,20 +16,22 @@
 @section('content')
 
 
-<div x-data="posApp()" class="flex-1 h-full max-h-full overflow-hidden flex flex-col lg:flex-row bg-white lg:bg-slate-100 -mx-6 -mt-4 text-slate-800 font-sans">
+<div x-data="posApp()" class="pos-height flex flex-col lg:flex-row bg-slate-100 -mx-6 -mt-4 text-slate-800 font-sans">
     
     {{-- MAIN CONTENT (TENGAH) --}}
-    <div class="flex-1 flex flex-col h-full bg-white lg:bg-slate-100 border-r border-slate-200 p-4 lg:p-6">
+    <div class="flex-1 flex flex-col h-full bg-slate-100 border-r border-slate-200 p-4 lg:p-6">
         
         {{-- HEADER BAR --}}
-        <div class="flex items-center gap-2 sm:gap-4 mb-4 bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-100 shrink-0">
+        <div class="flex items-center gap-4 mb-4 bg-white p-3 rounded-2xl shadow-sm border border-slate-200 shrink-0">
+            <h2 class="text-xl font-black text-slate-800 hidden md:block px-2">POS Kasir</h2>
+            
             <div class="relative flex-1">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                 <input type="text" x-model="searchQuery" @input.debounce.300ms="fetchProducts()" x-ref="searchInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner text-sm transition-all" placeholder="Cari produk atau scan barcode..." autofocus>
             </div>
             
             <div class="flex items-center gap-2 shrink-0">
-                <div class="flex items-center bg-white lg:bg-slate-100 p-1 rounded-xl">
+                <div class="flex items-center bg-slate-100 p-1 rounded-xl">
                     <button @click="viewMode='grid'" :class="viewMode==='grid' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-700'" class="p-2 rounded-lg transition-all"><i class="fas fa-th-large"></i></button>
                     <button @click="viewMode='list'" :class="viewMode==='list' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-700'" class="p-2 rounded-lg transition-all"><i class="fas fa-list"></i></button>
                 </div>
@@ -62,22 +64,22 @@
             </div>
         </div>
 
-                {{-- SHIFT BANNER & BEP INFO --}}
+        {{-- SHIFT BANNER & BEP INFO --}}
         <div class="mb-4 shrink-0">
             {{-- Shift Status --}}
-            <div :class="activeShift ? 'bg-white border-emerald-200' : 'bg-white border-amber-200'" class="border px-4 py-3 rounded-xl flex items-center justify-between shadow-sm">
+            <div :class="activeShift ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-100 border-amber-300 text-amber-800'" class="border px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
                 <div class="flex items-center gap-3">
-                    <div :class="activeShift ? 'text-emerald-500' : 'text-amber-500'" class="w-8 h-8 rounded-full flex items-center justify-center bg-slate-50">
-                        <i :class="activeShift ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'" class="text-lg"></i>
+                    <div :class="activeShift ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-200 text-amber-600'" class="w-10 h-10 rounded-full flex items-center justify-center shadow-inner">
+                        <i :class="activeShift ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="text-xl"></i>
                     </div>
                     <div>
-                        <p class="font-bold text-xs text-slate-700" x-text="activeShift ? 'Shift Aktif' : 'Shift Belum Dibuka'"></p>
-                        <p class="text-[9px] font-medium text-slate-400" x-text="activeShift ? 'Anda sedang dalam sesi penjualan.' : 'Buka shift untuk mulai transaksi.'"></p>
+                        <p class="font-black text-sm" x-text="activeShift ? 'Shift Telah Dibuka' : 'Shift Belum Dibuka'"></p>
+                        <p class="text-[10px] font-medium opacity-80" x-text="activeShift ? 'Anda sedang dalam sesi penjualan aktif.' : 'Buka shift untuk mulai mencatat transaksi.'"></p>
                     </div>
                 </div>
                 <template x-if="!activeShift && products.length > 0">
-                    <a href="{{ route('shifts.index', ['open' => 1]) }}" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5">
-                        <i class="fas fa-play text-[10px]"></i> Buka Shift
+                    <a href="{{ route('shifts.index', ['open' => 1]) }}" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg shadow-amber-500/30">
+                        Buka Shift
                     </a>
                 </template>
                 @if($activeShift)
@@ -95,51 +97,36 @@
 
 
 
-                {{-- FILTER KATEGORI (CHIPS) --}}
+        {{-- FILTER KATEGORI (CHIPS) --}}
         <div class="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide shrink-0" id="category-buttons">
-            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all">
+            <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-slate-800 text-white shadow-lg border-slate-800 active' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all">
                 Semua
             </button>
             
-            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5">
-                <i class="fas fa-fire text-[10px]" :class="activeCategory==='PROMO' ? 'text-white' : 'text-rose-500'"></i> Promo
+            {{-- SPECIAL FILTERS (PROMO & BEST SELLER) --}}
+            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white shadow-lg border-rose-500 active' : 'bg-white border-rose-200 text-rose-500 hover:bg-rose-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+                <i class="fas fa-fire"></i> Promo
             </button>
-            
-            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5">
-                <i class="fas fa-star text-[10px]" :class="activeCategory==='BEST SELLER' ? 'text-white' : 'text-amber-500'"></i> Terlaris
+            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white shadow-lg border-amber-500 active' : 'bg-white border-amber-200 text-amber-500 hover:bg-amber-50'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+                <i class="fas fa-star"></i> Terlaris
             </button>
 
             <template x-for="cat in categories" :key="cat.id">
-                <button @click="setCategory(cat.id)" :data-category="cat.id" :class="activeCategory===cat.id ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'" class="category-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all">
+                <button @click="setCategory(cat.id)" 
+                        :data-category="cat.id"
+                        :style="activeCategory===cat.id ? `background-color: ${cat.color || '#10b981'}; border-color: ${cat.color || '#10b981'}; color: ${getContrastYIQ(cat.color || '#10b981')}; box-shadow: 0 4px 15px -3px ${cat.color || '#10b981'}60;` : `border-color: ${cat.color || '#e2e8f0'}; color: ${cat.color || '#64748b'};`"
+                        :class="activeCategory===cat.id ? 'shadow-lg border active' : 'bg-white border hover:bg-slate-50'" 
+                        class="category-btn px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+                    <i :class="getPlaceholderIcon(cat.name)" class="text-xs" :style="activeCategory!==cat.id ? `color: ${cat.color || '#64748b'};` : ''"></i>
                     <span x-text="cat.name"></span>
                 </button>
             </template>
-                </div>
-
-        {{-- MINI WORKSHEET SELECTOR (Mobile Reference) --}}
-        @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
-        <div class="mb-4 bg-white border border-slate-200 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:bg-slate-50 transition-colors shrink-0" onclick="document.getElementById('mobile-ws-dropdown').classList.toggle('hidden')">
-            <div class="flex items-center gap-3">
-                <div class="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center">
-                    <i class="fas fa-store text-emerald-500 text-[10px]"></i>
-                </div>
-                <span class="text-xs font-bold text-slate-700">{{ $activeWorksheet ? $activeWorksheet->name : 'Pilih Worksheet' }}</span>
-            </div>
-            <i class="fas fa-chevron-down text-slate-400 text-[10px]"></i>
         </div>
-        <div id="mobile-ws-dropdown" class="hidden mb-4 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden shrink-0">
-            @foreach($userWorksheets ?? [] as $w)
-            <a href="?worksheet_id={{ $w->id }}" class="block px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 border-b border-slate-100 last:border-0 {{ $activeWorksheet && $activeWorksheet->id == $w->id ? 'bg-emerald-50 text-emerald-600' : '' }}">
-                {{ $w->name }}
-            </a>
-            @endforeach
-        </div>
-        @endif
 
         {{-- GRID PRODUK --}}
         <div id="product-grid-container" class="flex-1 overflow-y-auto pr-2 pb-6 scrollbar-hide scroll-smooth relative">
             <div x-show="filteredProductsCount === 0" class="absolute inset-0 flex flex-col items-center justify-center h-full text-slate-400 z-10">
-                <div class="w-20 h-20 bg-white lg:bg-slate-100 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-200 shadow-inner">
+                <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-200 shadow-inner">
                     <i class="fas fa-box-open text-3xl opacity-50"></i>
                 </div>
                 <p class="text-sm font-black text-slate-500 uppercase tracking-widest mb-2">Produk Belum Tersedia</p>
@@ -152,12 +139,12 @@
             {{-- VIRTUAL SECTION: PROMO (Only show in 'All' or 'PROMO' mode) --}}
             <div class="space-y-6 w-full mb-6" x-show="activeCategory === '' || activeCategory === 'PROMO'">
                 <div class="w-full" x-show="promoProducts.length > 0">
-                    <div class="sticky top-0 z-20 bg-white lg:bg-slate-100 py-3 mb-4 border-b border-rose-200 flex items-center gap-3">
+                    <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-rose-200 flex items-center gap-3">
                         <span class="w-3 h-3 rounded-full shadow-inner bg-rose-500 animate-pulse"></span>
                         <h3 class="font-black text-rose-600 text-sm uppercase tracking-widest">PROMO</h3>
                         <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100" x-text="promoProducts.length + ' Item'"></span>
                     </div>
-                    <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                    <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                         <template x-for="p in promoProducts" :key="'promo-view-'+p.id">
                             @include('pos._product_card')
                         </template>
@@ -168,12 +155,12 @@
             {{-- VIRTUAL SECTION: BEST SELLER (Only show in 'All' or 'BEST SELLER' mode) --}}
             <div class="space-y-6 w-full mb-6" x-show="activeCategory === '' || activeCategory === 'BEST SELLER'">
                 <div class="w-full" x-show="bestSellerProducts.length > 0">
-                    <div class="sticky top-0 z-20 bg-white lg:bg-slate-100 py-3 mb-4 border-b border-amber-200 flex items-center gap-3">
+                    <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-amber-200 flex items-center gap-3">
                         <span class="w-3 h-3 rounded-full shadow-inner bg-amber-500"></span>
                         <h3 class="font-black text-amber-600 text-sm uppercase tracking-widest">BEST SELLER</h3>
                         <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100" x-text="bestSellerProducts.length + ' Item'"></span>
                     </div>
-                    <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                    <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                         <template x-for="p in bestSellerProducts" :key="'best-view-'+p.id">
                             @include('pos._product_card')
                         </template>
@@ -186,14 +173,14 @@
                 <template x-for="group in posGroups" :key="'pos-group-'+group.id">
                     <div class="w-full" x-show="group.products.filter(p => filterProduct(p)).length > 0">
                         {{-- Group Header --}}
-                        <div class="sticky top-0 z-20 bg-white lg:bg-slate-100 py-3 mb-4 border-b border-slate-200 flex items-center gap-3">
+                        <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-slate-200 flex items-center gap-3">
                             <span class="w-3 h-3 rounded-full shadow-inner" :style="`background-color: ${group.color || '#f97316'}`"></span>
                             <h3 class="font-black text-slate-700 text-sm uppercase tracking-widest" x-text="group.name"></h3>
                             <span class="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md" x-text="group.products.filter(p => filterProduct(p)).length + ' Item'"></span>
                         </div>
                         
                         {{-- Inner Grid --}}
-                        <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                        <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                             <template x-for="p in group.products.filter(x => filterProduct(x))" :key="'group-item-'+p.id">
                                 @include('pos._product_card')
                             </template>
@@ -204,13 +191,13 @@
 
             {{-- SEMUA PRODUK (REMAINING / ALL) --}}
             <div class="w-full" x-show="!['PROMO', 'BEST SELLER'].includes(activeCategory) && products.filter(p => filterProduct(p)).length > 0">
-                <div class="sticky top-0 z-20 bg-white lg:bg-slate-100 py-3 mb-4 border-b border-slate-200 flex items-center gap-3">
+                <div class="sticky top-0 z-20 bg-slate-100 py-3 mb-4 border-b border-slate-200 flex items-center gap-3">
                     <span class="w-3 h-3 rounded-full shadow-inner bg-slate-300"></span>
                     <h3 class="font-black text-slate-700 text-sm uppercase tracking-widest">Semua Produk</h3>
                     <span class="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md" x-text="products.filter(p => filterProduct(p)).length + ' Item'"></span>
                 </div>
 
-                <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                     <template x-for="p in products.filter(p => filterProduct(p))" :key="p.id">
                         @include('pos._product_card')
                     </template>
@@ -220,17 +207,13 @@
     </div>
 
     {{-- RIGHT PANEL: ORDER PANEL (CLEAN & TIDY) --}}
-    {{-- Mobile Cart Overlay Backdrop --}}
-    <div x-show="mobileCartOpen" x-transition.opacity @click="mobileCartOpen = false" x-cloak class="fixed inset-0 bg-slate-900/60 z-[140] lg:hidden"></div>
-
-    <div class="fixed inset-y-0 right-0 z-[150] w-full sm:w-[420px] max-w-full lg:relative flex flex-col bg-white shadow-2xl lg:shadow-[-10px_0_30px_rgba(0,0,0,0.02)] h-[100dvh] lg:h-full border-l border-slate-100 shrink-0 overflow-hidden transition-transform duration-300 lg:translate-x-0" :class="mobileCartOpen ? 'translate-x-0' : 'translate-x-full'">
+    <div class="w-full lg:w-[420px] flex flex-col bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] z-10 h-full border-l border-slate-100 shrink-0 overflow-hidden">
         
         {{-- PANEL HEADER --}}
-        <div class="p-4 sm:p-6 border-b border-slate-100 bg-white shrink-0">
-            <div class="flex justify-between items-start mb-1 gap-2">
-                <button @click="mobileCartOpen = false" class="lg:hidden w-8 h-8 shrink-0 rounded-lg bg-white lg:bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors flex items-center justify-center border border-slate-200"><i class="fas fa-arrow-left text-xs"></i></button>
-                <h3 class="text-lg font-black text-slate-800 tracking-tight flex-1">Pesanan Saat Ini</h3>
-                <div class="flex gap-2 shrink-0">
+        <div class="p-6 border-b border-slate-100 bg-white shrink-0">
+            <div class="flex justify-between items-start mb-1">
+                <h3 class="text-lg font-black text-slate-800 tracking-tight">Pesanan Saat Ini</h3>
+                <div class="flex gap-2">
                     <button @click="showPrinterSettings = true" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-print text-xs"></i></button>
                     <button class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center border border-slate-100"><i class="fas fa-cog text-xs"></i></button>
                 </div>
@@ -258,7 +241,7 @@
         </div>
 
         {{-- CART AREA --}}
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide space-y-4">
+        <div class="flex-1 overflow-y-auto p-6 scrollbar-hide space-y-4">
             
             {{-- TAB: PESANAN SAAT INI --}}
             <div x-show="cartView === 'active'" class="flex flex-col">
@@ -279,7 +262,7 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
-                                    <span class="text-[10px] text-slate-300">ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</span>
+                                    <span class="text-[10px] text-slate-300">×</span>
                                     <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5">
                                         <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
                                         <span class="text-xs font-black text-slate-800 w-5 text-center" x-text="item.quantity"></span>
@@ -304,7 +287,7 @@
         </div>
 
         {{-- ORDER INFO & ACTION AREA --}}
-        <div class="p-4 sm:p-6 bg-slate-50/50 border-t border-slate-100 shrink-0 space-y-5">
+        <div class="p-6 bg-slate-50/50 border-t border-slate-100 shrink-0 space-y-5">
             
             {{-- DATA PELANGGAN --}}
             <div class="space-y-3">
@@ -316,7 +299,7 @@
                     <i class="far fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"></i>
                     <input type="text" x-model="activeWorksheet.customerName" class="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all" placeholder="Ketik nama atau no HP...">
                 </div>
-                <div class="grid grid-cols-1 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div class="relative group">
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. HP</label>
                         <i class="fas fa-phone-alt absolute left-4 top-[38px] text-[10px] text-slate-300"></i>
@@ -338,7 +321,7 @@
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400" x-text="activeWorksheet.discountType === 'nominal' ? 'Rp' : '%'"></span>
                             <input type="number" x-model.number="activeWorksheet.globalDiscount" class="w-full pl-8 pr-2 py-1.5 text-sm font-black text-slate-800 focus:outline-none bg-transparent">
                         </div>
-                        <div class="flex bg-white lg:bg-slate-100 rounded-lg p-0.5">
+                        <div class="flex bg-slate-100 rounded-lg p-0.5">
                             <button @click="activeWorksheet.discountType = 'nominal'" :class="activeWorksheet.discountType === 'nominal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">Rp</button>
                             <button @click="activeWorksheet.discountType = 'percentage'" :class="activeWorksheet.discountType === 'percentage' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">%</button>
                         </div>
@@ -352,7 +335,7 @@
             </div>
 
             {{-- DELIVERY MODE --}}
-            <div class="bg-white lg:bg-slate-100/50 border border-slate-200/50 rounded-xl p-3 space-y-3">
+            <div class="bg-slate-100/50 border border-slate-200/50 rounded-xl p-3 space-y-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3 text-slate-600">
                         <i class="fas fa-shipping-fast text-xs"></i>
@@ -412,7 +395,7 @@
             </div>
 
             {{-- ACTIONS --}}
-            <div class="grid grid-cols-1 gap-3 pt-2">
+            <div class="grid grid-cols-2 gap-3 pt-2">
                 <button @click="resetCurrentWorksheet()" class="py-3.5 bg-red-50 text-red-600 border border-red-100 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]">Batal</button>
                 <button @click="openPayment()" 
                         :disabled="!activeShift || activeWorksheet.cart.length === 0" 
@@ -422,34 +405,15 @@
                 </button>
             </div>
         </div>
-    </div>
-    
-    {{-- MOBILE FIXED BOTTOM CART BAR --}}
-        {{-- MOBILE FIXED BOTTOM CART BAR --}}
-    <div x-show="activeWorksheet && activeWorksheet.cart.length > 0" x-cloak class="lg:hidden fixed bottom-0 left-0 right-0 z-[130] bg-[#10b981] text-white shadow-[0_-10px_20px_rgba(16,185,129,0.2)] px-5 pt-3 pb-4 flex items-center justify-between cursor-pointer active:bg-emerald-600 transition-colors w-full" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));" @click="mobileCartOpen = true">
-        <div class="flex items-center gap-3">
-            <div class="relative w-8 h-8 flex items-center justify-center">
-                <i class="fas fa-shopping-bag text-2xl opacity-90"></i>
-                <span class="absolute -top-1 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm" x-text="activeWorksheet ? activeWorksheet.cart.reduce((s,i) => s+i.quantity, 0) : 0"></span>
-            </div>
-            <div class="flex flex-col ml-1">
-                <span class="text-[10px] font-medium text-emerald-100 uppercase tracking-widest leading-none mb-0.5">Total Belanja</span>
-                <span class="text-base font-black leading-none mt-0.5" x-text="formatRp(currentTotal)"></span>
-            </div>
-        </div>
-        <div class="flex items-center justify-center gap-2 font-black text-[11px] bg-white text-[#10b981] hover:bg-emerald-50 transition-colors px-4 py-2 rounded-full shadow-sm shrink-0">
-            <span>Lihat Pesanan</span> <i class="fas fa-arrow-right text-[10px]"></i>
-        </div>
-    </div>
 
 
     {{-- MODAL LAYOUT EDITOR (DRAG & DROP) --}}
     <template x-teleport="body">
-        <div x-show="showGroupManagerModal" x-transition x-cloak class="fixed inset-0 bg-white lg:bg-slate-100 z-[200] flex flex-col h-screen overflow-hidden">
+        <div x-show="showGroupManagerModal" x-transition x-cloak class="fixed inset-0 bg-slate-100 z-[200] flex flex-col h-screen overflow-hidden">
         {{-- HEADER MODAL --}}
         <div class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm z-10">
             <div class="flex items-center gap-4">
-                <button @click="closeGroupManager()" class="w-10 h-10 bg-white lg:bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-arrow-left"></i></button>
+                <button @click="closeGroupManager()" class="w-10 h-10 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-arrow-left"></i></button>
                 <div>
                     <h3 class="text-xl font-black text-slate-800">Edit Layout POS</h3>
                     <p class="text-xs font-bold text-slate-500">Seret produk untuk mengatur urutan & kelompok</p>
@@ -468,7 +432,7 @@
         </div>
 
         {{-- BODY EDITOR --}}
-        <div class="flex-1 overflow-y-auto p-6 bg-white lg:bg-slate-100/80 flex flex-col gap-6">
+        <div class="flex-1 overflow-y-auto p-6 bg-slate-100/80 flex flex-col gap-6">
             {{-- GROUPS CONTAINER --}}
             <template x-for="(g, gIndex) in draftGroups" :key="'draft-g-'+gIndex">
                 <div class="bg-white rounded-3xl border-2 shadow-sm p-5 relative transition-all" 
@@ -509,7 +473,7 @@
                                  class="w-40 bg-white border-2 rounded-2xl overflow-hidden shrink-0 shadow-sm cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-lg transition-all relative group flex flex-col"
                                  :style="`border-color: ${dragOverIndex === pIndex && dragOverGroup === gIndex ? g.color : '#e2e8f0'}; box-shadow: ${dragOverIndex === pIndex && dragOverGroup === gIndex ? '0 0 0 4px '+g.color+'40' : ''};`">
                                 
-                                <div class="h-28 w-full bg-white lg:bg-slate-100 relative overflow-hidden shrink-0">
+                                <div class="h-28 w-full bg-slate-100 relative overflow-hidden shrink-0">
                                     <template x-if="p.image">
                                         <img :src="'/storage/'+p.image" class="w-full h-full object-cover">
                                     </template>
@@ -547,7 +511,7 @@
                      @dragover.prevent="dragOverGroup = 'ungrouped'"
                      @dragleave.prevent="dragOverGroup = null"
                      @drop.prevent="dropItemToUngrouped()"
-                     :class="dragOverGroup === 'ungrouped' ? 'bg-white lg:bg-slate-100/80 rounded-2xl ring-2 ring-emerald-400 ring-inset' : ''">
+                     :class="dragOverGroup === 'ungrouped' ? 'bg-slate-100/80 rounded-2xl ring-2 ring-emerald-400 ring-inset' : ''">
                     
                     <template x-if="draftUngrouped.length === 0">
                         <div class="w-full flex flex-col items-center justify-center text-emerald-500 font-bold text-sm bg-emerald-50/50 rounded-2xl border border-emerald-100 py-8">
@@ -561,7 +525,7 @@
                              @dragstart="startDrag($event, p, 'ungrouped', pIndex)"
                              class="w-40 bg-white border border-slate-200 rounded-2xl overflow-hidden shrink-0 shadow-sm cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-lg transition-all relative group flex flex-col opacity-80 hover:opacity-100 grayscale-[0.5] hover:grayscale-0">
                             
-                            <div class="h-28 w-full bg-white lg:bg-slate-100 relative overflow-hidden shrink-0">
+                            <div class="h-28 w-full bg-slate-100 relative overflow-hidden shrink-0">
                                 <template x-if="p.image">
                                     <img :src="'/storage/'+p.image" class="w-full h-full object-cover">
                                 </template>
@@ -591,12 +555,12 @@
     {{-- MODAL PEMBAYARAN --}}
     <template x-teleport="body">
         <div x-show="showPaymentModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-        <div @click.away="showPaymentModal = false" class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 transform transition-all max-h-[90vh] overflow-y-auto scrollbar-hide ">
+        <div @click.away="showPaymentModal = false" class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 transform transition-all max-h-[90vh] overflow-y-auto scrollbar-hide">
             
             {{-- Header --}}
             <div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
                 <h3 class="text-xl font-black text-slate-800">Detail Pembayaran</h3>
-                <button @click="showPaymentModal = false" class="w-8 h-8 bg-white lg:bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
+                <button @click="showPaymentModal = false" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
             </div>
 
             <div class="p-6 space-y-6">
@@ -609,7 +573,7 @@
                 {{-- Toggle: Bayar Sekarang / Bayar Nanti --}}
                 <div>
                     <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Waktu Pembayaran</label>
-                    <div class="flex p-1 bg-white lg:bg-slate-100 rounded-xl">
+                    <div class="flex p-1 bg-slate-100 rounded-xl">
                         <button @click="paymentTiming = 'now'" 
                             :class="paymentTiming === 'now' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 hover:text-slate-700'" 
                             class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all">Bayar Sekarang</button>
@@ -670,7 +634,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-qrcode text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">QR Code belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Gambar QRIS</p>
+                                <p class="text-xs text-slate-400 mt-1">Upload di menu Pengaturan Toko → Gambar QRIS</p>
                             </div>
                             @endif
                         </div>
@@ -698,7 +662,7 @@
                             <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-3"><i class="fas fa-building-columns text-2xl text-slate-400"></i></div>
                                 <p class="text-sm font-bold text-slate-500">Info rekening belum diatur</p>
-                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Info Rekening Transfer</p>
+                                <p class="text-xs text-slate-400 mt-1">Isi di menu Pengaturan Toko → Info Rekening Transfer</p>
                             </div>
                             @endif
                         </div>
@@ -780,7 +744,7 @@
     {{-- MODAL SUKSES (RECEIPT) --}}
     <template x-teleport="body">
         <div x-show="showReceiptModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl border border-slate-200 text-center transform transition-all relative overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl border border-slate-200 text-center transform transition-all relative overflow-hidden">
             <div class="absolute -top-10 -right-10 w-40 h-40 bg-emerald-50 rounded-full opacity-50"></div>
             <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-50 rounded-full opacity-50"></div>
             
@@ -813,7 +777,7 @@
     {{-- MODAL TAMBAH GRUP --}}
     <template x-teleport="body">
         <div x-show="showAddGroupModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
-        <div @click.away="closeAddGroupModal()" @keydown.escape.window="closeAddGroupModal()" class="bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700 transform transition-all overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+        <div @click.away="closeAddGroupModal()" @keydown.escape.window="closeAddGroupModal()" class="bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl border border-slate-700 transform transition-all overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80">
                 <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fas fa-layer-group text-blue-400"></i> Tambah Group Produk</h3>
                 <button @click="closeAddGroupModal()" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
@@ -834,10 +798,10 @@
     {{-- MODAL PENGELUARAN / EXPENSE --}}
     <template x-teleport="body">
         <div x-show="showExpenseModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-        <div @click.away="showExpenseModal = false" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto scrollbar-hide ">
+        <div @click.away="showExpenseModal = false" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-lg font-black text-slate-800"><i class="fas fa-arrow-down text-orange-500 mr-2"></i>Catat Pengeluaran</h2>
-                <button @click="showExpenseModal = false" class="w-8 h-8 bg-white lg:bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200"><i class="fas fa-times"></i></button>
+                <button @click="showExpenseModal = false" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200"><i class="fas fa-times"></i></button>
             </div>
             <div class="space-y-4">
                 <div>
@@ -873,7 +837,7 @@
 
 {{-- ====================== MODAL TUTUP SHIFT ====================== --}}
 <div id="modal-tutup-shift" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden">
         {{-- Header --}}
         <div class="bg-gradient-to-r from-red-500 to-rose-600 p-6 text-white">
             <div class="flex items-center justify-between mb-1">
@@ -1015,7 +979,7 @@
     {{-- MODAL CUSTOM HARGA (HARGA KHUSUS) --}}
     <template x-teleport="body">
         <div x-show="showCustomPriceModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-            <div @click.away="showCustomPriceModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+            <div @click.away="showCustomPriceModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden">
                 {{-- Header --}}
                 <div class="bg-gradient-to-r from-orange-500 to-amber-600 p-8 text-white relative">
                     <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fas fa-tags text-7xl"></i></div>
@@ -1103,7 +1067,7 @@
     {{-- MODAL CASH OUT (MODERNIZED) --}}
     <template x-teleport="body">
         <div x-show="showCashOutModal" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-            <div @click.away="showCashOutModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+            <div @click.away="showCashOutModal = false" class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden">
                 {{-- Header --}}
                 <div class="bg-gradient-to-r from-orange-500 to-amber-600 p-8 text-white relative">
                     <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fas fa-cash-register text-7xl"></i></div>
@@ -1150,7 +1114,7 @@
                     {{-- Main Category --}}
                     <div>
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Jenis Pengeluaran</label>
-                        <div class="grid grid-cols-1 gap-2">
+                        <div class="grid grid-cols-2 gap-2">
                             <template x-for="cat in ['operasional', 'consumable', 'bahan_baku', 'variabel']">
                                 <button @click="cashOutMainCategory = cat; cashOutSubCategory = ''"
                                         :class="cashOutMainCategory === cat ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20' : 'bg-slate-50 text-slate-500 border-slate-100 hover:border-orange-200'"
@@ -1203,7 +1167,7 @@
     {{-- MODAL PENGATURAN PRINTER (PREMIUM UI) --}}
     <template x-teleport="body">
         <div x-show="showPrinterSettings" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[201] flex items-center justify-center p-4">
-            <div @click.away="showPrinterSettings = false" class="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] max-h-[90vh] overflow-y-auto scrollbar-hide ">
+            <div @click.away="showPrinterSettings = false" class="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
                 
                 {{-- Header --}}
                 <div class="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -1216,7 +1180,7 @@
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Hubungkan & sesuaikan tampilan struk</p>
                         </div>
                     </div>
-                    <button @click="showPrinterSettings = false" class="w-10 h-10 bg-slate-50 hover:bg-white lg:bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center transition-all">
+                    <button @click="showPrinterSettings = false" class="w-10 h-10 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center transition-all">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1306,7 +1270,7 @@
                                     <div class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fas fa-microchip text-lg"></i></div>
                                     <div class="text-left flex-1">
                                         <p class="text-sm font-black text-slate-800">USB (Serial)</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Pilih COM Port</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Printer via kabel USB — Pilih COM Port</p>
                                     </div>
                                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500"></i>
                                 </button>
@@ -1491,7 +1455,7 @@
                                 </div>
                             </div>
                             
-                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â font ' + fontSize"></p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-4" x-text="paperSize + ' — font ' + fontSize"></p>
                         </div>
                     </div>
                 </div>
@@ -1606,7 +1570,6 @@ function closeCashOut() {
         console.log("Registering posApp data...");
         
         Alpine.data('posApp', () => ({
-            mobileCartOpen: false,
             // Init Data Backend
             categories: @json($categories),
             products: @json($products),
@@ -1629,9 +1592,9 @@ function closeCashOut() {
             monthlyRevenue: {{ $monthlyRevenue ?? 0 }},
 
             get bepMonths() {
-                if (this.monthlyRevenue <= 0) return 'ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â Ãƒâ€¦Ã‚Â¾';
+                if (this.monthlyRevenue <= 0) return '∞';
                 let months = this.totalCapital / this.monthlyRevenue;
-                return isFinite(months) ? Math.ceil(months) : 'ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â Ãƒâ€¦Ã‚Â¾';
+                return isFinite(months) ? Math.ceil(months) : '∞';
             },
 
             // Multi-Worksheet Logic
@@ -2012,13 +1975,28 @@ function closeCashOut() {
                         if(e.key === 'Enter' && this.showReceiptModal) { e.preventDefault(); this.closeReceiptAndReset(); }
                     });
 
-                    setInterval(() => {
+                    const updateClock = () => {
+                        const now = new Date();
+                        const timeStr = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                        
                         const el = document.getElementById('pos-clock-display');
                         if(el) {
                             const span = el.querySelector('span');
-                            if(span) span.textContent = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                            if(span) span.textContent = timeStr;
                         }
-                    }, 1000);
+                        
+                        const timeDisplay = document.getElementById('pos-time-display');
+                        if(timeDisplay) timeDisplay.textContent = timeStr;
+                        
+                        const dateDisplay = document.getElementById('pos-date-display');
+                        if(dateDisplay) {
+                            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                            dateDisplay.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+                        }
+                    };
+                    updateClock();
+                    setInterval(updateClock, 1000);
                 } catch (e) {
                     console.error("POS App Init Error:", e);
                 }
@@ -2821,19 +2799,3 @@ function closeCashOut() {
 </script>
 @endpush
 @endsection
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

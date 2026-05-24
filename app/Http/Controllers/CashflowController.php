@@ -73,7 +73,8 @@ class CashflowController extends Controller
         $source = $request->source ?? 'all';
         $query = $this->baseQuery($filter, $source, $start, $end);
 
-        $cashflows = (clone $query)->latest('transaction_date')->paginate(20)->withQueryString();
+        $perPage = $request->input('per_page', 20);
+        $cashflows = (clone $query)->latest('transaction_date')->paginate($perPage)->withQueryString();
         
         // 1. Get Unified Summary
         $dateRange = $this->getDateRange($filter, $start, $end);

@@ -75,7 +75,8 @@ class MonthlyExpenseController extends Controller
             $query->where('expense_type', $request->expense_type);
         }
 
-        $expenses = (clone $query)->orderBy('expense_date', 'desc')->paginate(15)->withQueryString();
+        $perPage = $request->input('per_page', 20);
+        $expenses = (clone $query)->orderBy('expense_date', 'desc')->paginate($perPage)->withQueryString();
 
         // Module-specific Summary Statistics
         $summary = (clone $query)->where('expense_name', 'not like', '%Transfer%')

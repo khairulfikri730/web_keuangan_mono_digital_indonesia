@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Cashflow Dashboard')
 @section('page-title', 'Arus Kas')
@@ -737,7 +737,27 @@
     <div class="bg-[#111827] border border-slate-700/50 rounded-2xl p-5 mb-6">
         <!-- 7. FILTER & SEARCH -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h2 class="text-lg font-bold text-white">Riwayat Transaksi</h2>
+            <div class="flex items-center gap-3">
+                <h2 class="text-lg font-bold text-white">Riwayat Transaksi</h2>
+                <form action="" method="GET" class="flex items-center" onchange="this.submit()">
+                    @foreach(request()->except(['per_page', 'page']) as $key => $val)
+                        @if(is_array($val))
+                            @foreach($val as $v)
+                                <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                            @endforeach
+                        @else
+                            <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                        @endif
+                    @endforeach
+                    <select name="per_page" class="bg-[#0F172A] border border-slate-700 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-3 py-1.5 hover:bg-slate-800 transition-all focus:outline-none focus:border-blue-500 cursor-pointer">
+                        <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
+                        <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                        <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20 Baris</option>
+                        <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                        <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                    </select>
+                </form>
+            </div>
             
             <div class="flex items-center gap-3 w-full sm:w-auto">
                 <!-- Search Input -->

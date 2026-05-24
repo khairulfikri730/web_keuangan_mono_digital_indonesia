@@ -135,6 +135,25 @@
                         <span class="w-2 h-6 bg-blue-500 rounded-full"></span>
                         Riwayat Pengeluaran
                     </h4>
+                    <form action="" method="GET" class="flex items-center" onchange="this.submit()">
+                        @foreach(request()->except(['per_page', 'page']) as $key => $val)
+                            @if(is_array($val))
+                                @foreach($val as $v)
+                                    <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                                @endforeach
+                            @else
+                                <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                            @endif
+                        @endforeach
+                        <select name="per_page" class="bg-slate-800 border border-white/5 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 hover:bg-slate-700 transition-all focus:outline-none focus:border-blue-500/50 cursor-pointer">
+                            <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
+                            <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                            <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15 Baris</option>
+                            <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 Baris</option>
+                            <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                            <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                        </select>
+                    </form>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">

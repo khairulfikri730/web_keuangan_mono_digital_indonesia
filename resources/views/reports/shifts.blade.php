@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Monitoring Shift')
 @section('page-title', 'Dashboard Shift Kasir')
@@ -319,9 +319,29 @@
         <div class="lg:col-span-8 bg-slate-800 rounded-2xl border border-slate-700/80 shadow-sm overflow-hidden flex flex-col">
             <div class="p-5 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2"><i class="fas fa-list text-slate-300"></i> Riwayat Shift</h3>
-                <button onclick="window.openExportModal()" class="w-10 h-10 bg-slate-800 border border-white/5 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
-                    <i class="fas fa-file-export"></i>
-                </button>
+                <div class="flex items-center gap-3">
+                    <form action="" method="GET" class="flex items-center" onchange="this.submit()">
+                        @foreach(request()->except(['per_page', 'page']) as $key => $val)
+                            @if(is_array($val))
+                                @foreach($val as $v)
+                                    <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                                @endforeach
+                            @else
+                                <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                            @endif
+                        @endforeach
+                        <select name="per_page" class="bg-slate-800 border border-white/5 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 h-10 hover:bg-slate-700 transition-all focus:outline-none focus:border-blue-500/50 cursor-pointer">
+                            <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
+                            <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                            <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20 Baris</option>
+                            <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                            <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                        </select>
+                    </form>
+                    <button onclick="window.openExportModal()" class="w-10 h-10 bg-slate-800 border border-white/5 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
+                        <i class="fas fa-file-export"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="flex flex-col gap-0 divide-y divide-slate-700/50">
@@ -451,7 +471,7 @@
     </div>
 
     {{-- MODAL DETAIL SHIFT --}}
-    <div x-show="isModalOpen" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div x-show="isModalOpen" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div @click.away="closeModal()" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-[#1e293b] rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col max-h-[90vh] max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <div class="p-6 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50 shrink-0">
                 <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fas fa-file-invoice text-blue-400"></i> Detail Shift</h3>
@@ -596,7 +616,7 @@
     </div>
 
     {{-- MODAL EDIT SHIFT --}}
-    <div x-show="showEditModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+    <div x-show="showEditModal" x-transition.opacity x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div @click.away="showEditModal=false" class="bg-[#1e293b] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700 p-6 max-h-[90vh] overflow-y-auto scrollbar-hide ">
             <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fas fa-edit text-blue-400"></i> Edit Shift</h3>
             <p class="text-xs text-slate-400 mb-5">Perbarui data kas awal dan akhir shift.</p>

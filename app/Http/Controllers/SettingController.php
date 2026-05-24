@@ -121,4 +121,82 @@ class SettingController extends Controller
             ], 500);
         }
     }
+
+    public function resetData(Request $request)
+    {
+        $request->validate([
+            'reset_type' => 'required|string|in:all_data,all_transactions,income_only,expense_only,product_catalog',
+        ]);
+
+        $worksheetId = session('active_worksheet_id') ?: \App\Models\Worksheet::first()->id;
+
+        try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
+            $type = $request->reset_type;
+
+            if (in_array($type, ['all_data', 'all_transactions', 'income_only'])) {
+                // Hapus Invoices
+                $invoices = \App\Models\Invoice::where('worksheet_id', $worksheetId)->get();
+                foreach($invoices as $i) {
+                    $i->items()->delete();
+                    $i->payments()->delete();
+                    $i->delete();
+                }
+
+                // Hapus Transactions (Sales)
+                $transactions = \App\Models\Transaction::where('worksheet_id', $worksheetId)->get();
+                foreach($transactions as $t) {
+                    $t->items()->delete();
+                    $t->payments()->delete();
+                    $t->delete();
+                }
+
+                // Hapus Cashflows Pemasukan
+                \App\Models\Cashflow::where('worksheet_id', $worksheetId)->where('type', 'income')->delete();
+                
+                if ($type === 'income_only') {
+                    // Reset stats pemasukan shift agar tidak rancu
+                    \App\Models\Shift::where('worksheet_id', $worksheetId)
+                        ->update(['cash_sales' => 0, 'qris_sales' => 0, 'transfer_sales' => 0]);
+                }
+            }
+
+            if (in_array($type, ['all_data', 'all_transactions', 'expense_only'])) {
+                // Hapus Pengeluaran Bulanan
+                $usages = \App\Models\MonthlyUsage::where('worksheet_id', $worksheetId)->get();
+                foreach($usages as $u) {
+                    $u->items()->delete();
+                    $u->delete();
+                }
+                
+                // Hapus Cashflows Pengeluaran
+                \App\Models\Cashflow::where('worksheet_id', $worksheetId)->where('type', 'expense')->delete();
+            }
+
+            if (in_array($type, ['all_data', 'all_transactions'])) {
+                // Hapus Seluruh Shift karena riwayat transaksi sudah terhapus total
+                \App\Models\Shift::where('worksheet_id', $worksheetId)->delete();
+                \Illuminate\Support\Facades\DB::table('cash_drawer_logs')->truncate();
+            }
+
+            if (in_array($type, ['all_data', 'product_catalog'])) {
+                // Hapus Katalog Produk & Kategori
+                // Catatan: stock_mutations akan ikut terhapus berkat onDelete('cascade')
+                // transaction_items akan di set null jika ada yang tersisa
+                $products = \App\Models\Product::where('worksheet_id', $worksheetId)->get();
+                foreach($products as $p) {
+                    $p->delete();
+                }
+                \App\Models\Category::where('worksheet_id', $worksheetId)->delete();
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return back()->with('success', 'Reset data sistem berhasil dieksekusi secara permanen!');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return back()->with('error', 'Gagal mereset data: ' . $e->getMessage());
+        }
+    }
 }

@@ -43,7 +43,8 @@ class ReportController extends Controller
             $baseQuery->where('worksheet_id', $worksheetId);
         }
 
-        $transactions = (clone $baseQuery)->with(['user', 'items'])->latest()->paginate(20)->withQueryString();
+        $perPage = $request->input('per_page', 20);
+        $transactions = (clone $baseQuery)->with(['user', 'items'])->latest()->paginate($perPage)->withQueryString();
 
         $summary = (clone $baseQuery)
             ->selectRaw('COUNT(*) as total_trx, SUM(total) as total_sales, SUM(discount) as total_discount')
@@ -131,6 +132,14 @@ class ReportController extends Controller
         $finSummary = $this->financialService->getSummary($dateFrom, $dateTo, $worksheetId);
         $totalExpense = $finSummary->total_expense;
         $netProfit = $finSummary->net_profit;
+
+        $topExpenseCategory = \App\Models\Cashflow::where('transaction_category', 'expense')
+            ->whereBetween('transaction_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
+            ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
+            ->selectRaw('category, SUM(amount) as total')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->first();
 
         $users = \App\Models\User::all();
 
@@ -249,19 +258,28 @@ class ReportController extends Controller
 
         $promoDayName = $quietestDayName !== '-' ? $quietestDayName : '-';
 
+        $rankedDays = [];
+        foreach ($dayTotals as $iso => $total) {
+            if ($total > 0) {
+                $rankedDays[] = ['day' => $dayNames[$iso], 'count' => $total];
+            }
+        }
+        usort($rankedDays, fn($a, $b) => $b['count'] <=> $a['count']);
+
         $heatmapInsights = [
             'busiest_day' => $busiestDayName,
             'quietest_day' => $quietestDayName,
             'best_hour' => $bestHourText,
             'promo_day' => $promoDayName,
-            'max_trx' => $maxHeatmapTrx
+            'max_trx' => $maxHeatmapTrx,
+            'ranked_days' => $rankedDays
         ];
 
         return view('reports.sales', compact(
             'transactions', 'summary', 'byPayment', 'topProducts', 'dateFrom', 'dateTo', 'salesPerDay', 
             'byCategory', 'peakHours', 'users', 'saldoLaci', 'saldoBank', 'totalExpense', 'netProfit',
             'topProfitableHour', 'topProfitProduct', 'worstMarginProduct', 'inactiveProducts',
-            'heatmapMatrix', 'heatmapInsights'
+            'heatmapMatrix', 'heatmapInsights', 'topExpenseCategory'
         ));
     }
 
@@ -444,7 +462,8 @@ class ReportController extends Controller
             ->when($request->status && !is_array($request->status), fn($q) => $q->where('status', $request->status))
             ->when($request->user_id && !is_array($request->user_id), fn($q) => $q->where('opened_by', $request->user_id));
 
-        $shifts = $query->latest()->paginate(20)->withQueryString();
+        $perPage = $request->input('per_page', 20);
+        $shifts = $query->latest()->paginate($perPage)->withQueryString();
 
         $activeShiftsCount = (clone $query)->where('status', 'open')->count();
         $closedShifts = (clone $query)->where('status', 'closed')->get();

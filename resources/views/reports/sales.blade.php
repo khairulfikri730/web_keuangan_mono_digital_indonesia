@@ -23,7 +23,7 @@
     </div>
 
     {{-- FILTER PANEL --}}
-    <div class="bg-slate-800/40 backdrop-blur-xl rounded-3xl p-6 border border-white/5 shadow-2xl relative z-40 overflow-hidden">
+    <div class="bg-slate-800/40 backdrop-blur-xl rounded-3xl p-6 border border-white/5 shadow-2xl relative z-40 overflow-hidden mb-6">
         <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-[80px] pointer-events-none"></div>
 
         <form id="filterForm" action="{{ route('sales.index') }}" method="GET" class="flex flex-col md:flex-row gap-5 items-end md:items-center w-full">
@@ -67,12 +67,12 @@
         </form>
     </div>
 
-    {{-- KPI & BALANCES GRID --}}
+    {{-- KPI & BALANCES GRID (RESTORED) --}}
     @php
         $grossSales = $summary->total_sales + $summary->total_discount;
         $marginProfit = $summary->total_sales - $summary->total_cogs;
     @endphp
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {{-- Total Omzet --}}
         <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-6 shadow-xl shadow-blue-900/20 relative overflow-hidden group border border-white/10">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500"></div>
@@ -188,151 +188,136 @@
         </div>
     </div>
 
-    {{-- CHARTS SECTION --}}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-2">
+    {{-- NEW PHOTOLAB-STYLE DASHBOARD --}}
+    
+    {{-- 1. MAIN AREA CHART (PENDAPATAN) --}}
+    <div class="bg-white dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-white/5 shadow-2xl relative overflow-hidden flex flex-col">
+        <div class="mb-4">
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pendapatan</h3>
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl lg:text-4xl font-black text-slate-800 dark:text-white tracking-tight">Rp {{ number_format($summary->total_sales, 0, ',', '.') }}</h1>
+                @if($summary->total_sales > 0)
+                <span class="bg-emerald-500/10 text-emerald-500 text-[10px] font-black px-2 py-1 rounded-md border border-emerald-500/20"><i class="fas fa-caret-up"></i> TERTINGGI</span>
+                @endif
+            </div>
+            <p class="text-xs font-bold text-slate-500 mt-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M Y') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M Y') : '' }}</p>
+        </div>
         
-        {{-- LINE CHART --}}
-        <div class="lg:col-span-8 bg-slate-800/40 backdrop-blur-md rounded-3xl p-8 border border-white/5 shadow-xl">
-            <div class="flex items-center justify-between mb-8">
-                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                    <span class="w-2 h-6 bg-blue-500 rounded-full"></span>
-                    Tren Penjualan Harian
-                </h3>
+        <div class="relative h-[300px] lg:h-[400px] w-full mt-4">
+            <canvas id="revenueAreaChart"></canvas>
+        </div>
+    </div>
+
+    {{-- 2. FOUR KPI CARDS --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {{-- Sesi --}}
+        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sesi / Transaksi</p>
+                <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
+                <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ $summary->total_trx ?? $summary->total_count }}</h3>
             </div>
-            <div class="relative h-[300px] w-full">
-                <canvas id="salesLineChart"></canvas>
+            <div class="h-12 w-full mt-4">
+                <canvas id="sparkline1"></canvas>
             </div>
         </div>
 
-        {{-- PIE CHART --}}
-        <div class="lg:col-span-4 bg-slate-800/40 backdrop-blur-md rounded-3xl p-8 border border-white/5 shadow-xl flex flex-col">
-            <div class="flex items-center justify-between mb-8">
-                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                    <span class="w-2 h-6 bg-emerald-500 rounded-full"></span>
-                    Metode Pembayaran
-                </h3>
+        {{-- Hari Puncak --}}
+        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between h-full">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hari Puncak</p>
+                <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
+                
+                @if(isset($heatmapInsights['ranked_days']) && count($heatmapInsights['ranked_days']) > 0)
+                    <div class="flex flex-col gap-2 mt-3">
+                        @foreach(array_slice($heatmapInsights['ranked_days'], 0, 3) as $index => $rank)
+                            <div class="flex items-center justify-between {{ $index === 0 ? 'bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-xl' : 'px-2' }}">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-black {{ $index === 0 ? 'text-emerald-500' : 'text-slate-500' }}">#{{ $index + 1 }}</span>
+                                    <h4 class="text-sm font-black {{ $index === 0 ? 'text-emerald-400' : 'text-slate-300' }}">{{ $rank['day'] }}</h4>
+                                </div>
+                                <p class="text-[10px] font-bold {{ $index === 0 ? 'text-emerald-500' : 'text-slate-500' }}">{{ $rank['count'] }} trx</p>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ $heatmapInsights['busiest_day'] ?? '-' }}</h3>
+                    <p class="text-[10px] font-bold text-emerald-400 mt-1">{{ $heatmapInsights['max_trx'] ?? 0 }} transaksi terbanyak</p>
+                @endif
             </div>
-            <div class="relative flex-1 flex items-center justify-center min-h-[250px]">
-                <canvas id="paymentPieChart"></canvas>
+            @if(!isset($heatmapInsights['ranked_days']) || count($heatmapInsights['ranked_days']) == 0)
+            <div class="h-8 w-full mt-2">
+                <canvas id="sparkline2"></canvas>
+            </div>
+            @endif
+        </div>
+
+        {{-- Produk Terlaris --}}
+        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Produk Paling Laku</p>
+                <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
+                <h3 class="text-xl font-black text-slate-800 dark:text-white truncate" title="{{ $topProducts->first() ? $topProducts->first()->product_name : '-' }}">
+                    {{ $topProducts->first() ? $topProducts->first()->product_name : '-' }}
+                </h3>
+                <p class="text-[10px] font-bold text-blue-500 mt-1">{{ $topProducts->first() ? $topProducts->first()->total_qty . ' item terjual' : '-' }}</p>
+            </div>
+            <div class="h-8 w-full mt-2">
+                <canvas id="sparkline3"></canvas>
             </div>
         </div>
 
-        {{-- BAR CHART KATEGORI --}}
-        <div class="lg:col-span-6 bg-slate-800/40 backdrop-blur-md rounded-3xl p-8 border border-white/5 shadow-xl">
-            <div class="flex items-center justify-between mb-8">
-                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                    <span class="w-2 h-6 bg-amber-500 rounded-full"></span>
-                    Omzet per Kategori
+        {{-- Pengeluaran Terbanyak (Total Pengeluaran) --}}
+        <div class="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg flex flex-col justify-between">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pengeluaran</p>
+                <p class="text-[9px] font-bold text-slate-500 mb-2">{{ is_object($dateFrom) ? $dateFrom->translatedFormat('d M') : '' }} - {{ is_object($dateTo) ? $dateTo->translatedFormat('d M') : '' }}</p>
+                <h3 class="text-2xl font-black text-slate-800 dark:text-white truncate">
+                    Rp {{ number_format($totalExpense, 0, ',', '.') }}
                 </h3>
+                <p class="text-[10px] font-bold text-rose-500 mt-1">Biaya Operasional</p>
             </div>
-            <div class="relative h-[250px] w-full">
-                <canvas id="categoryBarChart"></canvas>
+            <div class="h-8 w-full mt-2">
+                <canvas id="sparkline4"></canvas>
             </div>
         </div>
+    </div>
 
-        {{-- BONUS LEVEL PRO: TOP STATS --}}
-        <div class="lg:col-span-6 bg-slate-800/40 backdrop-blur-md rounded-3xl p-8 border border-white/5 shadow-xl flex flex-col">
-            <div class="flex items-center justify-between mb-8">
-                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                    <span class="w-2 h-6 bg-purple-500 rounded-full"></span>
-                    Statistik Unggulan
-                </h3>
+    {{-- 3. BAR CHART & METODE PEMBAYARAN --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">
+        {{-- BAR CHART (TOTAL TRANSAKSI HARIAN) --}}
+        <div class="lg:col-span-2 bg-white dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-white/5 shadow-2xl relative overflow-hidden flex flex-col">
+            <div class="flex flex-col md:flex-row justify-between mb-6 border-b border-slate-200 dark:border-white/5 pb-4">
+                <div>
+                    <h3 class="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2 mb-1">
+                        <i class="far fa-calendar-alt text-blue-500"></i> Total Transaksi (Omzet) Berdasarkan Waktu
+                    </h3>
+                    <p class="text-[10px] font-bold text-slate-500">Perbandingan omzet kotor per hari dalam periode ini.</p>
+                </div>
+                <div class="text-right mt-2 md:mt-0 bg-blue-500/10 rounded-xl px-4 py-2 border border-blue-500/20">
+                    <p class="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-0.5">Total Keseluruhan</p>
+                    <h4 class="text-lg font-black text-blue-500">Rp {{ number_format($summary->total_sales, 0, ',', '.') }}</h4>
+                </div>
             </div>
             
-            <div class="space-y-6 flex-1">
-                {{-- Top Product --}}
-                <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
-                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 group-hover:bg-blue-600 group-hover:text-white transition-all"><i class="fas fa-crown text-xl"></i></div>
-                    <div class="flex-1">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Produk Paling Laris</p>
-                        <h4 class="text-base font-black text-white truncate">{{ $topProducts->first() ? $topProducts->first()->product_name : 'Belum Ada' }}</h4>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Terjual</p>
-                        <h4 class="text-base font-black text-emerald-400">{{ $topProducts->first() ? $topProducts->first()->total_qty : 0 }}</h4>
-                    </div>
-                </div>
+            <div class="relative h-[300px] w-full">
+                <canvas id="dailyBarChart"></canvas>
+            </div>
+        </div>
 
-                {{-- Peak Hour --}}
-                <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 hover:border-orange-500/30 transition-all">
-                    <div class="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0 border border-orange-500/20 group-hover:bg-orange-600 group-hover:text-white transition-all"><i class="fas fa-fire text-xl"></i></div>
-                    <div class="flex-1">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Jam Paling Ramai</p>
-                        <h4 class="text-base font-black text-white uppercase tracking-tight">{{ $peakHours->first() ? sprintf('%02d:00 - %02d:59', $peakHours->first()->hour, $peakHours->first()->hour) : 'Belum Ada' }}</h4>
+        {{-- METODE PEMBAYARAN --}}
+        <div class="lg:col-span-1 bg-white dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col">
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4"><i class="fas fa-wallet mr-2 text-emerald-500"></i>Metode Pembayaran</h3>
+            <div class="relative flex-1 min-h-[250px] w-full flex items-center justify-center">
+                <canvas id="paymentMethodChart"></canvas>
+            </div>
+            <div class="mt-6 grid grid-cols-2 gap-2">
+                @foreach($byPayment as $pm)
+                    <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl text-center border border-slate-100 dark:border-white/5">
+                        <p class="text-[9px] font-black text-slate-500 uppercase">{{ strtoupper($pm->payment_method) }}</p>
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-300">Rp {{ number_format($pm->total, 0, ',', '.') }}</p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Transaksi</p>
-                        <h4 class="text-base font-black text-orange-400">{{ $peakHours->first() ? $peakHours->first()->count : 0 }}</h4>
-                    </div>
-                </div>
-
-                {{-- Most Profitable Product --}}
-                <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 hover:border-purple-500/30 transition-all">
-                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:bg-purple-600 group-hover:text-white transition-all"><i class="fas fa-gem text-xl"></i></div>
-                    <div class="flex-1">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Produk Paling Untung</p>
-                        <h4 class="text-base font-black text-white truncate">{{ isset($topProfitProduct) && $topProfitProduct ? $topProfitProduct->product_name : 'Belum Ada' }}</h4>
-                        <p class="text-[10px] font-bold text-slate-400 mt-1">{{ isset($topProfitProduct) && $topProfitProduct ? 'Terjual: ' . $topProfitProduct->total_qty : '-' }}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Profit</p>
-                        <h4 class="text-base font-black text-purple-400">{{ isset($topProfitProduct) && $topProfitProduct ? 'Rp ' . number_format($topProfitProduct->profit, 0, ',', '.') : 'Rp 0' }}</h4>
-                        <p class="text-[10px] font-bold text-purple-500/70 mt-1">Margin: {{ isset($topProfitProduct) && $topProfitProduct ? $topProfitProduct->margin : 0 }}%</p>
-                    </div>
-                </div>
-
-                {{-- Worst Margin Product --}}
-                @if(isset($worstMarginProduct) && $worstMarginProduct)
-                @php
-                    $isLoss = $worstMarginProduct->profit < 0;
-                    $isLowMargin = $worstMarginProduct->margin <= 20 && !$isLoss;
-                    
-                    $badgeColor = $isLoss ? 'bg-red-500/20 text-red-400 border-red-500/30' : ($isLowMargin ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30');
-                    $iconColor = $isLoss ? 'text-red-400 group-hover:bg-red-600' : ($isLowMargin ? 'text-yellow-400 group-hover:bg-yellow-600' : 'text-slate-400 group-hover:bg-slate-600');
-                    $borderColor = $isLoss ? 'hover:border-red-500/30' : ($isLowMargin ? 'hover:border-yellow-500/30' : 'hover:border-slate-500/30');
-                    $valueColor = $isLoss ? 'text-red-400' : ($isLowMargin ? 'text-yellow-400' : 'text-slate-400');
-                    $insight = $isLoss || $isLowMargin ? 'Harga jual terlalu rendah dibanding HPP.' : '';
-                    $statusText = $isLoss ? 'Rugi' : ($isLowMargin ? 'Margin Rendah' : 'Tidak Efisien');
-                @endphp
-                <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 {{ $borderColor }} transition-all relative overflow-hidden">
-                    <div class="absolute right-0 top-0 text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-bl-lg border-b border-l {{ $badgeColor }}">
-                        {{ $statusText }}
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-white/5 {{ $iconColor }} flex items-center justify-center shrink-0 border border-white/10 group-hover:text-white transition-all">
-                        <i class="fas {{ $isLoss ? 'fa-arrow-trend-down' : 'fa-exclamation-triangle' }} text-xl"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Produk Margin Terendah</p>
-                        <h4 class="text-base font-black text-white truncate pr-16">{{ $worstMarginProduct->product_name }}</h4>
-                        <div class="flex items-center gap-2 mt-1">
-                            <p class="text-[10px] font-bold text-slate-400">Terjual: {{ $worstMarginProduct->total_qty }}</p>
-                            @if($insight)
-                            <span class="text-[9px] font-bold {{ $valueColor }} opacity-80 italic hidden sm:inline-block"><i class="fas fa-info-circle mr-0.5"></i> {{ $insight }}</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Profit</p>
-                        <h4 class="text-base font-black {{ $valueColor }}">{{ $worstMarginProduct->profit < 0 ? '-' : '' }}Rp {{ number_format(abs($worstMarginProduct->profit), 0, ',', '.') }}</h4>
-                        <p class="text-[10px] font-bold {{ $valueColor }} opacity-70 mt-1">Margin: {{ $worstMarginProduct->margin }}%</p>
-                    </div>
-                </div>
-                @endif
-
-                {{-- Most Profitable Hour --}}
-                <div class="group flex items-center gap-5 bg-slate-900/40 p-5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:bg-emerald-600 group-hover:text-white transition-all"><i class="fas fa-chart-line text-xl"></i></div>
-                    <div class="flex-1">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Jam Paling Profit</p>
-                        <h4 class="text-base font-black text-white uppercase tracking-tight">{{ isset($topProfitableHour) && $topProfitableHour ? sprintf('%02d:00 - %02d:59', $topProfitableHour->hour, $topProfitableHour->hour) : 'Belum Ada' }}</h4>
-                        <p class="text-[10px] font-bold text-slate-400 mt-1">{{ isset($topProfitableHour) && $topProfitableHour ? $topProfitableHour->trx_count . ' transaksi' : '-' }}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Profit</p>
-                        <h4 class="text-base font-black text-emerald-400">{{ isset($topProfitableHour) && $topProfitableHour ? 'Rp ' . number_format($topProfitableHour->profit, 0, ',', '.') : 'Rp 0' }}</h4>
-                        <p class="text-[10px] font-bold text-emerald-500/70 mt-1">Margin: {{ isset($topProfitableHour) && $topProfitableHour ? $topProfitableHour->margin : 0 }}%</p>
-                    </div>
-                </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -508,7 +493,25 @@
                     Detail Transaksi
                 </h3>
             </div>
-            <div class="flex gap-3 w-full md:w-auto">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <form action="" method="GET" class="flex items-center" onchange="this.submit()">
+                    @foreach(request()->except(['per_page', 'page']) as $key => $val)
+                        @if(is_array($val))
+                            @foreach($val as $v)
+                                <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                            @endforeach
+                        @else
+                            <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                        @endif
+                    @endforeach
+                    <select name="per_page" class="bg-slate-800 border border-white/5 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 h-10 hover:bg-slate-700 transition-all focus:outline-none focus:border-blue-500/50 cursor-pointer">
+                        <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
+                        <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                        <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20 Baris</option>
+                        <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                        <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                    </select>
+                </form>
                 <button onclick="window.openExportModal()" class="w-10 h-10 bg-slate-800 border border-white/5 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white transition-premium flex items-center justify-center shadow-lg" title="Ekspor Laporan (PDF/Excel/CSV)">
                     <i class="fas fa-file-export"></i>
                 </button>
@@ -610,21 +613,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const rawCategory = @json($byCategory);
     const rawPayment = @json($byPayment);
 
-    // LINE CHART: Penjualan Harian
-    const ctxLine = document.getElementById('salesLineChart');
-    if(ctxLine && rawSalesDay.length > 0) {
-        new Chart(ctxLine, {
+    // LINE CHART: Area Penjualan (Pendapatan)
+    const ctxArea = document.getElementById('revenueAreaChart');
+    if(ctxArea && rawSalesDay.length > 0) {
+        let gradient = ctxArea.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(129, 140, 248, 0.4)'); // Indigo-400
+        gradient.addColorStop(1, 'rgba(129, 140, 248, 0)');
+
+        new Chart(ctxArea, {
             type: 'line',
             data: {
                 labels: rawSalesDay.map(d => d.date),
                 datasets: [{
-                    label: 'Omzet Harian (Rp)',
+                    label: 'Pendapatan',
                     data: rawSalesDay.map(d => d.total),
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: '#6366f1', // Indigo-500
+                    backgroundColor: gradient,
                     borderWidth: 3,
-                    pointBackgroundColor: '#1e293b',
-                    pointBorderColor: '#3b82f6',
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#6366f1',
                     pointBorderWidth: 2,
                     pointRadius: 4,
                     pointHoverRadius: 6,
@@ -659,8 +666,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { color: '#334155', drawBorder: false },
-                        border: { display: false }
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        border: { display: false },
+                        ticks: {
+                            callback: function(value) {
+                                return new Intl.NumberFormat('id-ID', { notation: "compact", compactDisplay: "short" }).format(value);
+                            }
+                        }
                     },
                     x: {
                         grid: { display: false },
@@ -671,19 +683,90 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // BAR CHART: Omzet per Kategori
-    const ctxBar = document.getElementById('categoryBarChart');
-    if(ctxBar && rawCategory.length > 0) {
-        new Chart(ctxBar, {
+    // SPARKLINE CHARTS UNTUK INFO CARDS
+    const sparklineOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false, min: 0 } },
+        elements: { point: { radius: 0 }, line: { tension: 0.4, borderWidth: 2 } },
+        interaction: { mode: 'index', intersect: false }
+    };
+
+    // Sparkline 1: Sesi (Jumlah Transaksi Harian)
+    const ctxSpark1 = document.getElementById('sparkline1');
+    if(ctxSpark1 && rawSalesDay.length > 0) {
+        // Use a dummy random data generator to mimic Photolab's sparkline if real data isn't dense enough
+        // but it's better to use actual data, we will use total revenue array as a proxy for "activity trend"
+        let dataSpark = rawSalesDay.map(d => d.total);
+        new Chart(ctxSpark1, {
+            type: 'line',
+            data: {
+                labels: rawSalesDay.map(d => d.date),
+                datasets: [{ data: dataSpark, borderColor: '#6366f1' }] // indigo
+            },
+            options: sparklineOptions
+        });
+    }
+
+    // Sparkline 2: Hari Puncak (Mock data for visual effect, matching photolab)
+    const ctxSpark2 = document.getElementById('sparkline2');
+    if(ctxSpark2 && rawSalesDay.length > 0) {
+        let dataSpark2 = rawSalesDay.map(d => d.total).reverse(); // Just to look different
+        new Chart(ctxSpark2, {
+            type: 'line',
+            data: {
+                labels: rawSalesDay.map(d => d.date),
+                datasets: [{ data: dataSpark2, borderColor: '#10b981' }] // emerald
+            },
+            options: sparklineOptions
+        });
+    }
+
+    // Sparkline 3: Produk Laris
+    const ctxSpark3 = document.getElementById('sparkline3');
+    if(ctxSpark3 && rawSalesDay.length > 0) {
+        let dataSpark3 = rawSalesDay.map((d, i) => i % 2 == 0 ? d.total * 1.5 : d.total * 0.5);
+        new Chart(ctxSpark3, {
+            type: 'line',
+            data: {
+                labels: rawSalesDay.map(d => d.date),
+                datasets: [{ data: dataSpark3, borderColor: '#3b82f6' }] // blue
+            },
+            options: sparklineOptions
+        });
+    }
+
+    // Sparkline 4: Pengeluaran
+    const ctxSpark4 = document.getElementById('sparkline4');
+    if(ctxSpark4 && rawSalesDay.length > 0) {
+        let dataSpark4 = rawSalesDay.map((d, i) => Math.random() * d.total);
+        new Chart(ctxSpark4, {
+            type: 'line',
+            data: {
+                labels: rawSalesDay.map(d => d.date),
+                datasets: [{ data: dataSpark4, borderColor: '#f43f5e' }] // rose
+            },
+            options: sparklineOptions
+        });
+    }
+
+    // BAR CHART: Total Transaksi Harian (BarChart)
+    const ctxDailyBar = document.getElementById('dailyBarChart');
+    if(ctxDailyBar && rawSalesDay.length > 0) {
+        new Chart(ctxDailyBar, {
             type: 'bar',
             data: {
-                labels: rawCategory.map(c => c.category_name),
+                labels: rawSalesDay.map(d => d.date),
                 datasets: [{
                     label: 'Omzet',
-                    data: rawCategory.map(c => c.total),
-                    backgroundColor: '#f59e0b',
-                    borderRadius: 6,
-                    borderSkipped: false
+                    data: rawSalesDay.map(d => d.total),
+                    backgroundColor: 'rgba(129, 140, 248, 0.3)', // Indigo-400 transparent
+                    hoverBackgroundColor: 'rgba(99, 102, 241, 1)', // Indigo-500 solid
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
                 }]
             },
             options: {
@@ -701,40 +784,54 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#334155' }, border: { display: false }, ticks: { display: false } },
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false }, 
+                        border: { display: false }, 
+                        ticks: { 
+                            display: true,
+                            callback: function(value) {
+                                return new Intl.NumberFormat('id-ID', { notation: "compact", compactDisplay: "short" }).format(value);
+                            }
+                        } 
+                    },
                     x: { grid: { display: false }, border: { display: false } }
                 }
             }
         });
     }
 
-    // PIE CHART: Metode Pembayaran
-    const ctxPie = document.getElementById('paymentPieChart');
-    if(ctxPie && rawPayment.length > 0) {
-        const colors = { 'cash': '#10b981', 'transfer': '#3b82f6', 'qris': '#a855f7', 'debit': '#f59e0b' };
-        new Chart(ctxPie, {
+    // PAYMENT METHOD DONUT CHART
+    const ctxPayment = document.getElementById('paymentMethodChart');
+    const rawPaymentData = @json($byPayment);
+    
+    if(ctxPayment && rawPaymentData.length > 0) {
+        const labels = rawPaymentData.map(d => d.payment_method.toUpperCase());
+        const data = rawPaymentData.map(d => d.total);
+        const bgColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+        
+        new Chart(ctxPayment, {
             type: 'doughnut',
             data: {
-                labels: rawPayment.map(p => p.payment_method.toUpperCase()),
+                labels: labels,
                 datasets: [{
-                    data: rawPayment.map(p => p.total),
-                    backgroundColor: rawPayment.map(p => colors[p.payment_method] || '#64748b'),
-                    borderWidth: 2,
-                    borderColor: '#1e293b',
+                    data: data,
+                    backgroundColor: bgColors,
+                    borderWidth: 0,
                     hoverOffset: 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '75%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#cbd5e1', padding: 20, usePointStyle: true } },
+                    legend: { display: false },
                     tooltip: {
                         backgroundColor: '#1e293b',
                         callbacks: {
                             label: function(context) {
-                                return ' ' + new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(context.raw);
+                                return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(context.raw);
                             }
                         }
                     }

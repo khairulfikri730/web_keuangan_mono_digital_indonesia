@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'KasirPro') Ã¢â‚¬â€ {{ \App\Models\Setting::get('store_name', 'KasirPro') }}</title>
+    <title>@yield('title', 'KasirPro') — {{ \App\Models\Setting::get('store_name', 'KasirPro') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -32,7 +32,8 @@
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: #0B1120; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
-        .active-link { @apply bg-blue-600 text-white rounded-lg !important; }
+        .active-link { background-color: #00FF7F !important; color: #000000 !important; font-weight: 900 !important; border-radius: 0.5rem !important; }
+        .active-link i { color: #000000 !important; }
         [x-cloak] { display: none !important; }
         .transition-premium { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .group:hover .group-hover\:bounce { animation: bounce 1s infinite; }
@@ -239,19 +240,18 @@
     {{-- Main Content --}}
     <div class="flex-1 lg:ml-64 min-h-screen flex flex-col">
         {{-- Topbar --}}
-        <header class="sticky top-0 z-[100] @if(request()->routeIs('pos.*')) bg-white border-b border-slate-100 @else bg-slate-900/60 backdrop-blur-md border-b border-slate-800/50 @endif px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
-            <div class="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                <button @click="sidebarOpen = true" class="lg:hidden @if(request()->routeIs('pos.*')) text-slate-600 hover:text-slate-800 @else text-slate-400 hover:text-white @endif transition-colors shrink-0">
+        <header class="sticky top-0 z-[100] bg-slate-900/60 backdrop-blur-md border-b border-slate-800/50 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button @click="sidebarOpen = true" class="lg:hidden text-slate-400 hover:text-white transition-colors">
                     <i class="fas fa-bars-staggered text-xl"></i>
                 </button>
-                <div class="min-w-0">
-                    <h1 class="text-base sm:text-lg font-black @if(request()->routeIs('pos.*')) text-slate-800 @else text-white @endif tracking-tight uppercase truncate">@yield('page-title', 'Dashboard')</h1>
+                <div>
+                    <h1 class="text-lg font-black text-white tracking-tight uppercase">@yield('page-title', 'Dashboard')</h1>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div class="flex items-center gap-4">
 
-                @unless(request()->routeIs('pos.*'))
                 {{-- Notification Bell --}}
                 @php
                     $stockQuery = \App\Models\Product::active()
@@ -308,7 +308,7 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-xs font-bold text-white truncate">{{ $p->name }}</p>
-                                        <p class="text-[10px] text-red-400 font-bold">STOK HABIS Ã‚Â· {{ $p->stock }} tersisa</p>
+                                        <p class="text-[10px] text-red-400 font-bold">STOK HABIS · {{ $p->stock }} tersisa</p>
                                     </div>
                                 </a>
                                 @endforeach
@@ -319,7 +319,7 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-xs font-bold text-white truncate">{{ $p->name }}</p>
-                                        <p class="text-[10px] text-amber-400 font-bold">STOK MENIPIS Ã‚Â· {{ $p->stock }}/{{ $p->min_stock }} (min)</p>
+                                        <p class="text-[10px] text-amber-400 font-bold">STOK MENIPIS · {{ $p->stock }}/{{ $p->min_stock }} (min)</p>
                                     </div>
                                 </a>
                                 @endforeach
@@ -332,10 +332,9 @@
                         @endif
                     </div>
                 </div>
-                @endunless
 
-                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full @if(request()->routeIs('pos.*')) bg-slate-100 text-slate-500 @else bg-slate-900/50 border border-slate-800/50 text-slate-400 @endif text-[11px] font-bold tracking-wider uppercase">
-                    <i class="far fa-clock @if(request()->routeIs('pos.*')) text-emerald-500 @else text-blue-500 @endif"></i>
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/50 border border-slate-800/50 text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+                    <i class="far fa-clock text-blue-500"></i>
                     <span id="clock"></span>
                 </div>
             </div>
@@ -347,18 +346,18 @@
         </div>
 
         {{-- Page Content --}}
-                        <main class="flex-1 px-4 sm:px-6 @if(request()->routeIs('pos.*')) py-0 flex flex-col h-full @else pb-8 pt-4 @endif w-full max-w-full overflow-x-hidden">
+        <main class="flex-1 px-6 pb-8 pt-4">
+            {{-- Big Worksheet Selector --}}
             {{-- Big Worksheet Selector --}}
             @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
-            @unless(request()->routeIs('pos.*'))
             <div class="mb-6 bg-[#0F172A] rounded-2xl border border-emerald-500 shadow-lg shadow-emerald-500/10 relative z-[60]">
                 <div class="bg-emerald-500 px-4 py-2 rounded-t-[15px] border-b border-emerald-600 flex items-center justify-between">
                     <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                         <i class="fas fa-store-alt"></i> WORKSHEET BISNIS / CABANG
                     </h2>
                 </div>
-                <div class="p-3 sm:p-4" x-data="{ wsOpen: false }" @click.outside="wsOpen = false">
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div class="p-4" x-data="{ wsOpen: false }" @click.outside="wsOpen = false">
+                    <div class="flex items-center gap-3">
                         {{-- Dropdown Container --}}
                         <div class="relative flex-1">
                             <button @click="wsOpen = !wsOpen" class="w-full flex items-center justify-between bg-[#111827] border border-emerald-500/50 hover:border-emerald-400 rounded-xl px-4 py-3 text-sm font-bold text-emerald-400 transition-colors shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
@@ -404,15 +403,15 @@
                         
                         {{-- Action Buttons --}}
                         @if(auth()->user()->isOwner())
-                        <div class="flex items-center gap-2 shrink-0 grid grid-cols-3 sm:flex w-full sm:w-auto">
+                        <div class="flex items-center gap-2 shrink-0">
                             {{-- Add --}}
-                            <button x-data @click="$dispatch('open-modal', 'add-worksheet')" class="w-full sm:w-[50px] h-[44px] sm:h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Tambah Worksheet">
+                            <button x-data @click="$dispatch('open-modal', 'add-worksheet')" class="w-[50px] h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Tambah Worksheet">
                                 <i class="fas fa-plus text-lg"></i>
                             </button>
                             
                             @if($activeWorksheet)
                                 {{-- Edit --}}
-                                <button x-data @click="$dispatch('open-modal', 'edit-worksheet-{{ $activeWorksheet->id }}')" class="w-full sm:w-[50px] h-[44px] sm:h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Edit Worksheet">
+                                <button x-data @click="$dispatch('open-modal', 'edit-worksheet-{{ $activeWorksheet->id }}')" class="w-[50px] h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Edit Worksheet">
                                     <i class="fas fa-pen text-lg"></i>
                                 </button>
                                 
@@ -432,7 +431,7 @@
                                             }).then((result) => {
                                                 if (result.isConfirmed) document.getElementById('form-delete-worksheet').submit();
                                             })"
-                                            class="w-full sm:w-[50px] h-[44px] sm:h-[50px] rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-md shadow-red-500/20" title="Hapus Worksheet">
+                                            class="w-[50px] h-[50px] rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-md shadow-red-500/20" title="Hapus Worksheet">
                                         <i class="fas fa-trash text-lg"></i>
                                     </button>
                                 </form>
@@ -442,7 +441,6 @@
                     </div>
                 </div>
             </div>
-            @endunless
             @endif
 
             @yield('content')
@@ -504,7 +502,7 @@
         {{-- Add Modal --}}
         <div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'add-worksheet') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center overflow-y-auto overflow-x-hidden" style="display: none;">
             <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
-            <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+            <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
                     <h3 class="text-lg font-black text-white flex items-center gap-2">
                         <i class="fas fa-plus text-emerald-400"></i> Tambah Worksheet Baru
@@ -537,7 +535,7 @@
         @foreach($userWorksheets as $ws)
         <div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'edit-worksheet-{{ $ws->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center overflow-y-auto overflow-x-hidden" style="display: none;">
             <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
-            <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+            <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
                     <h3 class="text-lg font-black text-white flex items-center gap-2">
                         <i class="fas fa-pen text-blue-400"></i> Edit Worksheet
@@ -571,7 +569,3 @@
     @stack('scripts')
 </body>
 </html>
-
-
-
-

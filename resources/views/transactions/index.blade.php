@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Transaksi')
 @section('page-title', 'Riwayat Transaksi')
@@ -196,15 +196,42 @@
                 @endforeach
             </div>
 
-            <form method="GET" class="relative group">
-                @foreach(request()->except(['search','page']) as $key => $val)
-                    @if($val && !is_array($val)) <input type="hidden" name="{{ $key }}" value="{{ $val }}"> @endif
-                @endforeach
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs group-focus-within:text-blue-400 transition-colors"></i>
-                <input type="text" name="search" value="{{ is_array(request('search')) ? '' : request('search') }}" 
-                       class="bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none w-64 transition-all" 
-                       placeholder="Cari Invoice atau Pelanggan...">
-            </form>
+            <div class="flex items-center gap-3">
+                <form action="" method="GET" class="flex items-center" onchange="this.submit()">
+                    @foreach(request()->except(['per_page', 'page']) as $key => $val)
+                        @if(is_array($val))
+                            @foreach($val as $v)
+                                <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                            @endforeach
+                        @elseif($val)
+                            <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                        @endif
+                    @endforeach
+                    <select name="per_page" class="bg-slate-900/60 border border-white/5 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 hover:bg-slate-800 transition-all focus:outline-none focus:border-blue-500/50 cursor-pointer h-[38px]">
+                        <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
+                        <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                        <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20 Baris</option>
+                        <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                        <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                    </select>
+                </form>
+
+                <form method="GET" class="relative group">
+                    @foreach(request()->except(['search','page']) as $key => $val)
+                        @if(is_array($val))
+                            @foreach($val as $v)
+                                <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                            @endforeach
+                        @elseif($val)
+                            <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                        @endif
+                    @endforeach
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs group-focus-within:text-blue-400 transition-colors"></i>
+                    <input type="text" name="search" value="{{ is_array(request('search')) ? '' : request('search') }}" 
+                           class="bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none w-64 transition-all h-[38px]" 
+                           placeholder="Cari Invoice atau Pelanggan...">
+                </form>
+            </div>
         </div>
     </div>
 
