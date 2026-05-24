@@ -30,6 +30,7 @@
         .text-emerald { color: #10b981; }
         .text-red { color: #ef4444; }
         .text-blue { color: #3b82f6; }
+        .text-amber { color: #f59e0b; }
         .font-black { font-weight: 900; }
         .font-bold { font-weight: bold; }
         .uppercase { text-transform: uppercase; }
@@ -307,6 +308,38 @@
     </table>
     @endif
 
+    {{-- SECTION: INVOICE ANALYTICS --}}
+    @if(in_array('invoice_analytics', $meta['sections']) && isset($invoices))
+    <table class="card-grid" style="margin-top: -10px;">
+        <tr>
+            <td style="border: none; width: 25%;">
+                <div class="card">
+                    <div class="card-label">INVOICE LUNAS</div>
+                    <div class="card-value text-emerald">{{ number_format($invoices['lunas'], 0, ',', '.') }}</div>
+                </div>
+            </td>
+            <td style="border: none; width: 25%;">
+                <div class="card">
+                    <div class="card-label">INVOICE PIUTANG</div>
+                    <div class="card-value text-red">{{ number_format($invoices['piutang'], 0, ',', '.') }}</div>
+                </div>
+            </td>
+            <td style="border: none; width: 25%;">
+                <div class="card">
+                    <div class="card-label">TOTAL PIUTANG</div>
+                    <div class="card-value text-blue">Rp {{ number_format($invoices['total_piutang'], 0, ',', '.') }}</div>
+                </div>
+            </td>
+            <td style="border: none; width: 25%;">
+                <div class="card">
+                    <div class="card-label">UANG MUKA (DP)</div>
+                    <div class="card-value text-amber">{{ number_format($invoices['dp'], 0, ',', '.') }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+    @endif
+
     {{-- SECTION: CHARTS --}}
     @if(count($chart_images) > 0)
     <div class="section-header uppercase">Analisa Grafik Visual</div>
@@ -453,6 +486,7 @@
             </tr>
         </thead>
         <tbody>
+            @php $totalShiftCashExp = 0; $totalShiftBankExp = 0; @endphp
             @foreach($shifts as $s)
             @php 
                 $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
@@ -460,6 +494,9 @@
                 
                 $rowCashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
                 $rowBankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
+                
+                $totalShiftCashExp += $rowCashExpenses;
+                $totalShiftBankExp += $rowBankExpenses;
                 
                 $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses; 
                 $selisih = $s->closed_at ? ($s->closing_cash - $expected) : 0;
@@ -485,6 +522,39 @@
                 </td>
             </tr>
             @endforeach
+            @php
+                $totalShiftExp = $totalShiftCashExp + $totalShiftBankExp;
+                $unallocatedExp = max(0, $summary_data->total_expense - $totalShiftExp);
+            @endphp
+            @if($unallocatedExp > 0)
+            <tr class="grand-total">
+                <td colspan="2" class="text-right uppercase">Total Pengeluaran Dalam Shift</td>
+                <td></td>
+                <td></td>
+                <td style="font-size: 8px;">
+                    Tunai: Rp {{ number_format($totalShiftCashExp, 0, ',', '.') }}<br>
+                    Bank: Rp {{ number_format($totalShiftBankExp, 0, ',', '.') }}
+                </td>
+                <td></td>
+                <td class="text-right font-bold">Rp {{ number_format($totalShiftExp, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="text-right uppercase text-red">Pengeluaran Di Luar Shift (Tidak Terkait Shift)</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="text-right font-bold text-red">Rp {{ number_format($unallocatedExp, 0, ',', '.') }}</td>
+            </tr>
+            <tr class="grand-total">
+                <td colspan="2" class="text-right uppercase font-black">Total Seluruh Pengeluaran</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="text-right font-black text-red">Rp {{ number_format($summary_data->total_expense, 0, ',', '.') }}</td>
+            </tr>
+            @endif
         </tbody>
     </table>
     @endif
@@ -515,6 +585,68 @@
                 <td class="text-right text-red">{{ $cf->type == 'expense' ? 'Rp '.number_format($cf->amount, 0, ',', '.') : '-' }}</td>
             </tr>
             @endforeach
+        </tbody>
+    </table>
+    @endif
+
+    {{-- SECTION: EXPENSE CATEGORY BREAKDOWN --}}
+    @if(in_array('category_analysis', $meta['sections']) && isset($expense_categories) && $expense_categories->count() > 0)
+    <div class="page-break"></div>
+    <div class="section-header uppercase">Rincian Pengeluaran Berdasarkan Kategori</div>
+    <table class="zebra">
+        <thead>
+            <tr>
+                <th>Kategori</th>
+                <th class="text-right">Total</th>
+                <th class="text-right">Persentase</th>
+            </tr>
+        </thead>
+        <tbody>
+            @php $catTotal = $expense_categories->sum('total'); @endphp
+            @foreach($expense_categories as $ec)
+            <tr>
+                <td class="font-bold">{{ $ec->category }}</td>
+                <td class="text-right text-red">Rp {{ number_format($ec->total, 0, ',', '.') }}</td>
+                <td class="text-right">{{ $catTotal > 0 ? round(($ec->total / $catTotal) * 100) : 0 }}%</td>
+            </tr>
+            @endforeach
+            <tr class="grand-total">
+                <td class="text-right uppercase font-black">Total Pengeluaran</td>
+                <td class="text-right text-red font-black">Rp {{ number_format($catTotal, 0, ',', '.') }}</td>
+                <td class="text-right font-black">100%</td>
+            </tr>
+        </tbody>
+    </table>
+    @endif
+
+    {{-- SECTION: EXPENSE DETAIL --}}
+    @if(in_array('expense_details', $meta['sections']) && isset($expense_details) && $expense_details->count() > 0)
+    <div class="page-break"></div>
+    <div class="section-header uppercase">Detail Riwayat Transaksi Pengeluaran</div>
+    <table class="zebra">
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Kategori</th>
+                <th>Keterangan</th>
+                <th>Sumber</th>
+                <th class="text-right">Nominal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($expense_details as $exp)
+            <tr>
+                <td>{{ $exp->transaction_date->format('d/m/Y H:i') }}</td>
+                <td><span class="badge" style="background: rgba(239,68,68,0.1); color: #ef4444;">{{ $exp->category }}</span></td>
+                <td style="font-size: 8px;">{{ $exp->description }}</td>
+                <td>{{ \App\Models\Cashflow::sourceLabels()[$exp->source] ?? ucfirst($exp->source ?? '-') }}</td>
+                <td class="text-right font-bold text-red">Rp {{ number_format($exp->amount, 0, ',', '.') }}</td>
+            </tr>
+            @endforeach
+            <tr class="grand-total">
+                <td colspan="4" class="text-right uppercase font-black">Total Pengeluaran</td>
+                <td class="text-right font-black text-red">Rp {{ number_format($expense_details->sum('amount'), 0, ',', '.') }}</td>
+            </tr>
         </tbody>
     </table>
     @endif

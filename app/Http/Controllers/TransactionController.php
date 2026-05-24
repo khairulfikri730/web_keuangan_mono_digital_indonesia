@@ -98,7 +98,7 @@ class TransactionController extends Controller
             ->when($worksheetId && !$isLiveShift, fn($q) => $q->where('worksheet_id', $worksheetId));
 
         // --- Build expense items ---
-        $expenseQuery = Cashflow::withoutGlobalScopes()->with('user')
+        $expenseQuery = Cashflow::withoutGlobalScopes()->with(['user', 'worksheet'])
             ->where('transaction_category', 'expense')
             ->whereNull('reference')
             ->when($isLiveShift && $activeShift, function($q) use ($activeShift, $openedAt, $closedAt) {

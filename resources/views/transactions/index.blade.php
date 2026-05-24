@@ -553,8 +553,66 @@
                                 <td class="px-4 py-4 text-right">-</td>
                                 <td class="px-4 py-4 text-right">-</td>
                                 <td class="px-4 py-4 text-right">-</td>
-                                <td class="px-4 py-4 text-right"></td>
+                                <td class="px-4 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onclick="document.getElementById('expense-detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Detail"><i class="fas fa-eye text-xs"></i></button>
+                                    </div>
+                                </td>
                             </tr>
+
+                            {{-- Expense Detail Modal --}}
+                            <div id="expense-detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto scrollbar-hide">
+                                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                                        <h3 class="text-lg font-black text-slate-800">Detail Pengeluaran</h3>
+                                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
+                                    </div>
+                                    <div class="p-5 space-y-4">
+                                        @php
+                                            $expLabels = \App\Models\Cashflow::sourceLabels();
+                                            $expSourceLabel = $expLabels[$model->source] ?? ucfirst($model->source ?? '-');
+                                            $expIsBank = in_array($model->source, ['pos_bank', 'transfer', 'bank']);
+                                        @endphp
+
+                                        <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+                                            <span class="font-black text-slate-700">Nominal</span>
+                                            <span class="text-xl font-black text-red-600">-Rp {{ number_format($model->amount, 0, ',', '.') }}</span>
+                                        </div>
+
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-slate-500">Tipe</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase {{ $expIsBank ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20' }}">
+                                                    {{ $expIsBank ? 'EXP. BANK' : 'EXP. TUNAI' }}
+                                                </span>
+                                            </div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->translatedFormat('d F Y') : '-' }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->format('H:i') : ($model->created_at ? $model->created_at->format('H:i') : '-') }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Kategori</span><span class="font-bold text-slate-700">{{ $model->category ?: '-' }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Sumber Dana</span><span class="font-bold text-slate-700">{{ $expSourceLabel }}</span></div>
+                                            <div class="flex justify-between"><span class="text-slate-500">Petugas</span><span class="font-bold text-slate-700">{{ $model->user->name ?? '-' }}</span></div>
+                                            @if($model->description)
+                                            <div class="flex justify-between"><span class="text-slate-500">Deskripsi</span><span class="font-bold text-slate-700 text-right ml-2">{{ $model->description }}</span></div>
+                                            @endif
+                                            @if($model->notes)
+                                            <div class="flex justify-between"><span class="text-slate-500">Catatan</span><span class="font-bold text-slate-700 text-right ml-2">{{ $model->notes }}</span></div>
+                                            @endif
+                                            @if($model->worksheet)
+                                            <div class="flex justify-between"><span class="text-slate-500">Cabang</span><span class="font-bold text-slate-700">{{ $model->worksheet->name }}</span></div>
+                                            @endif
+                                            @if($model->reference)
+                                            <div class="flex justify-between"><span class="text-slate-500">Referensi</span><span class="font-bold text-slate-700">{{ $model->reference }}</span></div>
+                                            @endif
+                                        </div>
+
+                                        <div class="flex gap-3 pt-2">
+                                            <button onclick="this.closest('.fixed').classList.add('hidden')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-all text-center text-sm">
+                                                Tutup
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         @endif
                     @empty
                         <tr>

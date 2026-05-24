@@ -17,15 +17,33 @@ use App\Http\Controllers\WorksheetController;
 use App\Http\Controllers\CapitalController;
 use App\Http\Controllers\MonthlyExpenseController;
 use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\AccountController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+
+    Route::get('/forgot-password', [AuthController::class, 'showForgot'])->name('password.request');
+    Route::post('/forgot-password', [AuthController::class, 'sendOtp'])->name('password.otp.send');
+    Route::get('/verify-otp', [AuthController::class, 'showVerifyOtp'])->name('password.otp.verify');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('password.otp.check');
+    Route::get('/reset-password', [AuthController::class, 'showReset'])->name('password.reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+Route::middleware('auth')->prefix('account')->name('account.')->group(function () {
+    Route::get('/', [AccountController::class, 'profile'])->name('profile');
+    Route::put('/', [AccountController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/avatar', [AccountController::class, 'uploadAvatar'])->name('avatar');
+    Route::get('/password', [AccountController::class, 'showPassword'])->name('password');
+    Route::put('/password', [AccountController::class, 'updatePassword'])->name('password.update');
+
+
+});
 
 // Redirect root to dashboard
 Route::get('/', fn() => redirect()->route('dashboard'));

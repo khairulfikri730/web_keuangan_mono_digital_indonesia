@@ -21,7 +21,7 @@ class FinancialReportService
     {
         // INCOME = Hanya dari POS Sales (transaksi riil)
         // Manual income (input saldo, adjustment kas) TIDAK dihitung sebagai pendapatan operasional
-        $incomeQuery = Transaction::completed()
+        $incomeQuery = Transaction::withoutGlobalScopes()->completed()
             ->whereBetween('created_at', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()]);
             
         if ($worksheetId) {
@@ -30,7 +30,7 @@ class FinancialReportService
         
         $totalIncome = $incomeQuery->sum('total');
  
-        $expenseQuery = Cashflow::where('transaction_category', 'expense')
+        $expenseQuery = Cashflow::withoutGlobalScopes()->where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()]);
 
         if ($worksheetId) {
@@ -41,7 +41,7 @@ class FinancialReportService
         $cashflowBankExp = (clone $expenseQuery)->whereIn('source', ['pos_bank', 'transfer', 'bank'])->sum('amount');
 
         // Include MonthlyUsage that might not be synced to Cashflow yet (legacy or failed sync)
-        $baseMonthlyUsage = \App\Models\MonthlyUsage::whereBetween('expense_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
+        $baseMonthlyUsage = \App\Models\MonthlyUsage::withoutGlobalScopes()->whereBetween('expense_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
             ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->whereNotExists(function($query) {
                 $query->select(DB::raw(1))
@@ -78,17 +78,17 @@ class FinancialReportService
     public function getAllTimeNetProfit($worksheetId = null)
     {
         // INCOME = Hanya dari POS Sales (konsisten dengan getSummary)
-        $incomeQuery = Transaction::completed();
+        $incomeQuery = Transaction::withoutGlobalScopes()->completed();
         if ($worksheetId) {
             $incomeQuery->where('worksheet_id', $worksheetId);
         }
         $totalIncome = $incomeQuery->sum('total');
  
-        $cashflowExpense = Cashflow::where('transaction_category', 'expense')
+        $cashflowExpense = Cashflow::withoutGlobalScopes()->where('transaction_category', 'expense')
             ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->sum('amount');
 
-        $monthlyUsageExpense = \App\Models\MonthlyUsage::when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
+        $monthlyUsageExpense = \App\Models\MonthlyUsage::withoutGlobalScopes()->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->whereNotExists(function($query) {
                 $query->select(DB::raw(1))
                       ->from('cashflows')
@@ -123,7 +123,8 @@ class FinancialReportService
 
     public function getTopProducts($dateFrom, $dateTo, $worksheetId = null, $limit = 5)
     {
-        return \App\Models\TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+        return \App\Models\TransactionItem::withoutGlobalScopes()
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->where('transactions.status', 'completed')
             ->whereBetween('transactions.created_at', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()])
             ->when($worksheetId, fn($q) => $q->where('transactions.worksheet_id', $worksheetId))

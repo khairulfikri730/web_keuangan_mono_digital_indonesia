@@ -100,28 +100,35 @@
             font-weight: 900 !important;
         }
 
-        /* Generic Backgrounds - Exclude Semantic Colored Elements to protect buttons with 'disabled:bg-slate-...' */
-        html:not(.dark) [class*="bg-slate-950"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
-        html:not(.dark) [class*="bg-slate-900"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
-        html:not(.dark) [class*="bg-[#0f172a]" i]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
-        html:not(.dark) [class*="bg-[#111827]" i]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]),
-        html:not(.dark) [class*="bg-[#1e293b]" i]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+        /* Generic Backgrounds - Exclude Semantic Colored Elements (protect base colored buttons but allow hover variants to be overridden) */
+        html:not(.dark) [class*="bg-slate-950"]:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]),
+        html:not(.dark) [class*="bg-slate-900"]:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]),
+        html:not(.dark) [class*="bg-[#0f172a]" i]:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]),
+        html:not(.dark) [class*="bg-[#111827]" i]:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]),
+        html:not(.dark) [class*="bg-[#1e293b]" i]:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]) { 
             background-color: #ffffff !important; border-color: #e2e8f0 !important; 
         }
         
-        html:not(.dark) [class*="bg-slate-800"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+        html:not(.dark) [class*="bg-slate-800"]:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]) { 
             background-color: #ffffff !important; border-color: #e2e8f0 !important; 
         }
-        html:not(.dark) [class*="hover:bg-slate-800"]:hover:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+        html:not(.dark) [class*="hover:bg-slate-800"]:hover:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]) { 
             background-color: #f1f5f9 !important; 
         }
         
-        html:not(.dark) [class*="bg-slate-700"]:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+        html:not(.dark) [class*="bg-slate-700"]:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]) { 
             background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; 
         }
-        html:not(.dark) [class*="hover:bg-slate-700"]:hover:not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]) { 
+        html:not(.dark) [class*="hover:bg-slate-700"]:hover:not([class*=" bg-blue-"]):not([class^="bg-blue-"]):not([class*=" bg-emerald-"]):not([class^="bg-emerald-"]):not([class*=" bg-red-"]):not([class^="bg-red-"]):not([class*=" bg-amber-"]):not([class^="bg-amber-"]):not([class*=" bg-cyan-"]):not([class^="bg-cyan-"]):not([class*=" bg-purple-"]):not([class^="bg-purple-"]):not([class*="peer-checked:"]) { 
             background-color: #e2e8f0 !important; 
         }
+
+        /* Custom Modal and Components Override for Light Mode */
+        html:not(.dark) .glass-modal { background: rgba(255, 255, 255, 0.95) !important; }
+        html:not(.dark) .bg-navy-900\/60 { background-color: rgba(241, 245, 249, 0.6) !important; }
+
+        /* Handle custom toggles in light mode */
+        html:not(.dark) .peer:not(:checked) ~ div[class*="peer-checked:bg-"] { background-color: #cbd5e1 !important; }
 
         html:not(.dark) [class*="border-white/"],
         html:not(.dark) [class*="border-slate-800"],
@@ -437,19 +444,25 @@
         </nav>
 
         <!-- USER FOOTER -->
-        <div class="mt-auto pt-4 border-t border-slate-800/50">
-            <div class="flex items-center gap-3 px-3">
-                <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+        <div class="mt-auto pt-4 border-t border-slate-800/50" x-data="{ profileOpen: false }">
+            <button @click="profileOpen = !profileOpen" class="flex items-center gap-3 px-3 py-2 w-full hover:bg-slate-800/60 rounded-xl transition-colors">
+                <img src="{{ auth()->user()->avatarUrl() }}" class="w-9 h-9 rounded-full ring-2 ring-{{ auth()->user()->roleColor() }}-500/30 object-cover shrink-0" alt="{{ auth()->user()->name }}">
+                <div class="flex-1 min-w-0 text-left">
+                    <p class="text-xs font-bold text-white truncate">{{ auth()->user()->name }}</p>
+                    <p class="text-[9px] font-black text-{{ auth()->user()->roleColor() }}-400 uppercase tracking-wider">{{ auth()->user()->roleBadge() }}</p>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-white truncate uppercase">{{ auth()->user()->name }}</p>
-                    <p class="text-[10px] text-gray-500 uppercase">{{ auth()->user()->role }}</p>
-                </div>
+                <i class="fas fa-chevron-down text-[10px] text-slate-500 transition-transform" :class="profileOpen ? 'rotate-180' : ''"></i>
+            </button>
+            <div x-show="profileOpen" @click.away="profileOpen = false" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="bg-slate-800 border border-white/5 rounded-2xl shadow-2xl mx-2 overflow-hidden mt-1">
+                <a href="{{ route('account.profile') }}" class="flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-400 hover:bg-slate-700 hover:text-white transition-colors">
+                    <i class="fas fa-user-cog w-4 text-center text-blue-400"></i> Pengaturan Akun
+                </a>
+
+                <div class="border-t border-white/5"></div>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="text-gray-500 hover:text-red-400 transition-colors">
-                        <i class="fas fa-power-off text-xs"></i>
+                    <button type="submit" class="flex items-center gap-3 px-4 py-3 text-xs font-bold text-red-400 hover:bg-red-500/10 w-full text-left transition-colors">
+                        <i class="fas fa-power-off w-4 text-center"></i> Logout
                     </button>
                 </form>
             </div>
@@ -578,7 +591,7 @@
             {{-- Big Worksheet Selector --}}
             {{-- Big Worksheet Selector --}}
             @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
-            <div class="mb-6 bg-[#0F172A] rounded-2xl border border-emerald-500 shadow-lg shadow-emerald-500/10 relative z-[60]">
+            <div class="mb-6 bg-[#0F172A] rounded-2xl border border-emerald-500 shadow-lg shadow-emerald-500/10 relative z-40">
                 <div class="bg-emerald-500 px-4 py-2 rounded-t-[15px] border-b border-emerald-600 flex items-center justify-between">
                     <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                         <i class="fas fa-store-alt"></i> WORKSHEET BISNIS / CABANG

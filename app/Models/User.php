@@ -97,16 +97,39 @@ class User extends Authenticatable
         ],
     ];
 
+    const DEFAULT_KASIR_PERMISSIONS = [
+        'pos',
+        'transactions.view',
+        'transactions.edit',
+        'transactions.delete',
+        'invoices.view',
+        'invoices.create',
+        'invoices.delete',
+        'products.view',
+        'products.create',
+        'products.edit',
+        'products.delete',
+        'stock.view',
+        'stock.edit',
+        'cashflow.create',
+        'monthly_expenses.view',
+        'monthly_expenses.manage',
+        'shifts.view',
+        'shifts.manage',
+    ];
+
 
 
     protected $fillable = [
-        'name', 'email', 'phone', 'role', 'permissions', 'is_active', 'password',
+        'name', 'username', 'email', 'phone', 'avatar', 'role', 'permissions', 'is_active', 'password',
+        'last_login_at', 'last_login_device', 'last_login_ip',
     ];
 
     protected $hidden = ['password', 'remember_token'];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
         'permissions' => 'array',
@@ -165,5 +188,23 @@ class User extends Authenticatable
     public function worksheets()
     {
         return $this->belongsToMany(Worksheet::class, 'worksheet_user');
+    }
+
+    public function avatarUrl(): string
+    {
+        if ($this->avatar) {
+            return asset('storage/' . $this->avatar);
+        }
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=3b82f6&color=fff&size=128';
+    }
+
+    public function roleBadge(): string
+    {
+        return $this->isOwner() ? 'SUPER ADMIN' : 'KASIR';
+    }
+
+    public function roleColor(): string
+    {
+        return $this->isOwner() ? 'emerald' : 'blue';
     }
 }

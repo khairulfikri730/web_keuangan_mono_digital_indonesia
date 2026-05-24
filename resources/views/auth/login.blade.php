@@ -62,12 +62,17 @@
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/25 text-sm">
                     <i class="fas fa-right-to-bracket mr-2"></i>Masuk
                 </button>
+                <div class="text-center mt-4">
+                    <a href="{{ route('password.request') }}" class="text-[11px] font-bold text-slate-500 hover:text-blue-400 transition-colors">
+                        <i class="fas fa-key mr-1"></i>Lupa Password?
+                    </a>
+                </div>
             </form>
 
             <div class="mt-6 pt-5 border-t border-slate-700 space-y-1">
                 <p class="text-xs text-slate-500 text-center mb-3">Demo Credentials</p>
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="fillLogin('owner@kasirpro.com')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors">
+                    <button onclick="fillLogin('monoframestudio01@gmail.com')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors">
                         <i class="fas fa-crown text-yellow-400 mr-1"></i>Owner
                     </button>
                     <button onclick="fillLogin('operator@kasirpro.com')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors">

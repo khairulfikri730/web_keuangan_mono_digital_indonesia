@@ -14,7 +14,15 @@ class TeamController extends Controller
         $availablePermissions = User::AVAILABLE_PERMISSIONS;
         $permissionGroups = User::PERMISSION_GROUPS;
         $worksheets = \App\Models\Worksheet::all();
-        return view('team.index', compact('users', 'availablePermissions', 'permissionGroups', 'worksheets'));
+
+        $stats = [
+            'total' => $users->total(),
+            'owner' => $users->filter(fn($u) => $u->isOwner())->count(),
+            'kasir' => $users->filter(fn($u) => $u->isKasir())->count(),
+            'active' => $users->filter(fn($u) => $u->is_active)->count(),
+        ];
+
+        return view('team.index', compact('users', 'availablePermissions', 'permissionGroups', 'worksheets', 'stats'));
     }
 
     public function store(Request $request)

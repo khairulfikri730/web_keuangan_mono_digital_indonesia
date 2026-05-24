@@ -593,6 +593,192 @@ class ReportController extends Controller
         return Excel::download(new ReportExport($reportData), $filename);
     }
 
+    public function exportCsv(Request $request)
+    {
+        $reportData = $this->collectReportData($request);
+        $filename = 'LAPORAN_CSV_' . now()->format('YmdHis') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($reportData) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            $summary = $reportData['summary_data'];
+            $growth = $reportData['growth'];
+
+            fputcsv($file, ['LAPORAN BISNIS', $reportData['meta']['settings']['store_name']]);
+            fputcsv($file, ['Periode', $reportData['meta']['date_range']]);
+            fputcsv($file, ['Unit', $reportData['meta']['worksheet_name']]);
+            fputcsv($file, ['Dibuat', $reportData['meta']['export_date']]);
+            fputcsv($file, ['']);
+
+            fputcsv($file, ['RINGKASAN KEUANGAN']);
+            fputcsv($file, ['Metrik', 'Nilai (Rp)', 'Pertumbuhan (%)']);
+            fputcsv($file, ['Total Omzet', $summary->total_income, $growth['income'] . '%']);
+            fputcsv($file, ['Total Pengeluaran', $summary->total_expense, $growth['expense'] . '%']);
+            fputcsv($file, ['Laba Bersih', $summary->net_profit, $growth['profit'] . '%']);
+            fputcsv($file, ['Jumlah Transaksi', $summary->total_count ?? 0, '']);
+            fputcsv($file, ['']);
+
+            if (!empty($reportData['transactions'])) {
+                fputcsv($file, ['DETAIL PENJUALAN']);
+                fputcsv($file, ['Invoice', 'Tanggal', 'Kasir', 'Pelanggan', 'Item', 'Metode', 'Total', 'Status']);
+                foreach ($reportData['transactions'] as $trx) {
+                    fputcsv($file, [
+                        $trx->invoice_number ?? '-',
+                        $trx->created_at->format('Y-m-d H:i'),
+                        $trx->user->name ?? '-',
+                        $trx->customer_name ?? '-',
+                        $trx->items->count() ?? 0,
+                        $trx->payment_method ?? '-',
+                        $trx->total ?? 0,
+                        $trx->status ?? '-',
+                    ]);
+                }
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['top_products'])) {
+                fputcsv($file, ['RANKING PRODUK']);
+                fputcsv($file, ['Produk', 'Qty Terjual', 'Total Omzet']);
+                foreach ($reportData['top_products'] as $p) {
+                    fputcsv($file, [$p->product_name, $p->total_qty, $p->total_revenue]);
+                }
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['full_cashflow'])) {
+                fputcsv($file, ['ARUS KAS']);
+                fputcsv($file, ['Tanggal', 'Tipe', 'Kategori', 'Deskripsi', 'Nominal', 'Sumber']);
+                foreach ($reportData['full_cashflow'] as $c) {
+                    fputcsv($file, [
+                        $c->transaction_date->format('Y-m-d'),
+                        $c->type === 'income' ? 'Masuk' : 'Keluar',
+                        $c->category ?? '-',
+                        $c->description ?? '-',
+                        $c->amount ?? 0,
+                        $c->source ?? '-',
+                    ]);
+                }
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['expense_details'])) {
+                fputcsv($file, ['DETAIL PENGELUARAN']);
+                fputcsv($file, ['Tanggal', 'Kategori', 'Deskripsi', 'Sumber', 'Nominal']);
+                foreach ($reportData['expense_details'] as $exp) {
+                    fputcsv($file, [
+                        $exp->transaction_date->format('Y-m-d H:i'),
+                        $exp->category ?? '-',
+                        $exp->description ?? '-',
+                        \App\Models\Cashflow::sourceLabels()[$exp->source] ?? ucfirst($exp->source ?? '-'),
+                        $exp->amount ?? 0,
+                    ]);
+                }
+                $totalExpenseCsv = collect($reportData['expense_details'])->sum('amount');
+                fputcsv($file, ['', '', '', 'TOTAL PENGELUARAN', $totalExpenseCsv]);
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['ai_insights'])) {
+                fputcsv($file, ['AI BUSINESS INSIGHT']);
+                fputcsv($file, ['Tipe', 'Judul', 'Deskripsi']);
+                foreach ($reportData['ai_insights'] as $insight) {
+                    if (is_array($insight)) {
+                        fputcsv($file, [
+                            strtoupper($insight['type'] ?? '-'),
+                            $insight['title'] ?? '-',
+                            $insight['text'] ?? '-',
+                        ]);
+                    }
+                }
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['invoices'])) {
+                fputcsv($file, ['ANALISA INVOICE']);
+                fputcsv($file, ['Metrik', 'Nilai']);
+                fputcsv($file, ['Invoice Lunas', $reportData['invoices']['lunas'] ?? 0]);
+                fputcsv($file, ['Invoice Piutang', $reportData['invoices']['piutang'] ?? 0]);
+                fputcsv($file, ['Total Piutang (Rp)', $reportData['invoices']['total_piutang'] ?? 0]);
+                fputcsv($file, ['Uang Muka / DP', $reportData['invoices']['dp'] ?? 0]);
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['internal_mutations'])) {
+                fputcsv($file, ['MUTASI INTERNAL']);
+                fputcsv($file, ['Tanggal', 'Tipe', 'Kategori', 'Deskripsi', 'Sumber', 'Nominal']);
+                foreach ($reportData['internal_mutations'] as $m) {
+                    fputcsv($file, [
+                        $m->transaction_date instanceof \Carbon\Carbon ? $m->transaction_date->format('Y-m-d H:i') : $m->transaction_date,
+                        $m->type ?? '-',
+                        $m->category ?? '-',
+                        $m->description ?? '-',
+                        $m->source ?? '-',
+                        $m->amount ?? 0,
+                    ]);
+                }
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['roi_data'])) {
+                fputcsv($file, ['ANALISA ROI & BEP']);
+                fputcsv($file, ['Metrik', 'Nilai']);
+                fputcsv($file, ['Modal Investasi (Rp)', $reportData['roi_data']['total_capital'] ?? 0]);
+                fputcsv($file, ['Profit Akumulasi (Rp)', $reportData['roi_data']['total_profit'] ?? 0]);
+                fputcsv($file, ['Status Investasi', $reportData['roi_data']['status'] ?? '-']);
+                fputcsv($file, ['']);
+            }
+
+            if (!empty($reportData['shifts'])) {
+                fputcsv($file, ['LAPORAN SHIFT']);
+                fputcsv($file, ['ID', 'Kasir', 'Buka', 'Tutup', 'Kas Awal', 'Penjualan Tunai', 'Penjualan Non-Tunai', 'Pengeluaran Tunai', 'Pengeluaran Bank', 'Estimasi Kas Akhir', 'Aktual Kas Akhir', 'Selisih']);
+                $csvTotalCashExp = 0; $csvTotalBankExp = 0;
+                foreach ($reportData['shifts'] as $s) {
+                    $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
+                    $rowBankSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', '!=', 'cash')->where('status', 'completed')->sum('total');
+                    $rowCashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+                    $rowBankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
+                    $csvTotalCashExp += $rowCashExpenses;
+                    $csvTotalBankExp += $rowBankExpenses;
+                    $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses;
+                    $selisih = $s->closed_at ? ($s->closing_cash - $expected) : 0;
+
+                    fputcsv($file, [
+                        $s->id,
+                        $s->opener->name ?? '-',
+                        $s->opened_at->format('Y-m-d H:i'),
+                        $s->closed_at ? $s->closed_at->format('Y-m-d H:i') : 'Aktif',
+                        $s->opening_cash,
+                        $rowCashSales,
+                        $rowBankSales,
+                        $rowCashExpenses,
+                        $rowBankExpenses,
+                        $expected,
+                        $s->closing_cash ?? 0,
+                        $selisih,
+                    ]);
+                }
+                $csvTotalShiftExp = $csvTotalCashExp + $csvTotalBankExp;
+                $csvUnallocatedExp = max(0, ($reportData['summary_data']->total_expense ?? 0) - $csvTotalShiftExp);
+                if ($csvUnallocatedExp > 0) {
+                    fputcsv($file, ['', 'TOTAL PENGELUARAN DALAM SHIFT', '', '', '', '', '', $csvTotalCashExp, $csvTotalBankExp, $csvTotalShiftExp, '', '']);
+                    fputcsv($file, ['', 'PENGELUARAN DI LUAR SHIFT', '', '', '', '', '', $csvUnallocatedExp, '', '', '', '']);
+                    fputcsv($file, ['', 'TOTAL SELURUH PENGELUARAN', '', '', '', '', '', $reportData['summary_data']->total_expense ?? 0, '', '', '', '']);
+                }
+                fputcsv($file, ['']);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     protected function collectReportData(Request $request)
     {
         $request->validate([
@@ -644,6 +830,9 @@ class ReportController extends Controller
         }
 
         $worksheetId = $request->worksheet_id;
+        if ($worksheetId === 'all' || $worksheetId === '') {
+            $worksheetId = null;
+        }
         $sections = $request->sections;
         $data = [];
 
@@ -663,7 +852,7 @@ class ReportController extends Controller
 
         // 4. Internal Mutations (Mutasi Laci/Bank)
         if (in_array('internal_mutations', $sections)) {
-            $data['internal_mutations'] = Cashflow::whereBetween('transaction_date', [$dateFrom, $dateTo])
+            $data['internal_mutations'] = Cashflow::withoutGlobalScopes()->whereBetween('transaction_date', [$dateFrom, $dateTo])
                 ->where(function($q) {
                     $q->where('category', 'like', '%Transfer%')
                       ->orWhere('description', 'like', '%Transfer%');
@@ -674,7 +863,7 @@ class ReportController extends Controller
 
         // 5. Invoice Analytics
         if (in_array('invoice_analytics', $sections)) {
-            $invoiceQuery = Transaction::whereBetween('created_at', [$dateFrom, $dateTo])
+            $invoiceQuery = Transaction::withoutGlobalScopes()->whereBetween('created_at', [$dateFrom, $dateTo])
                 ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
             
             $data['invoices'] = [
@@ -696,6 +885,8 @@ class ReportController extends Controller
         $data['meta'] = [
             'period_label' => str_replace('_', ' ', strtoupper($request->period)),
             'date_range' => $dateFrom->format('d/m/Y') . ' - ' . $dateTo->format('d/m/Y'),
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
             'export_date' => now()->format('d/m/Y H:i'),
             'admin_name' => auth()->user()->name,
             'orientation' => $request->orientation,
@@ -714,7 +905,7 @@ class ReportController extends Controller
     protected function gatherSectionData($sections, $dateFrom, $dateTo, $worksheetId)
     {
         $data = [];
-        $queryTrx = Transaction::completed()->whereBetween('created_at', [$dateFrom, $dateTo])
+        $queryTrx = Transaction::withoutGlobalScopes()->completed()->whereBetween('created_at', [$dateFrom, $dateTo])
             ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId));
 
         if (in_array('history_trx', $sections)) {
@@ -731,17 +922,17 @@ class ReportController extends Controller
                 ->groupBy('payment_method')->get();
         }
         if (in_array('category_analysis', $sections)) {
-            $data['expense_categories'] = Cashflow::where('transaction_category', 'expense')
+            $data['expense_categories'] = Cashflow::withoutGlobalScopes()->where('transaction_category', 'expense')
                 ->whereBetween('transaction_date', [$dateFrom, $dateTo])
                 ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->selectRaw('category, SUM(amount) as total')
                 ->groupBy('category')->orderByDesc('total')->get();
         }
         if (in_array('balances', $sections)) {
-            $data['saldo_laci'] = Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
-                                - Cashflow::where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
-            $data['saldo_bank'] = Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
-                                - Cashflow::whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+            $data['saldo_laci'] = Cashflow::withoutGlobalScopes()->where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
+                                - Cashflow::withoutGlobalScopes()->where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+            $data['saldo_bank'] = Cashflow::withoutGlobalScopes()->whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
+                                - Cashflow::withoutGlobalScopes()->whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
         }
         if (in_array('roi', $sections)) {
             $totalCapital = Capital::sum('total_amount');
@@ -753,12 +944,18 @@ class ReportController extends Controller
             ];
         }
         if (in_array('shift_details', $sections)) {
-            $data['shifts'] = Shift::whereBetween('opened_at', [$dateFrom, $dateTo])
+            $data['shifts'] = Shift::withoutGlobalScopes()->whereBetween('opened_at', [$dateFrom, $dateTo])
                 ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->with(['opener', 'closer'])->latest()->get();
         }
         if (in_array('full_cashflow', $sections)) {
-            $data['full_cashflow'] = Cashflow::whereBetween('transaction_date', [$dateFrom, $dateTo])
+            $data['full_cashflow'] = Cashflow::withoutGlobalScopes()->whereBetween('transaction_date', [$dateFrom, $dateTo])
+                ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
+                ->latest()->get();
+        }
+        if (in_array('expense_details', $sections)) {
+            $data['expense_details'] = Cashflow::withoutGlobalScopes()->where('transaction_category', 'expense')
+                ->whereBetween('transaction_date', [$dateFrom, $dateTo])
                 ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
                 ->latest()->get();
         }

@@ -6,12 +6,14 @@
         ['id' => 'sales', 'label' => 'Performa Omzet', 'icon' => 'fa-shopping-bag'],
         ['id' => 'expenses', 'label' => 'Total Biaya', 'icon' => 'fa-arrow-circle-up'],
         ['id' => 'profit', 'label' => 'Laba Bersih', 'icon' => 'fa-heart'],
+        ['id' => 'balances', 'label' => 'Saldo Kas & Bank', 'icon' => 'fa-wallet'],
         ['id' => 'ai_insights', 'label' => 'AI Business Insight', 'icon' => 'fa-brain'],
         ['id' => 'invoice_analytics', 'label' => 'Analisa Invoice', 'icon' => 'fa-file-invoice'],
         ['id' => 'chart_sales', 'label' => 'Grafik Penjualan', 'icon' => 'fa-chart-line'],
         ['id' => 'chart_expenses', 'label' => 'Grafik Pengeluaran', 'icon' => 'fa-chart-pie'],
         ['id' => 'top_products', 'label' => 'Ranking Produk', 'icon' => 'fa-trophy'],
         ['id' => 'history_trx', 'label' => 'Detail Penjualan', 'icon' => 'fa-list-ul'],
+        ['id' => 'expense_details', 'label' => 'Detail Pengeluaran', 'icon' => 'fa-receipt'],
         ['id' => 'internal_mutations', 'label' => 'Mutasi Internal', 'icon' => 'fa-sync'],
         ['id' => 'full_cashflow', 'label' => 'Arus Kas Lengkap', 'icon' => 'fa-exchange-alt'],
         ['id' => 'roi', 'label' => 'Analisa ROI', 'icon' => 'fa-chart-bar'],
@@ -20,18 +22,18 @@
 
     if ($isKasir) {
         $options = array_filter($allOptions, function($opt) {
-            return in_array($opt['id'], ['summary', 'sales', 'expenses', 'profit', 'chart_sales', 'chart_expenses', 'top_products', 'history_trx', 'ai_insights']);
+            return in_array($opt['id'], ['summary', 'sales', 'expenses', 'profit', 'balances', 'chart_sales', 'chart_expenses', 'top_products', 'history_trx', 'ai_insights', 'expense_details']);
         });
     } else {
         $options = $allOptions;
     }
 
     $defaultSectionsJson = $isKasir
-        ? ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','history_trx','ai_insights']
-        : ['summary','sales','expenses','profit','chart_sales','top_products','ai_insights'];
+        ? ['summary','sales','expenses','profit','balances','chart_sales','chart_expenses','top_products','history_trx','ai_insights','expense_details']
+        : ['summary','sales','expenses','profit','balances','chart_sales','top_products','ai_insights','expense_details'];
     $allSectionsJson = $isKasir
-        ? ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','history_trx','ai_insights']
-        : ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','ai_insights','history_trx','roi','shift_details','full_cashflow','internal_mutations','invoice_analytics'];
+        ? ['summary','sales','expenses','profit','balances','chart_sales','chart_expenses','top_products','history_trx','ai_insights','expense_details']
+        : ['summary','sales','expenses','profit','balances','chart_sales','chart_expenses','top_products','ai_insights','history_trx','roi','shift_details','full_cashflow','internal_mutations','invoice_analytics','expense_details'];
     $defaultPeriod = (auth()->check() && auth()->user()->isOwner()) ? 'bulan_ini' : 'hari_ini';
 @endphp
 
@@ -127,31 +129,34 @@
                     self.exportProgress = 90;
                     self.exportStatus = 'Mengunduh...';
 
-                    // Parse filename from header
+                    // Parse filename from header safely
                     var filename = fallbackName;
                     var disp = resp.headers.get('Content-Disposition');
-                    if (disp && disp.indexOf('filename=') !== -1) {
-                        var raw = disp.split('filename=')[1].trim().split(';')[0];
-                        raw = raw.replace(/^["']|["']$/g, '');
-                        if (raw) filename = decodeURIComponent(raw);
+                    if (disp) {
+                        // Match filename="name.ext" or filename=name.ext (ignores filename*=)
+                        var match = disp.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                        if (match && match[1]) {
+                            var raw = match[1].replace(/^["']|["']$/g, '');
+                            if (raw) filename = decodeURIComponent(raw);
+                        }
                     }
 
-                    // Force correct mime type
-                    var mimes = {
-                        pdf: 'application/pdf',
-                        excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        csv: 'text/csv'
-                    };
-                    var typedBlob = new Blob([blob], { type: mimes[type] });
+                    // Remove invalid Windows characters from filename just in case
+                    filename = filename.replace(/[<>:"/\\|?*]/g, '_');
 
-                    var blobUrl = URL.createObjectURL(typedBlob);
+                    var blobUrl = URL.createObjectURL(blob);
                     var a = document.createElement('a');
                     a.href = blobUrl;
                     a.download = filename;
                     a.style.display = 'none';
                     document.body.appendChild(a);
                     a.click();
-                    setTimeout(function() { URL.revokeObjectURL(blobUrl); a.remove(); }, 2000);
+                    
+                    // Give Chrome plenty of time to show the "Save As" dialog before revoking
+                    setTimeout(function() { 
+                        URL.revokeObjectURL(blobUrl); 
+                        if(a.parentNode) a.parentNode.removeChild(a); 
+                    }, 60000);
 
                     self.exportProgress = 100;
                     self.exportStatus = 'Selesai!';
