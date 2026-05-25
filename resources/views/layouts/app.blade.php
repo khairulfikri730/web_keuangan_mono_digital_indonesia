@@ -284,7 +284,8 @@
     <div class="fixed inset-0 bg-black/60 z-[140] lg:hidden" x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak></div>
 
     {{-- Sidebar --}}
-    <aside class="fixed top-0 left-0 w-64 sidebar-bg text-gray-300 h-screen p-4 z-[150] flex flex-col lg:translate-x-0 -translate-x-full transition-transform duration-300 shadow-2xl"
+    <aside class="fixed top-0 bottom-0 left-0 w-64 sidebar-bg text-gray-300 p-4 z-[150] flex flex-col lg:translate-x-0 -translate-x-full transition-transform duration-300 shadow-2xl"
+           style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
 
         <!-- LOGO -->

@@ -217,94 +217,102 @@
                                 </div>
                                 <div class="text-xs font-bold text-slate-500 flex flex-wrap items-center gap-1.5 mt-1">
                                     <span class="flex items-center gap-1.5"><i class="far fa-calendar-alt"></i> {{ $s->opened_at->format('d M Y') }}</span>
-                                    <span class="text-slate-700">â€¢</span>
+                                    <span class="text-slate-700">&bull;</span>
                                     <span class="flex items-center gap-1.5"><i class="far fa-clock"></i> {{ $s->opened_at->format('H:i') }} - {{ $s->closed_at ? $s->closed_at->format('H:i') : 'Skrg' }}</span>
                                     <span class="ml-1 px-1.5 py-0.5 rounded-md bg-slate-900/50 text-[9px] font-black uppercase tracking-wider text-blue-400/80 border border-slate-700/50">{{ $s->getDuration() }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Tengah: Uang --}}
-                        <div class="flex gap-6 lg:justify-center shrink-0">
-                            <div>
+                        @php
+                            $rowSales = $s->status === 'open' 
+                                ? \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('status', 'completed')->sum('total')
+                                : $s->total_sales;
+                            $rowCashExpenses = $s->status === 'open'
+                                ? \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount')
+                                : ($s->cash_expenses ?? 0);
+                            $rowBankExpenses = $s->status === 'open'
+                                ? \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount')
+                                : ($s->bank_expenses ?? 0);
+                        @endphp
+
+                        {{-- Tengah & Kanan: Grid Keuangan --}}
+                        <div class="grid grid-cols-3 md:flex md:flex-wrap md:justify-end gap-y-4 gap-x-2 md:gap-x-6 w-full md:w-auto md:flex-1 mt-4 md:mt-0">
+                            
+                            {{-- Kas Awal --}}
+                            <div class="md:text-right">
                                 <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Kas Awal</p>
-                                <p class="text-sm font-bold text-slate-300 mt-0.5">Rp {{ number_format($s->opening_cash, 0, ',', '.') }}</p>
+                                <p class="text-sm font-bold text-slate-300 mt-0.5 whitespace-nowrap">Rp {{ number_format($s->opening_cash, 0, ',', '.') }}</p>
                             </div>
-                            <div>
+                            
+                            {{-- Penjualan --}}
+                            <div class="md:text-right">
                                 <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Penjualan</p>
-                                @php
-                                    $rowSales = $s->status === 'open' 
-                                        ? \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('status', 'completed')->sum('total')
-                                        : $s->total_sales;
-                                @endphp
-                                <p class="text-sm font-black text-emerald-400 mt-0.5">Rp {{ number_format($rowSales, 0, ',', '.') }}</p>
+                                <p class="text-sm font-black text-emerald-400 mt-0.5 whitespace-nowrap">Rp {{ number_format($rowSales, 0, ',', '.') }}</p>
                             </div>
-                            <div>
+                            
+                            {{-- Pengeluaran --}}
+                            <div class="md:text-right">
                                 <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Pengeluaran</p>
-                                @php
-                                    $rowCashExpenses = $s->status === 'open'
-                                        ? \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount')
-                                        : ($s->cash_expenses ?? 0);
-                                    $rowBankExpenses = $s->status === 'open'
-                                        ? \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount')
-                                        : ($s->bank_expenses ?? 0);
-                                @endphp
                                 <div class="mt-0.5 space-y-0.5">
                                     @if($rowCashExpenses > 0 || $rowBankExpenses == 0)
-                                    <p class="text-[11px] font-bold text-red-400 leading-tight">
+                                    <p class="text-[11px] font-bold text-red-400 leading-tight whitespace-nowrap">
                                         <i class="fas fa-money-bill-wave text-[9px] w-3 text-center"></i> Rp {{ number_format($rowCashExpenses, 0, ',', '.') }}
                                     </p>
                                     @endif
                                     @if($rowBankExpenses > 0)
-                                    <p class="text-[11px] font-bold text-blue-400 leading-tight">
+                                    <p class="text-[11px] font-bold text-blue-400 leading-tight whitespace-nowrap">
                                         <i class="fas fa-university text-[9px] w-3 text-center"></i> Rp {{ number_format($rowBankExpenses, 0, ',', '.') }}
                                     </p>
                                     @endif
                                 </div>
                             </div>
-                        </div>
 
-                        {{-- Kanan: Hasil & Selisih --}}
-                        <div class="flex gap-4 md:gap-6 items-center shrink-0">
                             @if($s->closed_at || $s->status === 'pending_approval')
                                 @php 
                                     $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
                                     $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses; 
                                     $selisih = $s->closing_cash - $expected;
                                 @endphp
-                                <div class="text-right">
+                                
+                                {{-- Kas Laci --}}
+                                <div class="md:text-right">
                                     <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Kas Laci</p>
-                                    <p class="text-sm font-bold text-white mt-0.5">Rp {{ number_format($s->closing_cash, 0, ',', '.') }}</p>
+                                    <p class="text-sm font-bold text-white mt-0.5 whitespace-nowrap">Rp {{ number_format($s->closing_cash, 0, ',', '.') }}</p>
                                 </div>
-                                <div class="text-right min-w-[80px]">
+                                
+                                {{-- Selisih --}}
+                                <div class="md:text-right min-w-[60px]">
                                     <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Selisih</p>
-                                    <div class="px-2 py-0.5 mt-0.5 rounded-md inline-block {{ abs($selisih) < 1 ? 'bg-slate-700/50 text-slate-400' : ($selisih > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }}">
+                                    <div class="px-2 py-0.5 mt-0.5 rounded-md inline-block whitespace-nowrap {{ abs($selisih) < 1 ? 'bg-slate-700/50 text-slate-400' : ($selisih > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }}">
                                         <p class="text-sm font-black">{{ abs($selisih) < 1 ? 'Pas' : ($selisih > 0 ? '+'.number_format($selisih, 0, ',', '.') : '-'.number_format(abs($selisih), 0, ',', '.')) }}</p>
                                     </div>
                                 </div>
                             @else
-                                <div class="text-right w-full">
+                                <div class="col-span-2 md:col-span-1 md:text-right flex items-center">
                                     <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider animate-pulse">Menunggu shift ditutup</p>
                                 </div>
                             @endif
-                            <div class="flex items-center gap-2 ml-4 md:ml-6">
+
+                            {{-- Actions --}}
+                            <div class="flex items-center gap-1.5 md:ml-4">
                                 @if($s->status === 'pending_approval' && auth()->user()->hasPermission('shifts.manage'))
                                 <form action="{{ route('shifts.approve', $s->id) }}" method="POST" class="m-0">
                                     @csrf
-                                    <button type="submit" @click.stop class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Approve Shift">
-                                        <i class="fas fa-check"></i>
+                                    <button type="submit" @click.stop class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Approve Shift">
+                                        <i class="fas fa-check text-xs md:text-sm"></i>
                                     </button>
                                 </form>
                                 @endif
                                 @if(auth()->user()->isOwner())
-                                <button @click.stop="openEditModalFor({{ $s->id }})" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
-                                    <i class="fas fa-edit"></i>
+                                <button @click.stop="openEditModalFor({{ $s->id }})" class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
+                                    <i class="fas fa-edit text-xs md:text-sm"></i>
                                 </button>
                                 <form action="{{ route('shifts.destroy', $s->id) }}" method="POST" class="m-0" id="delete-shift-{{ $s->id }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="button" @click.stop="confirmDelete('{{ $s->id }}')" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Hapus Shift">
-                                        <i class="fas fa-trash"></i>
+                                    <button type="button" @click.stop="confirmDelete('{{ $s->id }}')" class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Hapus Shift">
+                                        <i class="fas fa-trash text-xs md:text-sm"></i>
                                     </button>
                                 </form>
                                 @endif

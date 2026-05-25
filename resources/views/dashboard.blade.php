@@ -2,28 +2,28 @@
 
 @section('title', 'Dashboard Overview')
 
-@section('page-title')
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-    <div>
-        <h1 class="text-2xl font-black text-white tracking-wide uppercase">Dashboard Overview</h1>
-        <p class="text-sm text-slate-400 mt-1">Sistem Pemantauan Operasional Enterprise</p>
-    </div>
-    
-    {{-- Filter Bar --}}
-    <form id="filter-form" method="GET" class="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-white/5 backdrop-blur-md overflow-x-auto">
-        @if(auth()->user()->isOwner())
-            <button type="submit" name="filter" value="today" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'today' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Hari</button>
-            <button type="submit" name="filter" value="week" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'week' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Minggu</button>
-            <button type="submit" name="filter" value="month" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'month' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Bulan</button>
-        @else
-            <button type="button" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]">Hari Ini</button>
-        @endif
-    </form>
-</div>
-@endsection
+@section('page-title', 'Dashboard')
 
 @section('content')
 <div class="space-y-6 pb-20">
+
+    {{-- Header Content & Filter Bar --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-black text-white tracking-wide uppercase">Dashboard Overview</h2>
+            <p class="text-sm text-slate-400 mt-1">Sistem Pemantauan Operasional Enterprise</p>
+        </div>
+        
+        <form id="filter-form" method="GET" class="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-white/5 backdrop-blur-md overflow-x-auto">
+            @if(auth()->user()->isOwner())
+                <button type="submit" name="filter" value="today" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'today' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Hari</button>
+                <button type="submit" name="filter" value="week" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'week' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Minggu</button>
+                <button type="submit" name="filter" value="month" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'month' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Bulan</button>
+            @else
+                <button type="button" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]">Hari Ini</button>
+            @endif
+        </form>
+    </div>
 
     @if(auth()->user()->isOwner())
         {{-- ========================================================= --}}

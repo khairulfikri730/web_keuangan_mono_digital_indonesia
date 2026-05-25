@@ -5,8 +5,20 @@
 
 @push('styles')
 <style>
-    header { display: none; }
-    .pos-height { height: 100vh; }
+    /* Desktop: fixed layout inner scroll. Mobile: native body scroll */
+    @media (min-width: 1024px) {
+        .pos-height { height: calc(100vh - 6rem); }
+    }
+    @media (max-width: 1023px) {
+        .pos-height { min-height: 100vh; }
+        /* Mematikan inner scroll agar body yang men-scroll seluruh halaman */
+        #product-grid-container { 
+            overflow: visible !important; 
+            height: auto !important; 
+            flex: none; 
+        }
+    }
+
     /* Scrollbar minimal */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -98,7 +110,7 @@
 
 
         {{-- FILTER KATEGORI (CHIPS) --}}
-        <div class="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide shrink-0" id="category-buttons">
+        <div class="flex gap-2 overflow-x-auto py-3 mb-2 scrollbar-hide shrink-0 sticky top-[72px] lg:static z-[40] bg-slate-900/95 backdrop-blur-md -mx-4 px-4 lg:mx-0 lg:px-0 border-b border-white/5 lg:border-none transition-all" id="category-buttons">
             <button @click="setCategory('')" data-category="semua" :class="activeCategory==='' ? 'bg-white text-slate-900 shadow-lg border-white active' : 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all">
                 Semua
             </button>
@@ -207,19 +219,34 @@
     </div>
 
     {{-- MOBILE FLOATING BOTTOM BAR (Trigger Cart) --}}
-    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-emerald-600 text-white p-4 z-40 flex justify-between items-center rounded-t-2xl shadow-[0_-10px_30px_rgba(0,0,0,0.3)] transition-transform duration-300"
-         :class="mobileCartOpen ? 'translate-y-full' : 'translate-y-0'">
-        <div class="flex flex-col">
-            <span class="text-[10px] font-bold bg-emerald-500 rounded-full px-2 py-0.5 inline-block w-max mb-1 shadow-sm" x-text="(activeWorksheet ? activeWorksheet.cart.reduce((a,b)=>a+b.quantity, 0) : 0) + ' Item'"></span>
-            <div class="font-black text-lg" x-text="fmt(total)"></div>
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0ea5e9] text-white px-4 py-3 z-40 flex justify-between items-center shadow-[0_-10px_20px_rgba(0,0,0,0.15)] transition-transform duration-300"
+         :class="mobileCartOpen ? 'translate-y-full' : 'translate-y-0'"
+         style="background-color: #10b981; padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+        
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <div class="w-11 h-11 bg-white/20 rounded-full flex items-center justify-center border border-white/10">
+                    <i class="fas fa-shopping-bag text-lg"></i>
+                </div>
+                <span class="absolute -top-1 -right-1 bg-amber-400 text-slate-900 text-[11px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#10b981]" 
+                      x-show="activeWorksheet && activeWorksheet.cart.length > 0"
+                      x-text="activeWorksheet.cart.reduce((a,b)=>a+b.quantity, 0)">
+                </span>
+            </div>
+            
+            <div class="flex flex-col justify-center pt-0.5">
+                <span class="text-[11px] font-bold text-emerald-50 leading-none mb-1">Total Belanja</span>
+                <div class="font-black text-lg leading-none tracking-tight" x-text="formatRp(currentTotal)"></div>
+            </div>
         </div>
-        <button @click="mobileCartOpen = true" class="bg-white text-emerald-600 hover:bg-slate-100 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-colors text-sm">
-            Lihat Pesanan <i class="fas fa-arrow-right"></i>
+
+        <button @click="mobileCartOpen = true" class="bg-white text-emerald-700 hover:bg-slate-50 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-colors text-sm tracking-tight">
+            Lihat Pesanan <i class="fas fa-arrow-right text-xs"></i>
         </button>
     </div>
 
     {{-- RIGHT PANEL: ORDER PANEL (CLEAN & TIDY) --}}
-    <div class="fixed inset-y-0 right-0 w-full md:w-[420px] lg:static lg:w-[420px] flex flex-col bg-slate-800 shadow-[-10px_0_30px_rgba(0,0,0,0.2)] z-50 h-full border-l border-white/5 shrink-0 overflow-hidden transition-transform duration-300"
+    <div class="fixed inset-y-0 right-0 w-full md:w-[420px] lg:static lg:w-[420px] flex flex-col bg-slate-800 shadow-[-10px_0_30px_rgba(0,0,0,0.2)] z-[110] lg:z-auto h-full border-l border-white/5 shrink-0 overflow-hidden transition-transform duration-300"
          :class="mobileCartOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'">
         
         {{-- PANEL HEADER --}}
@@ -293,6 +320,93 @@
                         </div>
                     </template>
                 </div>
+
+                {{-- ADDITIONAL ORDER INFO (SCROLLABLE) --}}
+                <div class="mt-8 space-y-5 pt-6 border-t border-white/10" x-show="activeWorksheet.cart.length > 0">
+                    {{-- DATA PELANGGAN --}}
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Pelanggan</label>
+                            <button class="text-[10px] font-black text-emerald-600 uppercase flex items-center gap-1"><i class="fas fa-plus-circle"></i> Baru</button>
+                        </div>
+                        <div class="relative group">
+                            <i class="far fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"></i>
+                            <input type="text" x-model="activeWorksheet.customerName" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all" placeholder="Ketik nama atau no HP...">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="relative group">
+                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. HP</label>
+                                <i class="fas fa-phone-alt absolute left-4 top-[38px] text-[10px] text-slate-300"></i>
+                                <input type="text" x-model="activeWorksheet.customerPhone" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="08xxx...">
+                            </div>
+                            <div class="relative group">
+                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. Meja</label>
+                                <input type="text" x-model="activeWorksheet.tableNumber" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="Contoh: 12">
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- DISKON & CATATAN --}}
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Diskon</label>
+                            <div class="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl p-1 shadow-sm">
+                                <div class="flex-1 relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400" x-text="activeWorksheet.discountType === 'nominal' ? 'Rp' : '%'"></span>
+                                    <input type="number" x-model.number="activeWorksheet.globalDiscount" class="w-full pl-8 pr-2 py-1.5 text-sm font-black text-white focus:outline-none bg-transparent">
+                                </div>
+                                <div class="flex bg-slate-700 rounded-lg p-0.5">
+                                    <button @click="activeWorksheet.discountType = 'nominal'" :class="activeWorksheet.discountType === 'nominal' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">Rp</button>
+                                    <button @click="activeWorksheet.discountType = 'percentage'" :class="activeWorksheet.discountType === 'percentage' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">%</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan Pesanan</label>
+                            <textarea x-model="activeWorksheet.notes" rows="2" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-medium text-white focus:outline-none focus:border-emerald-500 transition-all resize-none" placeholder="Tambahkan catatan untuk pesanan ini..."></textarea>
+                        </div>
+                    </div>
+
+                    {{-- DELIVERY MODE --}}
+                    <div class="bg-slate-700/50 border border-white/10 rounded-xl p-3 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 text-slate-300">
+                                <i class="fas fa-shipping-fast text-xs"></i>
+                                <span class="text-[10px] font-black uppercase tracking-wider">Mode Delivery</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" x-model="activeWorksheet.deliveryMode" @change="if(!activeWorksheet.deliveryMode) activeWorksheet.deliveryFee = 0" class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+                            </label>
+                        </div>
+                        
+                        <div x-show="activeWorksheet.deliveryMode" x-collapse>
+                            <div class="pt-3 border-t border-slate-200/50">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tujuan & Ongkos Kirim (Rp)</label>
+                                <div class="mb-2">
+                                    <input type="text" x-model="activeWorksheet.deliveryDestination" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="Tujuan Delivery (opsional)">
+                                </div>
+                                <div class="relative mb-3">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">Rp</span>
+                                    <input type="number" x-model.number="activeWorksheet.deliveryFee" min="0" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all appearance-none" placeholder="0">
+                                </div>
+                                
+                                <template x-if="deliveryPresets && deliveryPresets.length > 0">
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="preset in deliveryPresets" :key="preset.name">
+                                            <button @click="activeWorksheet.deliveryFee = preset.price; activeWorksheet.deliveryDestination = preset.name;" 
+                                                    class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm">
+                                                <span x-text="preset.name"></span>
+                                                <span class="opacity-50 ml-1" x-text="'(' + formatRp(preset.price) + ')'"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {{-- TAB: RIWAYAT --}}
@@ -302,124 +416,37 @@
             </div>
         </div>
 
-        {{-- ORDER INFO & ACTION AREA --}}
-        <div class="p-6 bg-slate-900/50 border-t border-white/10 shrink-0 space-y-5">
-            
-            {{-- DATA PELANGGAN --}}
-            <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Pelanggan</label>
-                    <button class="text-[10px] font-black text-emerald-600 uppercase flex items-center gap-1"><i class="fas fa-plus-circle"></i> Baru</button>
-                </div>
-                <div class="relative group">
-                    <i class="far fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"></i>
-                    <input type="text" x-model="activeWorksheet.customerName" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all" placeholder="Ketik nama atau no HP...">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="relative group">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. HP</label>
-                        <i class="fas fa-phone-alt absolute left-4 top-[38px] text-[10px] text-slate-300"></i>
-                        <input type="text" x-model="activeWorksheet.customerPhone" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="08xxx...">
-                    </div>
-                    <div class="relative group">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">No. Meja</label>
-                        <input type="text" x-model="activeWorksheet.tableNumber" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="Contoh: 12">
-                    </div>
-                </div>
-            </div>
-
-            {{-- DISKON & CATATAN --}}
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Diskon</label>
-                    <div class="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl p-1 shadow-sm">
-                        <div class="flex-1 relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400" x-text="activeWorksheet.discountType === 'nominal' ? 'Rp' : '%'"></span>
-                            <input type="number" x-model.number="activeWorksheet.globalDiscount" class="w-full pl-8 pr-2 py-1.5 text-sm font-black text-white focus:outline-none bg-transparent">
-                        </div>
-                        <div class="flex bg-slate-700 rounded-lg p-0.5">
-                            <button @click="activeWorksheet.discountType = 'nominal'" :class="activeWorksheet.discountType === 'nominal' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">Rp</button>
-                            <button @click="activeWorksheet.discountType = 'percentage'" :class="activeWorksheet.discountType === 'percentage' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-400'" class="px-3 py-1 rounded-md text-[10px] font-black transition-all">%</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan Pesanan</label>
-                    <textarea x-model="activeWorksheet.notes" rows="2" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs font-medium text-white focus:outline-none focus:border-emerald-500 transition-all resize-none" placeholder="Tambahkan catatan untuk pesanan ini..."></textarea>
-                </div>
-            </div>
-
-            {{-- DELIVERY MODE --}}
-            <div class="bg-slate-700/50 border border-white/10 rounded-xl p-3 space-y-3">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 text-slate-300">
-                        <i class="fas fa-shipping-fast text-xs"></i>
-                        <span class="text-[10px] font-black uppercase tracking-wider">Mode Delivery</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" x-model="activeWorksheet.deliveryMode" @change="if(!activeWorksheet.deliveryMode) activeWorksheet.deliveryFee = 0" class="sr-only peer">
-                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
-                    </label>
-                </div>
-                
-                {{-- Ongkos Kirim Input (Shows when Delivery Mode is ON) --}}
-                <div x-show="activeWorksheet.deliveryMode" x-collapse>
-                    <div class="pt-3 border-t border-slate-200/50">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tujuan & Ongkos Kirim (Rp)</label>
-                        <div class="mb-2">
-                            <input type="text" x-model="activeWorksheet.deliveryDestination" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="Tujuan Delivery (opsional)">
-                        </div>
-                        <div class="relative mb-3">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">Rp</span>
-                            <input type="number" x-model.number="activeWorksheet.deliveryFee" min="0" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all appearance-none" placeholder="0">
-                        </div>
-                        
-                        {{-- Presets --}}
-                        <template x-if="deliveryPresets && deliveryPresets.length > 0">
-                            <div class="flex flex-wrap gap-2">
-                                <template x-for="preset in deliveryPresets" :key="preset.name">
-                                    <button @click="activeWorksheet.deliveryFee = preset.price; activeWorksheet.deliveryDestination = preset.name;" 
-                                            class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm">
-                                        <span x-text="preset.name"></span>
-                                        <span class="opacity-50 ml-1" x-text="'(' + formatRp(preset.price) + ')'"></span>
-                                    </button>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
+        {{-- FIXED PAYMENT SUMMARY & ACTIONS --}}
+        <div class="px-6 py-4 bg-slate-900 border-t border-white/10 shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.15)]" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));">
             {{-- PAYMENT SUMMARY --}}
-            <div class="pt-4 border-t border-white/10 space-y-1">
+            <div class="space-y-1 mb-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-slate-400">Subtotal</span>
-                    <span class="text-xs font-bold text-slate-600" x-text="formatRp(currentSubtotal)"></span>
+                    <span class="text-xs font-bold text-slate-300" x-text="formatRp(currentSubtotal)"></span>
                 </div>
                 <template x-if="activeWorksheet && activeWorksheet.deliveryMode && activeWorksheet.deliveryFee > 0">
                     <div class="flex justify-between items-center">
                         <span class="text-xs font-bold text-slate-400">Ongkir</span>
-                        <span class="text-xs font-bold text-slate-600" x-text="'+ ' + formatRp(activeWorksheet.deliveryFee)"></span>
+                        <span class="text-xs font-bold text-slate-300" x-text="'+ ' + formatRp(activeWorksheet.deliveryFee)"></span>
                     </div>
                 </template>
                 <div class="flex justify-between items-end pt-1">
                     <div>
-                        <h4 class="text-xl font-black text-white tracking-tight">Total</h4>
+                        <h4 class="text-lg font-black text-white tracking-tight">Total</h4>
                     </div>
                     <div class="text-right">
-                        <span class="text-xl font-black text-white tracking-tight" x-text="formatRp(currentTotal)"></span>
+                        <span class="text-xl font-black text-emerald-400 tracking-tight" x-text="formatRp(currentTotal)"></span>
                     </div>
                 </div>
             </div>
 
             {{-- ACTIONS --}}
-            <div class="grid grid-cols-2 gap-3 pt-2">
-                <button @click="resetCurrentWorksheet()" class="py-3.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]">Batal</button>
+            <div class="grid grid-cols-2 gap-3">
+                <button @click="resetCurrentWorksheet()" class="py-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-[0.98]">Batal</button>
                 <button @click="openPayment()" 
                         :disabled="!activeShift || activeWorksheet.cart.length === 0" 
                         :title="!activeShift ? 'Buka shift terlebih dahulu' : (activeWorksheet.cart.length === 0 ? 'Keranjang masih kosong' : '')"
-                        class="py-3.5 bg-emerald-400 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed disabled:bg-slate-400">
+                        class="py-3 bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed disabled:bg-slate-400">
                     Order
                 </button>
             </div>
@@ -2438,7 +2465,10 @@ function closeCashOut() {
             },
 
             resetCurrentWorksheet() {
-                if(this.activeWorksheet.cart.length === 0) return;
+                if(this.activeWorksheet.cart.length === 0) {
+                    this.mobileCartOpen = false;
+                    return;
+                }
                 
                 Swal.fire({
                     title: 'Batalkan Pesanan?',
@@ -2460,6 +2490,8 @@ function closeCashOut() {
                         w.deliveryMode = false;
                         w.globalDiscount = 0;
                         w.discountType = 'nominal';
+                        
+                        this.mobileCartOpen = false;
 
                         Swal.fire({
                             toast: true,

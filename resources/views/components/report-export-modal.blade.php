@@ -213,10 +213,10 @@
 
         <form id="exportReportForm" method="POST" class="flex-1 flex flex-col min-h-0">
             @csrf
-            <div class="flex-1 flex min-h-0">
+            <div class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto lg:overflow-hidden">
 
                 <!-- Left Column -->
-                <div class="w-2/3 p-8 overflow-y-auto border-r border-white/5 custom-scrollbar">
+                <div class="w-full lg:w-2/3 p-4 md:p-8 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r border-white/5 custom-scrollbar shrink-0 lg:shrink">
                     <div class="space-y-10">
 
                         <!-- 1. Module Selection -->
@@ -244,7 +244,7 @@
                         </div>
 
                         <!-- 2. Period & Branch -->
-                        <div class="grid grid-cols-2 gap-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                             <div>
                                 <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 block">2. PERIODE WAKTU</label>
                                 <select name="period" x-model="period" class="w-full bg-slate-950 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-premium shadow-inner">
@@ -281,7 +281,7 @@
                         </div>
 
                         <!-- 3. Orientation & Signatures -->
-                        <div class="grid grid-cols-2 gap-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                             <div>
                                 <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 block">4. ORIENTASI & TEMA</label>
                                 <div class="flex gap-2">
@@ -328,7 +328,7 @@
                 </div>
 
                 <!-- Right Column -->
-                <div class="w-1/3 p-8 bg-black/20 flex flex-col justify-between">
+                <div class="w-full lg:w-1/3 p-4 md:p-8 bg-black/20 flex flex-col justify-between shrink-0 lg:shrink">
                     <div>
                         <label class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-8 block">RINGKASAN EXPORT</label>
                         <div class="space-y-6">

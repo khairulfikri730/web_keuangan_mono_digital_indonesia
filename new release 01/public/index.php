@@ -14,7 +14,7 @@ if (file_exists($maintenance = __DIR__.'/../../../repositories/finance.monoframe
 require __DIR__.'/../../../repositories/finance.monoframe.id/vendor/autoload.php';
 
 // Bootstrap Laravel and handle the request...
-/** @var Application $app */
 $app = require_once __DIR__.'/../../../repositories/finance.monoframe.id/bootstrap/app.php';
+$app->usePublicPath(__DIR__);
 
 $app->handleRequest(Request::capture());

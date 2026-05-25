@@ -24,7 +24,7 @@
   </div>
 
   {{-- Main Layout --}}
-  <form id="productForm" action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" class="flex items-start gap-6">
+  <form id="productForm" action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" class="flex flex-col lg:flex-row items-start gap-6">
     @csrf
     
     {{-- Hidden Values for meta --}}
@@ -88,7 +88,7 @@
       {{-- CARD 2: INFO DASAR --}}
       <div class="p-6 rounded-2xl border backdrop-blur-xl space-y-5" style="background:rgba(30,41,59,.6);border-color:rgba(71,85,105,.4);">
         <h2 class="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-700 pb-3"><i class="fas fa-file-alt text-emerald-400"></i> Info Dasar</h2>
-        <div class="grid grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div class="col-span-2">
             <label class="text-xs font-bold text-slate-400 mb-1.5 block">Nama Produk <span class="text-red-400">*</span></label>
             <input type="text" name="name" x-model="name" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" placeholder="Contoh: Kopi Susu Aren">
@@ -122,7 +122,7 @@
       {{-- CARD 3: HARGA & STOK (Hidden for bundle/formula components usually, but basic price exists) --}}
       <div class="p-6 rounded-2xl border backdrop-blur-xl space-y-5" style="background:rgba(30,41,59,.6);border-color:rgba(71,85,105,.4);">
         <h2 class="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-700 pb-3"><i class="fas fa-money-bill-wave text-yellow-400"></i> Harga & Stok</h2>
-        <div class="grid grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
           
           {{-- Harga Jual --}}
           <div x-show="pkind !== 'formula'">
@@ -335,7 +335,7 @@
     </div>{{-- End Left Column --}}
 
     {{-- RIGHT COLUMN: Sidebar (Foto, Options, Submit) --}}
-    <div class="w-80 space-y-6 sticky top-6">
+    <div class="w-full lg:w-80 space-y-6 lg:sticky top-6">
       
       {{-- Status & Visibility --}}
       <div class="p-5 rounded-2xl border backdrop-blur-xl" style="background:rgba(30,41,59,.6);border-color:rgba(71,85,105,.4);">
