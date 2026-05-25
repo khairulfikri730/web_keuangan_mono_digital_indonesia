@@ -244,8 +244,8 @@ class ShiftController extends Controller
 
     public function close(Request $request, Shift $shift)
     {
-        if ($shift->status !== 'open') {
-            return back()->with('error', 'Shift sudah ditutup!');
+        if (!in_array($shift->status, ['open', 'pending_approval'])) {
+            return back()->with('error', 'Shift sudah tidak aktif atau sudah ditutup!');
         }
 
         if (!$shift->isUserAssigned(auth()->id())) {
@@ -280,6 +280,10 @@ class ShiftController extends Controller
         $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses + $transfers;
         $discrepancy = $request->closing_cash - $expectedCash;
 
+        $approvalRequired = \App\Models\Setting::get('shift_approval_required') == '1';
+        $isKasir = auth()->user()->isKasir();
+        $newStatus = ($approvalRequired && $isKasir) ? 'pending_approval' : 'closed';
+
         $shift->update([
             'closed_by' => auth()->id(),
             'closing_cash' => $request->closing_cash,
@@ -291,12 +295,34 @@ class ShiftController extends Controller
             'bank_expenses' => $bankExpenses,
             'total_sales' => $totalSales,
             'total_transactions' => $totalTransactions,
-            'status' => 'closed',
+            'status' => $newStatus,
             'notes' => $request->notes ?? $shift->notes,
             'closed_at' => now(),
         ]);
 
+        if ($newStatus === 'pending_approval') {
+            return redirect()->route('shifts.index')->with('success', 'Laporan shift berhasil dikirim. Menunggu persetujuan Owner.');
+        }
+
         return redirect()->route('shifts.index')->with('success', 'Shift berhasil ditutup!');
+    }
+
+    public function approve(Shift $shift)
+    {
+        if ($shift->status !== 'pending_approval') {
+            return back()->with('error', 'Shift tidak dalam status menunggu persetujuan!');
+        }
+
+        if (!auth()->user()->hasPermission('shifts.manage')) {
+            return back()->with('error', 'Anda tidak memiliki akses untuk menyetujui shift!');
+        }
+
+        $shift->update([
+            'status' => 'closed',
+            'closed_at' => $shift->closed_at ?? now(), // Ensure closed_at is set
+        ]);
+
+        return back()->with('success', 'Shift berhasil disetujui dan ditutup!');
     }
 
     /**
@@ -443,7 +469,7 @@ class ShiftController extends Controller
             'total_transactions' => $totalTransactions,
             'cash_expenses' => (float)$cashExpenses,
             'expected_cash' => (float)$expectedCash,
-            'discrepancy' => $shift->status === 'closed' ? (float)(($shift->closing_cash ?? 0) - $expectedCash) : null,
+            'discrepancy' => in_array($shift->status, ['closed', 'pending_approval']) ? (float)(($shift->closing_cash ?? 0) - $expectedCash) : null,
             'notes' => $shift->notes,
         ]);
     }

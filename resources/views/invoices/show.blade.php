@@ -1,6 +1,6 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
-@section('title', 'Detail Invoice â€” MONOFRAME')
+@section('title', 'Detail Invoice - MONOFRAME')
 
 @section('page-title')
     <div class="flex items-center gap-2">

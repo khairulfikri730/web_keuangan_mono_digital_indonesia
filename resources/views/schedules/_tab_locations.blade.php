@@ -17,7 +17,7 @@
             <div class="flex items-center gap-4 mb-4">
                 <div class="w-14 h-14 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center font-black text-xl text-yellow-400">{{ substr($loc->name, 0, 1) }}</div>
                 <div>
-                    <h3 class="font-bold text-white text-lg">{{ $loc->name }}</h3>
+                    <h3 class="font-bold text-slate-800 dark:text-white text-lg">{{ $loc->name }}</h3>
                     <span class="px-2 py-0.5 {{ $loc->is_active ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30' }} border text-[10px] font-bold rounded uppercase">{{ $loc->is_active ? 'Aktif' : 'Nonaktif' }}</span>
                 </div>
             </div>

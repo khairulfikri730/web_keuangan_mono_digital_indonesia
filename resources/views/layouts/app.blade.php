@@ -255,6 +255,12 @@
         /* ===== COMMON (both modes) ===== */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-thumb { border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .active-link { background-color: #00FF7F !important; color: #000000 !important; font-weight: 900 !important; border-radius: 0.5rem !important; }
         .active-link i { color: #000000 !important; }
         [x-cloak] { display: none !important; }
@@ -271,7 +277,7 @@
     </style>
     @stack('styles')
 </head>
-<body class="min-h-screen flex font-inter" x-data="{ sidebarOpen: false, darkMode: document.documentElement.classList.contains('dark') }">
+<body class="min-h-screen flex font-inter" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);" x-data="{ sidebarOpen: false, darkMode: document.documentElement.classList.contains('dark') }">
     @include('components.report-export-modal')
 
     {{-- Mobile Overlay --}}
@@ -291,7 +297,7 @@
             <!-- DASHBOARD -->
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Dashboard</p>
-                <a href="{{ route('dashboard') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('dashboard') ? 'active-link' : '' }}">
+                <a href="{{ route('dashboard') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('dashboard') ? 'active-link' : '' }}">
                     <i class="fas fa-th-large w-6 mr-1 text-sm"></i> Overview
                 </a>
             </div>
@@ -301,12 +307,12 @@
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Transaksi</p>
                 <div class="space-y-1">
                     @if(auth()->user()->hasPermission('pos'))
-                    <a href="{{ route('pos.index') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('pos.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('pos.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('pos.*') ? 'active-link' : '' }}">
                         <i class="fas fa-shopping-cart w-6 mr-1 text-sm"></i> POS Kasir
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('transactions.view'))
-                    <a href="{{ route('transactions.index') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('transactions.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('transactions.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('transactions.*') ? 'active-link' : '' }}">
                         <i class="fas fa-receipt w-6 mr-1 text-sm"></i> Daftar Transaksi
                     </a>
                     @endif
@@ -320,17 +326,17 @@
 
                 <div class="space-y-1">
                     @if(auth()->user()->hasPermission('shifts.view'))
-                    <a href="{{ route('shifts.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('shifts.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('shifts.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('shifts.*') ? 'active-link' : '' }}">
                         <i class="fas fa-clock w-6 mr-1 text-sm"></i> Sesi Shift
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('products.view'))
-                    <a href="{{ route('products.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('products.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('products.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('products.*') ? 'active-link' : '' }}">
                         <i class="fas fa-box w-6 mr-1 text-sm"></i> Katalog Produk
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('categories.view'))
-                    <a href="{{ route('categories.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('categories.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('categories.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('categories.*') ? 'active-link' : '' }}">
                         <i class="fas fa-tags w-6 mr-1 text-sm"></i> Kategori Produk
                     </a>
                     @endif
@@ -345,7 +351,7 @@
                             ->where('min_stock', '>', 0)
                             ->count();
                     @endphp
-                    <a href="{{ route('stock.index') }}" class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('stock.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('stock.index') }}" @click="sidebarOpen = false" class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('stock.*') ? 'active-link' : '' }}">
                         <span class="flex items-center"><i class="fas fa-warehouse w-6 mr-1 text-sm"></i> Gudang Stok</span>
                         @if($sidebarStockAlerts > 0)
                         <span class="w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg shadow-red-500/20 animate-pulse">{{ $sidebarStockAlerts }}</span>
@@ -363,37 +369,37 @@
 
                 <div class="space-y-1">
                     @if(auth()->user()->hasPermission('cashflow.view'))
-                    <a href="{{ route('cashflow.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('cashflow.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('cashflow.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('cashflow.*') ? 'active-link' : '' }}">
                         <i class="fas fa-money-bill-transfer w-6 mr-1 text-sm"></i> Cashflow
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('sales.view'))
-                    <a href="{{ route('sales.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('sales.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('sales.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('sales.*') ? 'active-link' : '' }}">
                         <i class="fas fa-chart-line w-6 mr-1 text-sm"></i> Analisa Penjualan
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('capitals.view'))
-                    <a href="{{ route('capitals.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('capitals.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('capitals.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('capitals.*') ? 'active-link' : '' }}">
                         <i class="fas fa-wallet w-6 mr-1 text-sm"></i> Modal Usaha
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('monthly_expenses.view'))
-                    <a href="{{ route('monthly_expenses.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('monthly_expenses.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('monthly_expenses.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('monthly_expenses.*') ? 'active-link' : '' }}">
                         <i class="fas fa-file-invoice w-6 mr-1 text-sm"></i> Biaya Bulanan
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('expense_categories.view'))
-                    <a href="{{ route('expense_categories.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('expense_categories.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('expense_categories.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('expense_categories.*') ? 'active-link' : '' }}">
                         <i class="fas fa-list-check w-6 mr-1 text-sm"></i> Master Jenis Biaya
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('reports_financial'))
-                    <a href="{{ route('reports.financial') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('reports.financial') ? 'active-link' : '' }}">
+                    <a href="{{ route('reports.financial') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('reports.financial') ? 'active-link' : '' }}">
                         <i class="fas fa-file-invoice-dollar w-6 mr-1 text-sm"></i> Laporan Laba Rugi
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('reports_shifts'))
-                    <a href="{{ route('reports.shifts') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('reports.shifts') ? 'active-link' : '' }}">
+                    <a href="{{ route('reports.shifts') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('reports.shifts') ? 'active-link' : '' }}">
                         <i class="fas fa-history w-6 mr-1 text-sm"></i> Laporan Shift
                     </a>
                     @endif
@@ -406,10 +412,10 @@
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Invoice Generator</p>
                 <div class="space-y-1">
-                    <a href="{{ route('invoices.index') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('invoices.index') ? 'active-link' : '' }}">
+                    <a href="{{ route('invoices.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('invoices.index') ? 'active-link' : '' }}">
                         <i class="fas fa-file-invoice w-6 mr-1 text-sm text-blue-400"></i> Semua Invoice
                     </a>
-                    <a href="{{ route('invoices.create') }}" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('invoices.create') ? 'active-link' : '' }}">
+                    <a href="{{ route('invoices.create') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors {{ request()->routeIs('invoices.create') ? 'active-link' : '' }}">
                         <i class="fas fa-plus-circle w-6 mr-1 text-sm text-emerald-400"></i> Buat Invoice
                     </a>
                 </div>
@@ -423,18 +429,18 @@
 
                 <div class="space-y-1">
                     @if(auth()->user()->hasPermission('team.view'))
-                    <a href="{{ route('team.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('team.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('team.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('team.*') ? 'active-link' : '' }}">
                         <i class="fas fa-users-gear w-6 mr-1 text-sm"></i> Manajemen Tim
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('schedules.view'))
-                    <a href="{{ route('schedules.index') }}" class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('schedules.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('schedules.index') }}" @click="sidebarOpen = false" class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('schedules.*') ? 'active-link' : '' }}">
                         <span class="flex items-center"><i class="fas fa-calendar-alt w-6 mr-1 text-sm text-yellow-400"></i> Jadwal Kerja</span>
                         <span class="px-1.5 py-0.5 bg-yellow-500 text-black text-[9px] font-black rounded-sm tracking-wider uppercase">Baru</span>
                     </a>
                     @endif
                     @if(auth()->user()->hasPermission('settings'))
-                    <a href="{{ route('settings.index') }}" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('settings.*') ? 'active-link' : '' }}">
+                    <a href="{{ route('settings.index') }}" @click="sidebarOpen = false" class="flex items-center px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('settings.*') ? 'active-link' : '' }}">
                         <i class="fas fa-sliders w-6 mr-1 text-sm"></i> Pengaturan Toko
                     </a>
                     @endif
@@ -471,7 +477,7 @@
     </aside>
 
     {{-- Main Content --}}
-    <div class="flex-1 lg:ml-64 min-h-screen flex flex-col">
+    <div class="flex-1 min-w-0 lg:ml-64 min-h-screen flex flex-col">
         {{-- Topbar --}}
         <header class="sticky top-0 z-[100] topbar-bg backdrop-blur-md border-b px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -508,7 +514,8 @@
                         ->with('category')
                         ->get();
                         
-                    $totalAlerts = $lowStockAlert->count() + $outOfStockAlert->count();
+                    $pendingShifts = auth()->user()->hasPermission('shifts.manage') ? \App\Models\Shift::where('status', 'pending_approval')->get() : collect();
+                    $totalAlerts = $lowStockAlert->count() + $outOfStockAlert->count() + $pendingShifts->count();
                 @endphp
                 <div class="relative" x-data="{ notifOpen: false }" @click.outside="notifOpen = false">
                     <button @click="notifOpen = !notifOpen" class="relative w-9 h-9 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700 text-slate-400 hover:text-white inline-flex items-center justify-center transition-all">
@@ -522,7 +529,7 @@
                     <div x-show="notifOpen" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95 -translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                          class="absolute right-0 top-12 w-80 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50">
                         <div class="p-4 border-b border-slate-700 flex justify-between items-center">
-                            <h3 class="text-sm font-black text-white"><i class="fas fa-bell text-amber-400 mr-2"></i>Notifikasi Stok</h3>
+                            <h3 class="text-sm font-black text-white"><i class="fas fa-bell text-amber-400 mr-2"></i>Notifikasi Sistem</h3>
                             @if($totalAlerts > 0)
                             <span class="text-[10px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/20">{{ $totalAlerts }} peringatan</span>
                             @endif
@@ -557,6 +564,26 @@
                                 </a>
                                 @endforeach
                             @endif
+
+                            @if($pendingShifts->count() > 0)
+                                <div class="px-4 py-2 bg-slate-900 border-y border-slate-700/50 flex justify-between items-center sticky top-0 z-10">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><i class="fas fa-clock text-amber-400 mr-1.5"></i>Persetujuan Shift</span>
+                                    <span class="text-[9px] font-bold bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full">{{ $pendingShifts->count() }} menunggu</span>
+                                </div>
+                                @foreach($pendingShifts as $ps)
+                                <a href="{{ route('reports.shifts', ['status' => 'pending_approval']) }}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors border-b border-slate-700/50">
+                                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                                        <i class="fas fa-lock text-amber-400 text-xs"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-bold text-white truncate">Shift Kasir: {{ $ps->opener->name ?? 'User' }}</p>
+                                        <p class="text-[10px] text-amber-400 font-bold">
+                                            {{ auth()->user()->isOwner() ? 'Menunggu Persetujuan Anda' : 'Menunggu Persetujuan Admin' }}
+                                        </p>
+                                    </div>
+                                </a>
+                                @endforeach
+                            @endif
                         </div>
                         @if($totalAlerts > 0)
                         <a href="{{ route('products.index', ['stock_status' => 'low']) }}" class="block p-3 text-center text-xs font-bold text-blue-400 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
@@ -587,7 +614,7 @@
         </div>
 
         {{-- Page Content --}}
-        <main class="flex-1 px-6 pb-8 pt-4">
+        <main class="flex-1 min-w-0 px-6 pb-8 pt-4">
             {{-- Big Worksheet Selector --}}
             {{-- Big Worksheet Selector --}}
             @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))

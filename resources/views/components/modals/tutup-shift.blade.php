@@ -1,4 +1,4 @@
-﻿{{-- Premium Redesign Tutup Shift Modal --}}
+{{-- Premium Redesign Tutup Shift Modal --}}
 <div x-data="{ 
         physicCash: {{ $currentExpected ?? 0 }}, 
         systemCash: {{ $currentExpected ?? 0 }},
@@ -221,9 +221,16 @@
                 <button @click="showCloseModal = false" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] transition-all active:scale-95 border border-white/5 order-2 md:order-1">
                     Batal
                 </button>
-                <button form="tutupShiftFormMain" class="flex-[2] bg-gradient-to-r from-red-600 to-rose-500 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] transition-all active:scale-95 btn-glow-red flex items-center justify-center gap-3 order-1 md:order-2">
-                    <i class="fas fa-lock"></i>
-                    Tutup Shift Sekarang
+                @php
+                    $approvalRequired = \App\Models\Setting::get('shift_approval_required') == '1';
+                    $isKasir = auth()->check() && auth()->user()->isKasir();
+                @endphp
+                <button form="tutupShiftFormMain" class="flex-[2] bg-gradient-to-r {{ ($approvalRequired && $isKasir) ? 'from-amber-500 to-orange-500 btn-glow-orange' : 'from-red-600 to-rose-500 btn-glow-red' }} text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] transition-all active:scale-95 flex items-center justify-center gap-3 order-1 md:order-2">
+                    @if($approvalRequired && $isKasir)
+                        <i class="fas fa-paper-plane"></i> Lapor Shift
+                    @else
+                        <i class="fas fa-lock"></i> Tutup Shift Sekarang
+                    @endif
                 </button>
             </div>
             
@@ -254,6 +261,12 @@
         }
         .btn-glow-red:hover {
             box-shadow: 0 8px 30px rgba(239, 68, 68, 0.5);
+        }
+        .btn-glow-orange {
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+        }
+        .btn-glow-orange:hover {
+            box-shadow: 0 8px 30px rgba(245, 158, 11, 0.5);
         }
         .transition-premium {
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);

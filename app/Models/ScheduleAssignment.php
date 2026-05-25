@@ -11,7 +11,7 @@ class ScheduleAssignment extends Model
 
     protected $fillable = [
         'schedule_shift_id', 'schedule_crew_id', 'date', 'notes',
-        'status', 'closed_by', 'closed_reason',
+        'status', 'closed_by', 'closed_reason', 'closed_at_time',
         'original_crew_id', 'changed_by',
     ];
 

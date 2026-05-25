@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poster Jadwal Mingguan - {{ $weekStart->translatedFormat('d M') }} - {{ $weekEnd->translatedFormat('d M Y') }}</title>
+    <title>Poster Jadwal {{ ucfirst($type ?? 'Mingguan') }} - {{ $startDate->translatedFormat('d M Y') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
         body { font-family: 'Outfit', sans-serif; background-color: #0f172a; color: #f8fafc; }
         .poster-container {
             width: 1080px;
-            min-height: 1920px;
+            min-height: {{ $type === 'monthly' ? '1528px' : '763px' }}; /* A4 Portrait for Monthly, A4 Landscape for Weekly/Daily */
             margin: 0 auto;
             background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             position: relative;
@@ -34,8 +34,16 @@
         <button onclick="window.print()" class="px-5 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-xl hover:bg-blue-500 transition-colors text-sm"><i class="fas fa-file-pdf mr-2"></i>Cetak PDF</button>
         <button onclick="savePNG()" class="px-5 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-xl hover:bg-emerald-500 transition-colors text-sm"><i class="fas fa-image mr-2"></i>Save PNG</button>
         <form action="{{ route('schedules.poster') }}" method="GET" class="flex items-center gap-2">
-            <input type="date" name="date" value="{{ $weekStart->format('Y-m-d') }}" class="px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none text-sm">
-            <button type="submit" class="px-5 py-3 bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-600 transition-colors text-sm">Ubah Minggu</button>
+            <input type="hidden" name="type" value="{{ $type }}">
+            @if(request('location_id'))
+                <input type="hidden" name="location_id" value="{{ request('location_id') }}">
+            @endif
+            @if($type === 'monthly')
+                <input type="month" name="month" value="{{ $startDate->format('Y-m') }}" class="px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none text-sm">
+            @else
+                <input type="date" name="date" value="{{ $startDate->format('Y-m-d') }}" class="px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none text-sm">
+            @endif
+            <button type="submit" class="px-5 py-3 bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-600 transition-colors text-sm">Ubah</button>
         </form>
     </div>
 
@@ -48,32 +56,48 @@
             {{-- Header --}}
             <div class="text-center mb-12">
                 <div class="inline-block px-6 py-2 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 font-bold tracking-[0.2em] uppercase text-sm mb-4">
-                    Jadwal Operasional Mingguan
+                    Jadwal Operasional {{ ucfirst($type ?? 'Mingguan') }}
                 </div>
-                <h1 class="text-5xl font-black leading-none tracking-tight mb-3 text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase">
-                    {{ $weekStart->translatedFormat('d M') }} — {{ $weekEnd->translatedFormat('d M Y') }}
+                <h1 class="text-5xl font-black leading-none tracking-tight mb-3 text-white uppercase drop-shadow-md">
+                    @if($type === 'daily')
+                        {{ $startDate->translatedFormat('l, d F Y') }}
+                    @elseif($type === 'monthly')
+                        Bulan {{ $startDate->translatedFormat('F Y') }}
+                    @else
+                        {{ $startDate->translatedFormat('d M') }} — {{ $endDate->translatedFormat('d M Y') }}
+                    @endif
                 </h1>
             </div>
 
+            @php
+                $dateChunks = array_chunk($reportDates, 7);
+            @endphp
             {{-- Schedule Grid Per Location --}}
             @foreach($locations as $loc)
             @if($loc->shifts->count() > 0)
             <div class="mb-10 bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-[2rem] p-8 overflow-hidden shadow-2xl relative">
                 <div class="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500 to-purple-500"></div>
                 <h3 class="text-3xl font-black text-white mb-6 tracking-widest uppercase text-center">
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">{{ $loc->name }}</span>
+                    <span class="text-blue-400 drop-shadow-sm">{{ $loc->name }}</span>
                 </h3>
 
+                @foreach($dateChunks as $chunkIndex => $chunkDates)
+                @if($chunkIndex > 0)
+                    <div class="my-8 border-t-2 border-dashed border-slate-700/50"></div>
+                @endif
                 <table class="w-full border-collapse">
                     <thead>
                         <tr>
                             <th class="text-left text-sm font-bold text-slate-400 uppercase px-3 py-3 border-b border-slate-700 w-[140px]">Shift</th>
-                            @foreach($weekDates as $wd)
-                            <th class="text-center text-sm font-bold px-2 py-3 border-b border-slate-700 {{ $wd->isToday() ? 'text-yellow-400' : 'text-slate-400' }}">
+                            @foreach($chunkDates as $wd)
+                            <th class="text-center text-sm font-bold px-2 py-3 border-b border-slate-700 {{ $wd->isToday() ? 'text-yellow-400' : 'text-slate-400' }} w-[120px]">
                                 <div class="text-lg">{{ $wd->translatedFormat('D') }}</div>
                                 <div class="text-xs opacity-70">{{ $wd->format('d/m') }}</div>
                             </th>
                             @endforeach
+                            @for($i = count($chunkDates); $i < 7; $i++)
+                            <th class="border-b border-slate-700 w-[120px]"></th>
+                            @endfor
                         </tr>
                     </thead>
                     <tbody>
@@ -88,27 +112,40 @@
                                     </div>
                                 </div>
                             </td>
-                            @foreach($weekDates as $wd)
+                            @foreach($chunkDates as $wd)
                             @php $dayAsgn = $shift->assignments->filter(fn($a) => $a->date->format('Y-m-d') === $wd->format('Y-m-d')); @endphp
                             <td class="px-1 py-3 text-center align-top {{ $wd->isToday() ? 'bg-yellow-500/5' : '' }}">
-                                @forelse($dayAsgn as $da)
-                                <div class="px-2 py-1.5 mb-1 rounded-xl text-sm font-bold
+                                @foreach($dayAsgn as $da)
+                                <div class="px-2 py-1.5 mb-1 rounded-xl text-sm font-bold flex items-center justify-center leading-none min-h-[34px]
                                     {{ $da->isClosed()
-                                        ? 'bg-red-500/15 text-red-400 border border-red-500/30 line-through'
+                                        ? ($da->closed_at_time ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' : 'bg-red-500/15 text-red-400 border border-red-500/30')
                                         : 'text-white border' }}"
                                     style="{{ $da->isOpen() ? 'background:' . $shift->color . '22; border-color:' . $shift->color . '55' : '' }}">
-                                    @if($da->isClosed())<i class="fas fa-times text-[10px] mr-1"></i>@endif
-                                    {{ $da->crew->name ?? '-' }}
+                                    @if($da->isClosed())
+                                        <div class="flex flex-col items-center leading-tight">
+                                            <span>{{ $da->crew->name ?? '-' }}</span>
+                                            <span class="text-[9px] font-normal opacity-80 mt-0.5"><i class="fas fa-{{ $da->closed_at_time ? 'clock' : 'ban' }} mr-0.5 text-[8px]"></i>{{ $da->closed_at_time ? 'Selesai ' . substr($da->closed_at_time, 0, 5) : 'Close' }}</span>
+                                        </div>
+                                    @else
+                                        {{ $da->crew->name ?? '-' }}
+                                    @endif
                                 </div>
-                                @empty
-                                <div class="text-xs text-slate-600 italic py-1">—</div>
-                                @endforelse
+                                @endforeach
+                                @for($i = $dayAsgn->count(); $i < $shift->max_crew; $i++)
+                                <div class="px-2 py-1.5 mb-1 rounded-xl text-sm font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center justify-center leading-none min-h-[34px]">
+                                    Close
+                                </div>
+                                @endfor
                             </td>
                             @endforeach
+                            @for($i = count($chunkDates); $i < 7; $i++)
+                            <td class="px-1 py-3 border-b border-slate-700/30"></td>
+                            @endfor
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
+                @endforeach
             </div>
             @endif
             @endforeach
@@ -131,7 +168,7 @@
     function savePNG() {
         html2canvas(document.getElementById('poster'), { scale: 2, useCORS: true, backgroundColor: '#0f172a' }).then(canvas => {
             let link = document.createElement('a');
-            link.download = 'jadwal-{{ $weekStart->format("Y-m-d") }}.png';
+            link.download = 'jadwal-{{ $startDate->format("Y-m-d") }}.png';
             link.href = canvas.toDataURL();
             link.click();
         });

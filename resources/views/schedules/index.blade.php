@@ -15,11 +15,6 @@
                 <i :class="t.icon" class="mr-1"></i><span x-text="t.name"></span>
             </button>
         </template>
-        <div class="ml-auto">
-            <a href="{{ route('schedules.poster') }}" target="_blank" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl text-xs font-bold text-white shadow-lg transition-all flex items-center gap-2">
-                <i class="fas fa-image"></i> Poster Mingguan
-            </a>
-        </div>
     </div>
 
     @include('schedules._tab_dashboard')
@@ -74,6 +69,9 @@ document.addEventListener('alpine:init', () => {
         },
         getForDate(date) {
             return this.assignmentsData.filter(a => a.date === date);
+        },
+        openQuickAssign(date, shiftId) {
+            window.dispatchEvent(new CustomEvent('open-quick-add', { detail: { date: date, shiftId: shiftId } }));
         }
     }));
 });

@@ -12,8 +12,8 @@
 
     <div class="bg-slate-800/80 border border-slate-700 rounded-2xl overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-300">
-                <thead class="text-xs font-bold text-slate-400 uppercase bg-slate-900/50 border-b border-slate-700">
+            <table class="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+                <thead class="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase bg-slate-900/50 border-b border-slate-700">
                     <tr>
                         <th class="px-6 py-4">Nama</th>
                         <th class="px-6 py-4">Telepon</th>
@@ -25,7 +25,7 @@
                 <tbody class="divide-y divide-slate-700/50">
                     @forelse($crews as $crew)
                     <tr class="hover:bg-slate-700/30 transition-colors">
-                        <td class="px-6 py-4 font-bold text-white flex items-center gap-3">
+                        <td class="px-6 py-4 font-bold text-slate-800 dark:text-white flex items-center gap-3">
                             <div class="w-8 h-8 rounded-full {{ $crew->is_active ? 'bg-blue-500' : 'bg-slate-600' }} flex items-center justify-center text-xs font-black text-white">{{ substr($crew->name, 0, 1) }}</div>
                             {{ $crew->name }}
                         </td>

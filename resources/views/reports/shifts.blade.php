@@ -33,6 +33,7 @@
                         <select name="status" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500 shadow-inner appearance-none">
                             <option value="">Semua Status</option>
                             <option value="open" {{ request('status') == 'open' ? 'selected' : '' }}>Aktif (Berjalan)</option>
+                            <option value="pending_approval" {{ request('status') == 'pending_approval' ? 'selected' : '' }}>Menunggu Persetujuan</option>
                             <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Selesai (Ditutup)</option>
                         </select>
                     </div>
@@ -200,14 +201,16 @@
                         
                         {{-- Kiri: Identitas --}}
                         <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 rounded-xl {{ $s->status === 'open' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'bg-slate-900 border-slate-700 text-slate-500' }} border flex items-center justify-center shrink-0">
-                                <i class="fas {{ $s->status === 'open' ? 'fa-door-open' : 'fa-lock' }}"></i>
+                            <div class="w-12 h-12 rounded-xl {{ $s->status === 'open' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : ($s->status === 'pending_approval' ? 'bg-amber-500/20 border-amber-500/30 text-amber-400' : 'bg-slate-900 border-slate-700 text-slate-500') }} border flex items-center justify-center shrink-0">
+                                <i class="fas {{ $s->status === 'open' ? 'fa-door-open' : ($s->status === 'pending_approval' ? 'fa-clock' : 'fa-lock') }}"></i>
                             </div>
                             <div>
                                 <div class="flex items-center gap-2 mb-1">
                                     <h4 class="text-base font-black text-white">{{ $s->opener->name }}</h4>
                                     @if($s->status === 'open')
                                         <span class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30">Aktif</span>
+                                    @elseif($s->status === 'pending_approval')
+                                        <span class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">Menunggu Approve</span>
                                     @else
                                         <span class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-slate-700 text-slate-400 border border-slate-600">Selesai</span>
                                     @endif
@@ -263,7 +266,7 @@
 
                         {{-- Kanan: Hasil & Selisih --}}
                         <div class="flex gap-4 md:gap-6 items-center shrink-0">
-                            @if($s->closed_at)
+                            @if($s->closed_at || $s->status === 'pending_approval')
                                 @php 
                                     $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
                                     $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses; 
@@ -285,6 +288,14 @@
                                 </div>
                             @endif
                             <div class="flex items-center gap-2 ml-4 md:ml-6">
+                                @if($s->status === 'pending_approval' && auth()->user()->hasPermission('shifts.manage'))
+                                <form action="{{ route('shifts.approve', $s->id) }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" @click.stop class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Approve Shift">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                @endif
                                 @if(auth()->user()->isOwner())
                                 <button @click.stop="openEditModalFor({{ $s->id }})" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Edit Shift">
                                     <i class="fas fa-edit"></i>
@@ -344,7 +355,9 @@
                             </div>
                             <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
                                 <span class="text-xs font-medium text-slate-400">Status</span>
-                                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider border" :class="detailData.status=='open'?'bg-blue-500/20 text-blue-400 border-blue-500/30':'bg-slate-700 text-slate-400 border-slate-600'" x-text="detailData.status=='open'?'Aktif':'Selesai'"></span>
+                                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider border" 
+                                      :class="detailData.status=='open' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : (detailData.status=='pending_approval' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-slate-700 text-slate-400 border-slate-600')" 
+                                      x-text="detailData.status=='open' ? 'Aktif' : (detailData.status=='pending_approval' ? 'Menunggu Approve' : 'Selesai')"></span>
                             </div>
                             <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
                                 <span class="text-xs font-medium text-slate-400">Shift Dibuka</span>
@@ -418,7 +431,7 @@
                                 </div>
                                 <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
                                     <span class="text-xs font-medium text-slate-400">Uang di Laci</span>
-                                    <span class="text-sm font-bold text-white" x-text="detailData.status=='closed' ? 'Rp '+Number(detailData.closing_cash).toLocaleString('id-ID') : 'Belum ditutup'"></span>
+                                    <span class="text-sm font-bold text-white" x-text="['closed', 'pending_approval'].includes(detailData.status) ? 'Rp '+Number(detailData.closing_cash).toLocaleString('id-ID') : 'Belum ditutup'"></span>
                                 </div>
                                 <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
                                     <span class="text-xs font-black text-slate-300">Selisih</span>
@@ -479,7 +492,7 @@
                             <input type="number" name="opening_cash" x-model="editOpening" required min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
                         </div>
                     </div>
-                    <template x-if="detailData?.status == 'closed'">
+                    <template x-if="['closed', 'pending_approval'].includes(detailData?.status)">
                         <div>
                             <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Kas Laci Saat Ditutup (Rp)</label>
                             <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>

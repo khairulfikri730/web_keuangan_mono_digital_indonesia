@@ -237,7 +237,23 @@ class ScheduleController extends Controller
             return back()->with('error', 'Crew sudah terjadwal di shift ini pada tanggal tersebut!');
         }
 
-        ScheduleAssignment::create($request->only('schedule_shift_id', 'schedule_crew_id', 'date', 'notes'));
+        // Auto-close if the shift is already closed by another crew member on this date
+        $existingClosed = ScheduleAssignment::where('schedule_shift_id', $request->schedule_shift_id)
+            ->where('date', $request->date)
+            ->where('status', 'close')
+            ->first();
+
+        $newAsgn = ScheduleAssignment::create($request->only('schedule_shift_id', 'schedule_crew_id', 'date', 'notes'));
+
+        if ($existingClosed) {
+            $newAsgn->update([
+                'status' => 'close',
+                'closed_by' => $existingClosed->closed_by,
+                'closed_reason' => $existingClosed->closed_reason,
+                'closed_at_time' => $existingClosed->closed_at_time,
+            ]);
+        }
+
         return back()->with('success', 'Jadwal berhasil ditambahkan!');
     }
 
@@ -253,13 +269,26 @@ class ScheduleController extends Controller
     {
         $request->validate([
             'closed_reason' => 'nullable|string|max:255',
+            'closed_at_time' => 'nullable|date_format:H:i',
         ]);
 
         $assignment->update([
             'status' => 'close',
             'closed_by' => auth()->user()->name,
             'closed_reason' => $request->closed_reason ?? 'Tidak ada alasan',
+            'closed_at_time' => $request->closed_at_time,
         ]);
+
+        // Propagasi penutupan ke kru lain di shift dan tanggal yang sama
+        ScheduleAssignment::where('schedule_shift_id', $assignment->schedule_shift_id)
+            ->where('date', $assignment->date->format('Y-m-d'))
+            ->where('id', '!=', $assignment->id)
+            ->update([
+                'status' => 'close',
+                'closed_by' => auth()->user()->name,
+                'closed_reason' => $request->closed_reason ?? 'Tidak ada alasan',
+                'closed_at_time' => $request->closed_at_time,
+            ]);
 
         return back()->with('success', "Shift ditutup oleh " . auth()->user()->name . "!");
     }
@@ -415,24 +444,42 @@ class ScheduleController extends Controller
 
     public function poster(Request $request)
     {
-        $date = $request->input('date', now()->format('Y-m-d'));
-        $weekStart = Carbon::parse($date)->startOfWeek(Carbon::MONDAY);
-        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+        $type = $request->input('type', 'weekly');
+        $locationId = $request->input('location_id');
 
-        $weekDates = [];
-        for ($d = $weekStart->copy(); $d->lte($weekEnd); $d->addDay()) {
-            $weekDates[] = $d->copy();
+        if ($type === 'monthly') {
+            $month = $request->input('month', now()->format('Y-m'));
+            $startDate = Carbon::parse($month . '-01')->startOfMonth();
+            $endDate = $startDate->copy()->endOfMonth();
+        } elseif ($type === 'daily') {
+            $date = $request->input('date', now()->format('Y-m-d'));
+            $startDate = Carbon::parse($date);
+            $endDate = $startDate->copy();
+        } else {
+            $date = $request->input('date', now()->format('Y-m-d'));
+            $startDate = Carbon::parse($date)->startOfWeek(Carbon::MONDAY);
+            $endDate = $startDate->copy()->endOfWeek(Carbon::SUNDAY);
         }
 
-        $locations = ScheduleLocation::active()
-            ->with(['shifts' => function ($q) use ($weekStart, $weekEnd) {
-                $q->orderBy('start_time')
-                  ->with(['assignments' => function ($q2) use ($weekStart, $weekEnd) {
-                    $q2->whereBetween('date', [$weekStart->format('Y-m-d'), $weekEnd->format('Y-m-d')])
-                       ->with('crew');
-                }]);
-            }])->get();
+        $reportDates = [];
+        for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
+            $reportDates[] = $d->copy();
+        }
 
-        return view('schedules.poster', compact('locations', 'weekStart', 'weekEnd', 'weekDates'));
+        $locationsQuery = ScheduleLocation::active()->with(['shifts' => function ($q) use ($startDate, $endDate) {
+            $q->orderBy('start_time')
+              ->with(['assignments' => function ($q2) use ($startDate, $endDate) {
+                $q2->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+                   ->with('crew');
+            }]);
+        }]);
+
+        if ($locationId) {
+            $locationsQuery->where('id', $locationId);
+        }
+
+        $locations = $locationsQuery->get();
+
+        return view('schedules.poster', compact('locations', 'startDate', 'endDate', 'reportDates', 'type'));
     }
 }

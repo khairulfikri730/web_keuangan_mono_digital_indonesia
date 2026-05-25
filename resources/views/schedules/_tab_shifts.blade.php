@@ -15,7 +15,7 @@
     <div class="bg-slate-800/80 border border-slate-700 rounded-2xl overflow-hidden">
         <div class="bg-slate-900/50 px-6 py-3 border-b border-slate-700 flex items-center gap-3">
             <div class="w-8 h-8 rounded-full bg-yellow-400 text-slate-900 flex items-center justify-center font-black text-sm">{{ substr($loc->name, 0, 1) }}</div>
-            <h3 class="font-bold text-white">{{ $loc->name }}</h3>
+            <h3 class="font-bold text-slate-800 dark:text-white">{{ $loc->name }}</h3>
             <span class="text-xs text-slate-500">{{ $loc->shifts->count() }} shift</span>
         </div>
         <div class="overflow-x-auto">
@@ -35,7 +35,7 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
                                 <div class="w-3 h-3 rounded-full shadow-sm" style="background:{{ $shift->color }}"></div>
-                                <span class="font-bold text-white">{{ $shift->name }}</span>
+                                <span class="font-bold text-slate-800 dark:text-white">{{ $shift->name }}</span>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center">

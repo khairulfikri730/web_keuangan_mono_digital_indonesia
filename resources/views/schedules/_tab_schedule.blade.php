@@ -1,11 +1,14 @@
 {{-- TAB 5: JADWAL TIM --}}
 <div x-show="activeTab === 'jadwal'" x-cloak x-transition.opacity class="space-y-6">
-    <div class="flex flex-wrap gap-4 justify-between items-center">
+    <div class="flex flex-col sm:flex-row gap-4 justify-between sm:items-center">
         <div>
             <h2 class="text-xl font-black text-white">Jadwal Tim</h2>
             <p class="text-sm text-slate-400">Atur penugasan shift untuk crew. Bisa close, reopen, atau ganti crew.</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
+            <button @click="$dispatch('open-modal', 'poster-modal')" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2">
+                <i class="fas fa-image"></i> Poster
+            </button>
             <button @click="$dispatch('open-modal', 'weekly-bulk-assign')" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-purple-500/20 flex items-center gap-2">
                 <i class="fas fa-calendar-week"></i> Assign Mingguan
             </button>
@@ -57,7 +60,7 @@
             @csrf
             <div class="flex-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Shift / Lokasi</label>
-                <select name="schedule_shift_id" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                <select name="schedule_shift_id" id="quick_shift_id" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
                     <option value="">-- Pilih Shift --</option>
                     @foreach($locations as $loc)
                     <optgroup label="{{ $loc->name }}">
@@ -70,7 +73,7 @@
             </div>
             <div class="flex-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Crew</label>
-                <select name="schedule_crew_id" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                <select name="schedule_crew_id" id="quick_crew_id" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
                     <option value="">-- Pilih Crew --</option>
                     @foreach($activeCrews as $crew)
                     <option value="{{ $crew->id }}">{{ $crew->name }}{{ $crew->position ? " ($crew->position)" : '' }}</option>
@@ -79,7 +82,7 @@
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tanggal</label>
-                <input type="date" name="date" value="{{ $date }}" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                <input type="date" name="date" id="quick_date" value="{{ $date }}" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Catatan</label>
@@ -92,7 +95,7 @@
     </div>
 
     {{-- Schedule Grid --}}
-    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 w-full max-w-full overflow-hidden">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
                 <i class="fas fa-calendar-alt text-blue-400"></i>
@@ -104,16 +107,27 @@
                     Bulan {{ \Carbon\Carbon::parse($month)->translatedFormat('F Y') }}
                 @endif
             </h3>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
                 @php
                     $openCount = $assignments->where('status', 'open')->count();
-                    $closedCount = $assignments->where('status', 'close')->count();
+                    $selesaiCount = $assignments->where('status', 'close')->filter(fn($a) => !is_null($a->closed_at_time))->count();
+                    $closedDbCount = $assignments->where('status', 'close')->filter(fn($a) => is_null($a->closed_at_time))->count();
+                    
+                    $totalCapacity = 0;
+                    foreach($locations as $loc) {
+                        foreach($loc->shifts as $s) {
+                            $totalCapacity += $s->max_crew * count($dates);
+                        }
+                    }
+                    
+                    $emptySlots = max(0, $totalCapacity - $assignments->count());
+                    $totalClose = $closedDbCount + $emptySlots;
+                    $actualTotal = $openCount + $selesaiCount + $totalClose;
                 @endphp
                 <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20"><i class="fas fa-check-circle mr-1"></i>{{ $openCount }} Open</span>
-                @if($closedCount > 0)
-                <span class="text-[10px] text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/20"><i class="fas fa-times-circle mr-1"></i>{{ $closedCount }} Close</span>
-                @endif
-                <span class="text-[10px] text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-700">{{ $assignments->count() }} total</span>
+                <span class="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20"><i class="fas fa-clock mr-1"></i>{{ $selesaiCount }} Selesai</span>
+                <span class="text-[10px] text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/20"><i class="fas fa-times-circle mr-1"></i>{{ $totalClose }} Close</span>
+                <span class="text-[10px] text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-700">{{ $actualTotal }} total</span>
             </div>
         </div>
 
@@ -141,12 +155,12 @@
                                 @forelse($shiftAsgn as $asgn)
                                 <div class="flex items-center gap-2 px-3 py-2 rounded-xl border transition-all group
                                     {{ $asgn->isClosed() 
-                                        ? 'bg-red-500/5 border-red-500/20' 
+                                        ? ($asgn->closed_at_time ? 'bg-blue-500/5 border-blue-500/20' : 'bg-red-500/5 border-red-500/20')
                                         : 'bg-slate-800 border-slate-600' }}">
                                     {{-- Status Badge --}}
                                     @if($asgn->isClosed())
-                                        <span class="w-6 h-6 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center flex-shrink-0" title="CLOSE">
-                                            <i class="fas fa-times text-red-400 text-[10px]"></i>
+                                        <span class="w-6 h-6 rounded-full {{ $asgn->closed_at_time ? 'bg-blue-500/20 border-blue-500/30' : 'bg-red-500/20 border-red-500/30' }} border flex items-center justify-center flex-shrink-0" title="CLOSE">
+                                            <i class="fas fa-{{ $asgn->closed_at_time ? 'clock text-blue-400' : 'times text-red-400' }} text-[10px]"></i>
                                         </span>
                                     @else
                                         <span class="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0" title="OPEN">
@@ -157,7 +171,13 @@
                                     {{-- Crew Info --}}
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="text-xs font-bold {{ $asgn->isClosed() ? 'text-red-300 line-through' : 'text-white' }}">{{ $asgn->crew->name ?? '?' }}</span>
+                                            @if($asgn->isClosed())
+                                                <span class="text-xs font-bold {{ $asgn->closed_at_time ? 'text-blue-300' : 'text-red-300' }}">
+                                                    {{ $asgn->crew->name ?? '?' }} <span class="text-[9px] opacity-80 font-normal ml-1">({{ $asgn->closed_at_time ? 'Selesai ' . substr($asgn->closed_at_time, 0, 5) : 'Close' }})</span>
+                                                </span>
+                                            @else
+                                                <span class="text-xs font-bold text-white">{{ $asgn->crew->name ?? '?' }}</span>
+                                            @endif
                                             @if($asgn->wasReplaced())
                                                 <span class="text-[9px] text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">
                                                     <i class="fas fa-exchange-alt mr-0.5"></i>ganti dari {{ $asgn->originalCrew->name ?? '?' }}
@@ -166,7 +186,7 @@
                                             @if($asgn->notes)<span class="text-[9px] text-slate-500">({{ $asgn->notes }})</span>@endif
                                         </div>
                                         @if($asgn->isClosed())
-                                            <div class="text-[9px] text-red-400 mt-0.5">
+                                            <div class="text-[9px] {{ $asgn->closed_at_time ? 'text-blue-400' : 'text-red-400' }} mt-0.5">
                                                 <i class="fas fa-lock mr-0.5"></i>Ditutup oleh: <b>{{ $asgn->closed_by }}</b>
                                                 @if($asgn->closed_reason) · {{ $asgn->closed_reason }}@endif
                                             </div>
@@ -221,7 +241,7 @@
 
         @else
             {{-- Weekly / Monthly Grid --}}
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto pb-8 min-h-[300px]">
                 <table class="w-full text-xs text-slate-300 border-collapse">
                     <thead>
                         <tr class="bg-slate-900/50">
@@ -255,12 +275,18 @@
                                 <div x-data="{ pop: false }" class="relative mb-0.5 group">
                                     <div @click="pop = !pop" class="px-1.5 py-1 rounded cursor-pointer text-[9px] font-bold flex items-center gap-0.5 transition-all hover:ring-1 hover:ring-slate-500
                                         {{ $ca->isClosed() 
-                                            ? 'bg-red-500/10 text-red-400 border border-red-500/20 line-through' 
+                                            ? ($ca->closed_at_time ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20')
                                             : 'text-white' }}"
                                         style="{{ $ca->isOpen() ? 'background:' . $shift->color . '33; border-left: 2px solid ' . $shift->color : '' }}"
                                         title="{{ $ca->isClosed() ? 'CLOSE - ' . $ca->closed_by . ': ' . $ca->closed_reason : 'OPEN' }}">
-                                        @if($ca->isClosed())<i class="fas fa-times text-[7px]"></i>@endif
-                                        {{ Str::limit($ca->crew->name ?? '?', 8) }}
+                                        @if($ca->isClosed())
+                                            <div class="flex flex-col items-center leading-tight">
+                                                <span>{{ Str::limit($ca->crew->name ?? '?', 8) }}</span>
+                                                <span class="text-[7px] font-normal opacity-80 mt-0.5"><i class="fas fa-{{ $ca->closed_at_time ? 'clock' : 'ban' }} mr-0.5"></i>{{ $ca->closed_at_time ? 'Selesai ' . substr($ca->closed_at_time, 0, 5) : 'Close' }}</span>
+                                            </div>
+                                        @else
+                                            {{ Str::limit($ca->crew->name ?? '?', 8) }}
+                                        @endif
                                     </div>
                                     {{-- Action Popover --}}
                                     <div x-show="pop" x-transition.scale.origin.top @click.outside="pop = false" class="absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl p-2 min-w-[140px]" style="display:none;">
@@ -294,9 +320,11 @@
                                     </div>
                                 </div>
                                 @endforeach
-                                @if($cellAsgn->count() < $shift->max_crew)
-                                <div class="text-[8px] text-slate-600 text-center">+{{ $shift->max_crew - $cellAsgn->count() }}</div>
-                                @endif
+                                @for($i = $cellAsgn->count(); $i < $shift->max_crew; $i++)
+                                <div class="px-1.5 py-1 mt-0.5 rounded cursor-pointer text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all hover:ring-1 hover:ring-slate-500 bg-red-500/10 text-red-400 border border-red-500/20" @click="openQuickAssign('{{ $dt }}', {{ $shift->id }})" title="Klik untuk tugaskan crew (Slot kosong)">
+                                    <i class="fas fa-ban text-[7px]"></i> Close
+                                </div>
+                                @endfor
                             </td>
                             @endforeach
                         </tr>

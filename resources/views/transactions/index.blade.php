@@ -228,7 +228,7 @@
                     @endforeach
                     <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs group-focus-within:text-blue-400 transition-colors"></i>
                     <input type="text" name="search" value="{{ is_array(request('search')) ? '' : request('search') }}" 
-                           class="bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none w-64 transition-all h-[38px]" 
+                           class="bg-slate-900/60 border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-600 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 outline-none w-full md:w-64 transition-all h-[38px]" 
                            placeholder="Cari Invoice atau Pelanggan...">
                 </form>
             </div>
@@ -338,7 +338,7 @@
                                     <p class="text-xs font-black text-blue-400">Rp {{ number_format($model->gross_profit, 0, ',', '.') }}</p>
                                 </td>
                                 <td class="px-4 py-4 text-right">
-                                    <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div class="flex items-center justify-end gap-1.5 sm:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity">
                                         {{-- Detail --}}
                                         <button onclick="document.getElementById('detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Detail"><i class="fas fa-eye text-xs"></i></button>
                                         {{-- Pelunasan --}}
@@ -554,7 +554,7 @@
                                 <td class="px-4 py-4 text-right">-</td>
                                 <td class="px-4 py-4 text-right">-</td>
                                 <td class="px-4 py-4 text-right">
-                                    <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div class="flex items-center justify-end gap-1.5 sm:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onclick="document.getElementById('expense-detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Detail"><i class="fas fa-eye text-xs"></i></button>
                                     </div>
                                 </td>

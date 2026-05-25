@@ -54,7 +54,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-yellow-400 text-slate-900 flex items-center justify-center font-black">{{ substr($loc->name, 0, 1) }}</div>
                         <div>
-                            <p class="font-bold text-white">{{ $loc->name }}</p>
+                            <p class="font-bold text-slate-800 dark:text-white">{{ $loc->name }}</p>
                             <p class="text-xs text-slate-400">{{ $loc->shifts->count() }} shift · {{ $loc->description ?? '-' }}</p>
                         </div>
                     </div>
@@ -81,7 +81,7 @@
                         <div class="bg-slate-900/50 border border-slate-700/50 p-3 rounded-xl">
                             <div class="flex items-center gap-2 mb-2">
                                 <div class="w-3 h-3 rounded-full" style="background:{{ $shift->color }}"></div>
-                                <span class="text-xs font-bold text-white">{{ $loc->name }} — {{ $shift->name }}</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-white">{{ $loc->name }} — {{ $shift->name }}</span>
                                 <span class="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">{{ substr($shift->start_time,0,5) }}-{{ substr($shift->end_time,0,5) }}</span>
                                 <span class="text-[10px] {{ $people->count() >= $shift->max_crew ? 'text-emerald-400' : 'text-orange-400' }}">{{ $people->count() }}/{{ $shift->max_crew }}</span>
                             </div>
@@ -156,14 +156,14 @@
                             <div class="flex items-center gap-2">
                                 <div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">{{ substr($cs['crew']->name, 0, 1) }}</div>
                                 <div>
-                                    <span class="font-bold text-white text-xs">{{ $cs['crew']->name }}</span>
+                                    <span class="font-bold text-slate-800 dark:text-white text-xs">{{ $cs['crew']->name }}</span>
                                     @if($cs['crew']->position)
                                     <span class="text-[9px] text-slate-500 block">{{ $cs['crew']->position }}</span>
                                     @endif
                                 </div>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-center font-bold text-white">{{ $cs['total_shifts'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-slate-800 dark:text-white">{{ $cs['total_shifts'] }}</td>
                         <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ $cs['open'] }}</td>
                         <td class="px-4 py-3 text-center font-bold {{ $cs['closed'] > 0 ? 'text-red-400' : 'text-slate-600' }}">{{ $cs['closed'] }}</td>
                         <td class="px-4 py-3 text-center font-bold {{ $cs['replaced'] > 0 ? 'text-orange-400' : 'text-slate-600' }}">{{ $cs['replaced'] }}</td>

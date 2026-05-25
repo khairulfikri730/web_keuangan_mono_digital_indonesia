@@ -62,7 +62,7 @@
             @if($user->last_login_at)
             <p class="text-[9px] text-slate-600 mb-3"><i class="far fa-clock mr-1"></i> Login {{ $user->last_login_at->diffForHumans() }}</p>
             @endif
-            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="flex gap-2 sm:opacity-100 sm:flex opacity-0 group-hover:opacity-100 transition-opacity">
                 @if($user->id !== auth()->id())
                 <button onclick="document.getElementById('modal-edit-{{ $user->id }}').classList.remove('hidden')" class="flex-1 bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white text-[10px] font-black py-2 rounded-xl transition-all text-center">
                     <i class="fas fa-pen mr-1"></i> Edit

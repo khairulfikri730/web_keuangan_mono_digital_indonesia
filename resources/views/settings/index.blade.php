@@ -128,7 +128,7 @@
 
                     <div class="border-t border-slate-700/50 pt-4">
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2"><i class="fas fa-building-columns mr-1"></i> Info Rekening Transfer</label>
-                        <div class="grid grid-cols-3 gap-2 mb-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Bank</label>
                                 <input type="text" name="bank_name" value="{{ $settings['bank_name'] ?? '' }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 transition-all" placeholder="BRI">
@@ -346,6 +346,27 @@
                     <button type="button" @click="addPreset()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-3 py-2 rounded-xl transition-all shadow-lg shadow-orange-500/20 text-xs whitespace-nowrap">
                         <i class="fas fa-plus mr-1"></i> Tambah
                     </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- ROW 5: Sistem Operasional --}}
+        <div class="card overflow-hidden border border-slate-700/80 shadow-xl rounded-2xl">
+            <div class="p-5 border-b border-slate-700 bg-slate-800/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-400"><i class="fas fa-clipboard-check"></i></div>
+                    <div>
+                        <h3 class="text-base font-black text-white">Sistem Operasional</h3>
+                        <p class="text-[10px] text-slate-400">Pengaturan jam operasional dan persetujuan</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <label class="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded-xl cursor-pointer hover:border-teal-500/50 transition-all">
+                        <div><span class="text-xs font-bold text-slate-200">Wajib Approve Tutup Shift</span><p class="text-[9px] text-slate-500">Kasir lapor, Owner approve</p></div>
+                        <input type="hidden" name="shift_approval_required" value="0"><input type="checkbox" name="shift_approval_required" value="1" class="sr-only peer" {{ ($settings['shift_approval_required'] ?? '0') == '1' ? 'checked' : '' }}><div class="w-10 h-5 bg-slate-700 rounded-full peer-checked:bg-teal-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 relative shrink-0 ml-2"></div>
+                    </label>
                 </div>
             </div>
         </div>

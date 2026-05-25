@@ -102,6 +102,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('permission:shifts.manage')->group(function() {
             Route::post('/open', [ShiftController::class, 'open'])->name('open');
             Route::post('/{shift}/close', [ShiftController::class, 'close'])->name('close');
+            Route::post('/{shift}/approve', [ShiftController::class, 'approve'])->name('approve');
             Route::post('/{shift}/cashout', [ShiftController::class, 'cashOut'])->name('cashout');
             Route::put('/{shift}', [ShiftController::class, 'update'])->name('update');
             Route::delete('/{shift}', [ShiftController::class, 'destroy'])->name('destroy');
