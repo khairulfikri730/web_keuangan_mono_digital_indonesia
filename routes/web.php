@@ -241,7 +241,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('permission:transactions.delete')->name('transactions.destroy');
 
     // Bayar piutang (Protected by granular permission)
-    Route::post('/transactions/{transaction}/pay', [TransactionController::class, 'payPiutang'])->middleware('permission:transactions.edit')->name('transactions.pay');
+    Route::post('/transactions/{transaction}/pay', [TransactionController::class, 'payPiutang'])->middleware('permission:transactions.view')->name('transactions.pay');
 
     // Manajemen Tim
     Route::prefix('team')->name('team.')->group(function () {
