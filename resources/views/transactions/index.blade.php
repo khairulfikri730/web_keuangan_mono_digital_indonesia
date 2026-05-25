@@ -353,6 +353,12 @@
                                         <button @click="doPrint('{{ $model->id }}')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Print Struk POS"><i class="fas fa-print text-xs"></i></button>
                                         {{-- Invoice Generator --}}
                                         <a href="{{ route('invoices.create', ['transaction_id' => $model->id]) }}" class="w-8 h-8 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 flex items-center justify-center transition-all" title="Buat Invoice (Official)"><i class="fas fa-file-invoice text-xs"></i></a>
+                                        {{-- WhatsApp Share --}}
+                                        @if($model->customer_phone)
+                                        <button onclick="shareTransactionWA('{{ $model->id }}')" class="w-8 h-8 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 flex items-center justify-center transition-all" title="Share via WhatsApp">
+                                            <i class="fab fa-whatsapp text-xs"></i>
+                                        </button>
+                                        @endif
                                         {{-- Hapus / Batal --}}
                                         @if(auth()->user()->hasPermission('transactions.delete'))
                                             <form action="{{ route('transactions.cancel', $model) }}" method="POST" class="inline">@csrf
@@ -857,6 +863,24 @@
                 iframe.src = url;
             }
         };
+    }
+
+    async function shareTransactionWA(transactionId) {
+        try {
+            const res = await fetch(`/transactions/${transactionId}/receipt-text`);
+            const data = await res.json();
+            const phone = (() => {
+                let p = (data.phone || '').replace(/\D/g, '');
+                if (p.startsWith('0')) p = '62' + p.substring(1);
+                return p;
+            })();
+            const waUrl = phone
+                ? `https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`
+                : `https://wa.me/?text=${encodeURIComponent(data.message)}`;
+            window.open(waUrl, '_blank');
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal membuka WhatsApp', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        }
     }
 </script>
 @endpush
