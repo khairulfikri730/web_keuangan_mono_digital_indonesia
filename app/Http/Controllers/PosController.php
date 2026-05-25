@@ -55,10 +55,15 @@ class PosController extends Controller
             ->unique('name')
             ->groupBy('parent_category');
 
+        $editTransaction = null;
+        if (request()->has('edit')) {
+            $editTransaction = Transaction::with(['items.product'])->find(request('edit'));
+        }
+
         return view('pos.index', compact(
             'activeShift', 'categories', 'products', 'posGroups', 'settings', 
             'totalCapital', 'monthlyRevenue', 'promoProductIds', 'bestSellerProductIds',
-            'expenseCategories'
+            'expenseCategories', 'editTransaction'
         ));
     }
 
@@ -81,6 +86,7 @@ class PosController extends Controller
     public function checkout(Request $request)
     {
         $request->validate([
+            'edit_transaction_id' => 'nullable|exists:transactions,id',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -103,6 +109,28 @@ class PosController extends Controller
 
         DB::beginTransaction();
         try {
+            $transaction = null;
+            if ($request->edit_transaction_id) {
+                $transaction = Transaction::with('items')->find($request->edit_transaction_id);
+                if (!$transaction) {
+                    return response()->json(['error' => 'Transaksi tidak ditemukan!'], 404);
+                }
+                
+                // Revert old stock
+                foreach ($transaction->items as $oldItem) {
+                    $prod = Product::lockForUpdate()->find($oldItem->product_id);
+                    if ($prod && !$prod->isStockless()) {
+                        $prod->increment('stock', $oldItem->quantity);
+                    }
+                }
+                
+                // Delete old records
+                StockMutation::where('reference', $transaction->invoice_number)->delete();
+                Cashflow::where('reference', $transaction->invoice_number)
+                        ->orWhere('reference_id', $transaction->id)->delete();
+                TransactionItem::where('transaction_id', $transaction->id)->delete();
+            }
+
             $subtotal = 0;
             $itemsData = [];
 
@@ -140,7 +168,8 @@ class PosController extends Controller
                         'quantity' => $item['quantity'],
                         'stock_before' => $stockBefore,
                         'stock_after' => $product->stock,
-                        'notes' => 'Terjual via POS',
+                        'notes' => $transaction ? 'Update Terjual via POS' : 'Terjual via POS',
+                        'reference' => $transaction ? $transaction->invoice_number : null, // will update later if new
                     ]);
                 }
 
@@ -174,8 +203,7 @@ class PosController extends Controller
             $isPiutang = $request->payment_method === 'piutang';
             $dpAmount = $isPiutang ? max(0, $request->paid_amount) : 0;
 
-            $transaction = Transaction::create([
-                'invoice_number' => Transaction::generateInvoiceNumber(true),
+            $txData = [
                 'shift_id' => $activeShift->id,
                 'user_id' => auth()->id(),
                 'subtotal' => $subtotal,
@@ -194,7 +222,17 @@ class PosController extends Controller
                 'customer_phone' => $request->customer_phone,
                 'notes' => $request->notes,
                 'worksheet_id' => $activeShift->worksheet_id,
-            ]);
+            ];
+
+            if ($transaction) {
+                $transaction->update($txData);
+            } else {
+                $txData['invoice_number'] = Transaction::generateInvoiceNumber(true);
+                $transaction = Transaction::create($txData);
+                
+                // Update references for new mutations
+                StockMutation::whereNull('reference')->where('user_id', auth()->id())->where('notes', 'Terjual via POS')->update(['reference' => $transaction->invoice_number]);
+            }
 
             foreach ($itemsData as &$item) {
                 $item['transaction_id'] = $transaction->id;

@@ -6,7 +6,6 @@
         ['id' => 'sales', 'label' => 'Performa Omzet', 'icon' => 'fa-shopping-bag'],
         ['id' => 'expenses', 'label' => 'Total Biaya', 'icon' => 'fa-arrow-circle-up'],
         ['id' => 'profit', 'label' => 'Laba Bersih', 'icon' => 'fa-heart'],
-        ['id' => 'balances', 'label' => 'Saldo Kas & Bank', 'icon' => 'fa-wallet'],
         ['id' => 'ai_insights', 'label' => 'AI Business Insight', 'icon' => 'fa-brain'],
         ['id' => 'invoice_analytics', 'label' => 'Analisa Invoice', 'icon' => 'fa-file-invoice'],
         ['id' => 'chart_sales', 'label' => 'Grafik Penjualan', 'icon' => 'fa-chart-line'],
@@ -22,18 +21,18 @@
 
     if ($isKasir) {
         $options = array_filter($allOptions, function($opt) {
-            return in_array($opt['id'], ['summary', 'sales', 'expenses', 'profit', 'balances', 'chart_sales', 'chart_expenses', 'top_products', 'history_trx', 'ai_insights', 'expense_details']);
+            return in_array($opt['id'], ['summary', 'sales', 'expenses', 'profit', 'chart_sales', 'chart_expenses', 'top_products', 'history_trx', 'ai_insights', 'expense_details']);
         });
     } else {
         $options = $allOptions;
     }
 
     $defaultSectionsJson = $isKasir
-        ? ['summary','sales','expenses','profit','balances','chart_sales','chart_expenses','top_products','history_trx','ai_insights','expense_details']
-        : ['summary','sales','expenses','profit','balances','chart_sales','top_products','ai_insights','expense_details'];
+        ? ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','history_trx','ai_insights','expense_details']
+        : ['summary','sales','expenses','profit','chart_sales','top_products','ai_insights','expense_details'];
     $allSectionsJson = $isKasir
-        ? ['summary','sales','expenses','profit','balances','chart_sales','chart_expenses','top_products','history_trx','ai_insights','expense_details']
-        : ['summary','sales','expenses','profit','balances','chart_sales','chart_expenses','top_products','ai_insights','history_trx','roi','shift_details','full_cashflow','internal_mutations','invoice_analytics','expense_details'];
+        ? ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','history_trx','ai_insights','expense_details']
+        : ['summary','sales','expenses','profit','chart_sales','chart_expenses','top_products','ai_insights','history_trx','roi','shift_details','full_cashflow','internal_mutations','invoice_analytics','expense_details'];
     $defaultPeriod = (auth()->check() && auth()->user()->isOwner()) ? 'bulan_ini' : 'hari_ini';
 @endphp
 

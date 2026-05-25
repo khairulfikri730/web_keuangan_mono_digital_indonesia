@@ -154,6 +154,7 @@ class ShiftController extends Controller
         $users = \App\Models\User::all();
         $activeCrewShifts = Shift::with('opener')->where('status', 'open')->get();
         $todayTarget = \App\Models\Setting::get('daily_target') ?? 3000000;
+        $drawerPulsePin = (int) (\App\Models\Setting::get('drawer_pulse_pin', '0'));
         
         // Calculate total sales for today to compare with target
         $todaySalesTotal = Transaction::completed()
@@ -165,7 +166,7 @@ class ShiftController extends Controller
             'activeShift', 'users', 'laciBalance',
             'currentSales', 'currentCashExpenses', 'currentBankSales', 'currentBankExpenses', 'currentTotalExpenses', 'currentExpected',
             'laciMovements', 'recentTransactions', 'recentExpenses', 'activeCrewShifts', 
-            'todayTarget', 'todaySalesTotal'
+            'todayTarget', 'todaySalesTotal', 'drawerPulsePin'
         ));
     }
 
@@ -301,7 +302,10 @@ class ShiftController extends Controller
         ]);
 
         if ($newStatus === 'pending_approval') {
-            return redirect()->route('shifts.index')->with('success', 'Laporan shift berhasil dikirim. Menunggu persetujuan Owner.');
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect()->route('login')->with('success', 'Laporan shift berhasil dikirim. Menunggu persetujuan Owner.');
         }
 
         return redirect()->route('shifts.index')->with('success', 'Shift berhasil ditutup!');

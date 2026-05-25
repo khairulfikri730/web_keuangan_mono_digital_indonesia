@@ -367,8 +367,11 @@
 
                 {{-- STICKY ACTIONS --}}
                 <div class="bg-slate-800/95 backdrop-blur-xl border-t border-slate-700/50 p-6 shadow-2xl">
-                    <button @click="submitAndDownload()" :disabled="isSubmitting" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 mb-4">
+                    <button @click="submitAndDownload()" :disabled="isSubmitting" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 mb-3">
                         <i class="fas fa-file-pdf"></i> Download PDF Invoice
+                    </button>
+                    <button @click="submitAndShareWA()" :disabled="isSubmitting" class="w-full bg-green-600 hover:bg-green-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl shadow-green-500/20 flex items-center justify-center gap-2 mb-4">
+                        <i class="fab fa-whatsapp"></i> Simpan & Share via WhatsApp
                     </button>
                     <div class="flex gap-3">
                         <button @click="submitInvoice()" :disabled="isSubmitting" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-600 transition-all">
@@ -564,6 +567,20 @@
                 const id = await this.submitInvoice(false);
                 if (id) {
                     window.location.href = `/invoices/${id}/pdf`;
+                }
+            },
+
+            async submitAndShareWA() {
+                const id = await this.submitInvoice(false);
+                if (id) {
+                    try {
+                        const message = await fetch(`/invoices/${id}/invoice-text`).then(r => r.text());
+                        const phone = this.client.phone ? this.client.phone.replace(/\D/g, '') : '';
+                        const waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : `https://wa.me/?text=${encodeURIComponent(message)}`;
+                        window.open(waUrl, '_blank');
+                    } catch (e) {
+                        Toast.fire({ icon: 'warning', title: 'Invoice tersimpan, gagal buka WhatsApp' });
+                    }
                 }
             }
         }

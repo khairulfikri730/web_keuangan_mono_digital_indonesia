@@ -1578,6 +1578,7 @@ function closeCashOut() {
             products: @json($products),
             promoProductIds: @json($promoProductIds),
             bestSellerProductIds: @json($bestSellerProductIds),
+            editTransaction: @json($editTransaction ?? null),
             activeShift: {{ $activeShift ? 'true' : 'false' }},
             taxRate: parseFloat('{{ $settings["tax_rate"] ?? 0 }}') || 0,
             rawMethods: @json(json_decode($settings['active_payment_methods'] ?? '["cash"]', true) ?: ['cash']),
@@ -1818,6 +1819,10 @@ function closeCashOut() {
                         let data = await res.json();
                         if (data.success) {
                             this.showCashOutModal = false;
+                            if (this.cashOutSource === 'cash' && this.printerHandle) {
+                                const drawerCmd = new Uint8Array([0x1B, 0x70, this.drawerPulsePin, 0x19, 0xFA]);
+                                this.printRaw(drawerCmd).catch(() => {});
+                            }
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Berhasil!',
@@ -1966,12 +1971,24 @@ function closeCashOut() {
                                 this.addWorksheet(@json($ws->name), @json($ws->id));
                             @endforeach
                         @else
-                            this.addWorksheet('Draft POS');
+                            if (this.editTransaction) {
+                                this.loadEditTransaction();
+                            } else {
+                                this.addWorksheet('Draft POS');
+                            }
                         @endif
                     @elseif($activeWorksheetId && $activeWorksheet)
-                        this.addWorksheet(@json($activeWorksheet->name), @json($activeWorksheetId));
+                        if (this.editTransaction) {
+                            this.loadEditTransaction();
+                        } else {
+                            this.addWorksheet(@json($activeWorksheet->name), @json($activeWorksheetId));
+                        }
                     @else
-                        this.addWorksheet('Draft POS');
+                        if (this.editTransaction) {
+                            this.loadEditTransaction();
+                        } else {
+                            this.addWorksheet('Draft POS');
+                        }
                     @endif
                     
                     document.addEventListener('keydown', (e) => {
@@ -2021,9 +2038,54 @@ function closeCashOut() {
                     deliveryFee: 0,
                     deliveryDestination: '',
                     globalDiscount: 0,
-                    discountType: 'nominal'
+                    discountType: 'nominal',
+                    editTransactionId: null
                 });
                 this.activeTabId = id;
+            },
+
+            loadEditTransaction() {
+                this.addWorksheet('Edit ' + this.editTransaction.invoice_number);
+                let w = this.activeWorksheet;
+                w.editTransactionId = this.editTransaction.id;
+                w.customerName = this.editTransaction.customer_name || '';
+                w.customerPhone = this.editTransaction.customer_phone || '';
+                
+                // Parse notes for table number and delivery
+                let notes = this.editTransaction.notes || '';
+                if (notes.includes('[DELIVERY]')) {
+                    notes = notes.replace('[DELIVERY]', '').trim();
+                }
+                const mejaMatch = notes.match(/No Meja:\s*([^|]+)\|?/);
+                if (mejaMatch) {
+                    w.tableNumber = mejaMatch[1].trim();
+                    notes = notes.replace(mejaMatch[0], '').trim();
+                }
+                w.notes = notes;
+                
+                w.deliveryMode = this.editTransaction.delivery_fee > 0;
+                w.deliveryFee = this.editTransaction.delivery_fee || 0;
+                w.deliveryDestination = this.editTransaction.delivery_destination || '';
+                w.globalDiscount = this.editTransaction.discount || 0;
+                w.discountType = this.editTransaction.discount_type || 'nominal';
+                
+                // Load items
+                if (this.editTransaction.items) {
+                    this.editTransaction.items.forEach(item => {
+                        w.cart.push({
+                            product_id: item.product_id,
+                            name: item.product_name,
+                            price: item.price,
+                            cost_price: item.cost_price,
+                            quantity: item.quantity,
+                            is_custom_price: item.is_custom_price,
+                            custom_price: item.custom_price,
+                            custom_hpp: item.custom_hpp,
+                            custom_price_reason: item.custom_price_reason,
+                            discount: item.discount || 0
+                        });
+                    });
+                }
             },
 
             get activeWorksheet() {
@@ -2203,6 +2265,7 @@ function closeCashOut() {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
                         body: JSON.stringify({
+                            edit_transaction_id: w.editTransactionId || null,
                             items: w.cart, 
                             payment_method: method, 
                             dp_method: isPiutang ? this.paymentMethod : null,
@@ -2413,6 +2476,7 @@ function closeCashOut() {
                     this.paperSize = settings.paperSize || '58mm';
                     this.fontSmall = settings.fontSmall || false;
                     this.fontSize = settings.fontSize || 'medium';
+                    this.autoPrint = settings.autoPrint !== undefined ? settings.autoPrint : false;
                     this.connectionMethod = settings.connectionMethod || null;
                     this.printerName = settings.printerName || '';
                 } else {

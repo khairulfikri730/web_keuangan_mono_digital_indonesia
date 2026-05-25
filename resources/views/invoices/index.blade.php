@@ -139,6 +139,9 @@
                                 <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="w-8 h-8 rounded-lg bg-slate-700/50 hover:bg-emerald-600 text-slate-300 hover:text-white flex items-center justify-center transition-all" title="Download PDF">
                                     <i class="fas fa-download text-xs"></i>
                                 </a>
+                                <button onclick="shareInvoiceWA('{{ $invoice->id }}', '{{ $invoice->client_phone }}')" class="w-8 h-8 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 flex items-center justify-center transition-all" title="Share via WhatsApp">
+                                    <i class="fab fa-whatsapp text-xs"></i>
+                                </button>
                                 <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" onsubmit="return confirm('Hapus invoice ini?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="w-8 h-8 rounded-lg bg-slate-700/50 hover:bg-red-600 text-slate-300 hover:text-white flex items-center justify-center transition-all">
@@ -197,3 +200,22 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    async function shareInvoiceWA(invoiceId, clientPhone) {
+        try {
+            const message = await fetch(`/invoices/${invoiceId}/invoice-text`).then(r => r.text());
+            const phone = (() => {
+                let p = (clientPhone || '').replace(/\D/g, '');
+                if (p.startsWith('0')) p = '62' + p.substring(1);
+                return p;
+            })();
+            const waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(waUrl, '_blank');
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal membuka WhatsApp', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        }
+    }
+</script>
+@endpush

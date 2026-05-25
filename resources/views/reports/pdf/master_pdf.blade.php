@@ -257,7 +257,7 @@
     <div class="section-header uppercase">Ikhtisar Performa Bisnis</div>
     <table class="card-grid">
         <tr>
-            <td style="border: none; width: 33.3%;">
+            <td style="border: none; width: 25%;">
                 <div class="card">
                     <div class="card-label">TOTAL OMZET</div>
                     <div class="card-value text-emerald">Rp {{ number_format($summary_data->total_income, 0, ',', '.') }}</div>
@@ -266,7 +266,7 @@
                     </div>
                 </div>
             </td>
-            <td style="border: none; width: 33.3%;">
+            <td style="border: none; width: 25%;">
                 <div class="card">
                     <div class="card-label">TOTAL PENGELUARAN</div>
                     <div class="card-value text-red">Rp {{ number_format($summary_data->total_expense, 0, ',', '.') }}</div>
@@ -275,13 +275,20 @@
                     </div>
                 </div>
             </td>
-            <td style="border: none; width: 33.3%;">
+            <td style="border: none; width: 25%;">
                 <div class="card">
                     <div class="card-label">LABA BERSIH</div>
                     <div class="card-value text-blue">Rp {{ number_format($summary_data->net_profit, 0, ',', '.') }}</div>
                     <div class="card-growth {{ $growth['profit'] >= 0 ? 'text-emerald' : 'text-red' }}">
                         {{ $growth['profit'] >= 0 ? '↑' : '↓' }} {{ abs($growth['profit']) }}% vs periode lalu
                     </div>
+                </div>
+            </td>
+            <td style="border: none; width: 25%;">
+                <div class="card">
+                    <div class="card-label">TOTAL TRANSAKSI</div>
+                    <div class="card-value" style="color: #8b5cf6;">{{ number_format($summary_data->total_count ?? 0, 0, ',', '.') }}</div>
+                    <div class="card-growth" style="color: #8b5cf6; font-size: 9px;">Transaksi Selesai</div>
                 </div>
             </td>
         </tr>

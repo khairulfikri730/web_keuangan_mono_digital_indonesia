@@ -82,6 +82,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:transactions.view')->group(function () {
         Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
         Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
+        Route::get('/transactions/{transaction}/receipt-text', [TransactionController::class, 'receiptText'])->name('transactions.receipt-text');
     });
 
     // Shift Management - permission based
@@ -223,6 +224,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('invoices/{invoice}/pdf', [\App\Http\Controllers\InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+        Route::get('invoices/{invoice}/invoice-text', [\App\Http\Controllers\InvoiceController::class, 'invoiceText'])->name('invoices.invoice-text');
         Route::delete('invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'destroy'])->middleware('permission:invoices.delete')->name('invoices.destroy');
     });
 

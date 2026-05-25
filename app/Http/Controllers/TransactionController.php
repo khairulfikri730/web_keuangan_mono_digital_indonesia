@@ -302,6 +302,80 @@ class TransactionController extends Controller
         return view('transactions.show', compact('transaction'));
     }
 
+    public function receiptText(Transaction $transaction)
+    {
+        $transaction->load(['items', 'user']);
+        $settings = \App\Models\Setting::getMultiple([
+            'store_name', 'store_address', 'store_phone', 'store_footer'
+        ]);
+
+        $lines = [];
+
+        $storeName = $settings['store_name'] ?? 'MONOFRAME STUDIO';
+        $lines[] = "*{$storeName}*";
+
+        if ($settings['store_address'] ?? false) {
+            $lines[] = $settings['store_address'];
+        }
+        if ($settings['store_phone'] ?? false) {
+            $lines[] = "Telp: {$settings['store_phone']}";
+        }
+
+        $lines[] = str_repeat('-', 32);
+
+        $lines[] = "No      : {$transaction->invoice_number}";
+        $lines[] = "Tgl     : {$transaction->created_at->format('d/m/Y H:i')}";
+        $lines[] = "Kasir   : " . ($transaction->user->name ?? 'Admin');
+
+        if ($transaction->customer_name) {
+            $lines[] = "Pelanggan: {$transaction->customer_name}";
+        }
+
+        $lines[] = str_repeat('-', 32);
+
+        foreach ($transaction->items as $item) {
+            $lines[] = $item->product_name;
+            $line = str_pad("{$item->quantity} x " . number_format($item->price, 0), 20)
+                  . str_pad(number_format($item->subtotal, 0), 12, ' ', STR_PAD_LEFT);
+            $lines[] = $line;
+        }
+
+        $lines[] = str_repeat('-', 32);
+
+        $lines[] = str_pad('Subtotal', 20) . str_pad(number_format($transaction->subtotal, 0), 12, ' ', STR_PAD_LEFT);
+
+        if ($transaction->delivery_fee > 0) {
+            $dest = $transaction->delivery_destination ? " ({$transaction->delivery_destination})" : '';
+            $lines[] = str_pad("Ongkir{$dest}", 20) . str_pad(number_format($transaction->delivery_fee, 0), 12, ' ', STR_PAD_LEFT);
+        }
+
+        if ($transaction->discount > 0) {
+            $lines[] = str_pad('Diskon', 20) . str_pad('-'.number_format($transaction->discount, 0), 12, ' ', STR_PAD_LEFT);
+        }
+
+        if ($transaction->tax > 0) {
+            $lines[] = str_pad('Pajak', 20) . str_pad(number_format($transaction->tax, 0), 12, ' ', STR_PAD_LEFT);
+        }
+
+        $lines[] = str_pad('TOTAL', 20) . str_pad(number_format($transaction->total, 0), 12, ' ', STR_PAD_LEFT);
+        $lines[] = str_repeat('-', 32);
+
+        $methodLabel = strtoupper($transaction->payment_method);
+        $lines[] = str_pad($methodLabel, 20) . str_pad(number_format($transaction->paid_amount, 0), 12, ' ', STR_PAD_LEFT);
+
+        if ($transaction->change_amount > 0) {
+            $lines[] = str_pad('KEMBALI', 20) . str_pad(number_format($transaction->change_amount, 0), 12, ' ', STR_PAD_LEFT);
+        }
+
+        $lines[] = str_repeat('-', 32);
+        $lines[] = $settings['store_footer'] ?? 'Terima Kasih Atas Kunjungan Anda';
+
+        return response()->json([
+            'phone' => $transaction->customer_phone,
+            'message' => implode("\n", $lines),
+        ]);
+    }
+
     /**
      * Pay piutang (partial or full)
      */
@@ -425,13 +499,11 @@ class TransactionController extends Controller
 
     public function destroy(Transaction $transaction)
     {
-        if ($transaction->status !== 'cancelled') {
-            return back()->with('error', 'Hanya transaksi batal yang dapat dihapus permanen.');
-        }
-
         DB::beginTransaction();
         try {
-            Cashflow::where('reference', $transaction->invoice_number)->delete();
+            Cashflow::where('reference', $transaction->invoice_number)
+                    ->orWhere('reference_id', $transaction->id)
+                    ->delete();
             StockMutation::where('reference', $transaction->invoice_number)->delete();
             $transaction->delete();
 

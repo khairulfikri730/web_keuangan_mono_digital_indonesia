@@ -27,8 +27,9 @@ class FinancialReportService
         if ($worksheetId) {
             $incomeQuery->where('worksheet_id', $worksheetId);
         }
-        
         $totalIncome = $incomeQuery->sum('total');
+        $totalCount = (clone $incomeQuery)->count();
+ 
  
         $expenseQuery = Cashflow::withoutGlobalScopes()->where('transaction_category', 'expense')
             ->whereBetween('transaction_date', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()]);
@@ -66,6 +67,7 @@ class FinancialReportService
             'cash_expense' => $cashExpense,
             'bank_expense' => $bankExpense,
             'net_profit' => $netProfit,
+            'total_count' => $totalCount,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'worksheet_id' => $worksheetId

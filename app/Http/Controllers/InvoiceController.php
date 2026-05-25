@@ -197,6 +197,74 @@ class InvoiceController extends Controller
         return $pdf->download($invoice->invoice_number . '.pdf');
     }
 
+    public function invoiceText(Invoice $invoice)
+    {
+        $invoice->load(['items', 'payments']);
+
+        $lines = [];
+
+        $businessName = $invoice->business_name ?? 'MONOFRAME STUDIO';
+        $lines[] = "*INVOICE*";
+        $lines[] = $businessName;
+
+        if ($invoice->business_address) {
+            $lines[] = $invoice->business_address;
+        }
+        if ($invoice->business_phone) {
+            $lines[] = "Telp: {$invoice->business_phone}";
+        }
+
+        $lines[] = str_repeat('-', 32);
+
+        $lines[] = "No      : {$invoice->invoice_number}";
+        $lines[] = "Tgl     : " . ($invoice->date ? $invoice->date->format('d/m/Y') : '-');
+        if ($invoice->due_date) {
+            $lines[] = "Jatuh Tempo: {$invoice->due_date->format('d/m/Y')}";
+        }
+        $lines[] = "Klien   : {$invoice->client_name}";
+
+        if ($invoice->client_company) {
+            $lines[] = "Perusahaan: {$invoice->client_company}";
+        }
+
+        $lines[] = str_repeat('-', 32);
+
+        $lines[] = str_pad('Item', 12) . str_pad('Qty', 6) . str_pad('Harga', 10) . 'Total';
+        $lines[] = str_repeat('-', 32);
+
+        foreach ($invoice->items as $item) {
+            $name = mb_substr($item->name, 0, 11);
+            $lines[] = str_pad($name, 12)
+                     . str_pad($item->quantity, 6)
+                     . str_pad(number_format($item->price, 0), 10)
+                     . number_format($item->total, 0);
+        }
+
+        $lines[] = str_repeat('-', 32);
+
+        $lines[] = str_pad('Subtotal', 20) . str_pad(number_format($invoice->subtotal, 0), 12, ' ', STR_PAD_LEFT);
+
+        if ($invoice->discount > 0) {
+            $lines[] = str_pad('Diskon', 20) . str_pad('-'.number_format($invoice->discount, 0), 12, ' ', STR_PAD_LEFT);
+        }
+
+        $lines[] = str_pad('TOTAL', 20) . str_pad(number_format($invoice->total_amount, 0), 12, ' ', STR_PAD_LEFT);
+        $lines[] = str_repeat('-', 32);
+
+        $lines[] = str_pad('Dibayar', 20) . str_pad(number_format($invoice->paid_amount, 0), 12, ' ', STR_PAD_LEFT);
+        $lines[] = str_pad('Sisa', 20) . str_pad(number_format($invoice->balance_remaining, 0), 12, ' ', STR_PAD_LEFT);
+
+        $statusLabels = [
+            'paid' => 'Lunas',
+            'partial' => 'DP / Cicilan',
+            'pending' => 'Menunggu Pembayaran',
+        ];
+        $statusText = $statusLabels[$invoice->status] ?? $invoice->status;
+        $lines[] = "Status: {$statusText}";
+
+        return response(implode("\n", $lines), 200, ['Content-Type' => 'text/plain; charset=utf-8']);
+    }
+
     public function edit(Invoice $invoice)
     {
         $invoice->load('items');

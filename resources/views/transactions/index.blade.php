@@ -347,7 +347,7 @@
                                         @endif
                                         {{-- Edit --}}
                                         @if(!$isCancelled && auth()->user()->hasPermission('transactions.edit'))
-                                            <a href="{{ route('transactions.show', $model) }}" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Edit"><i class="fas fa-pencil text-xs"></i></a>
+                                            <a href="{{ route('pos.index', ['edit' => $model->id]) }}" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Edit"><i class="fas fa-pencil text-xs"></i></a>
                                         @endif
                                         {{-- Print --}}
                                         <button @click="doPrint('{{ $model->id }}')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Print Struk POS"><i class="fas fa-print text-xs"></i></button>
@@ -732,6 +732,29 @@
             async doPrint(transactionId) {
                 if (!transactionId) return;
 
+                // Priority: Server Side ESC/POS
+                if (this.connectionMethod === 'server_escpos') {
+                    try {
+                        const res = await fetch(`/pos/print-receipt/${transactionId}`, {
+                            method: 'POST',
+                            headers: { 
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json' 
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                        } else {
+                            Swal.fire({ icon: 'warning', title: 'Peringatan', text: data.message, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                        }
+                        return;
+                    } catch (e) {
+                        console.error("Server Print Error:", e);
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menghubungi printer server.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                    }
+                }
+
                 if (this.connectionMethod === 'usb_direct' && this.printerHandle) {
                     try {
                         const res = await fetch(`/transactions/${transactionId}`, {
@@ -806,7 +829,7 @@
                         commands.push(encoder.encode('--------------------------------\n'));
                         
                         commands.push(center);
-                        commands.push(encoder.encode('\n' + tx.store_footer + '\n'));
+                        commands.push(encoder.encode('\n' + (tx.store_footer || this.storeFooter) + '\n'));
                         commands.push(encoder.encode('\nPowered by monodev.id\n\n\n\n\n'));
                         
                         const cut = new Uint8Array([0x1D, 0x56, 0x41, 0x03]);
