@@ -26,7 +26,9 @@ class PosController extends Controller
             'tax_rate', 'active_payment_methods', 'bank_name', 'bank_account', 'bank_holder', 'qris_image',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
-            'cashout_source_access', 'cashout_role_access'
+            'cashout_source_access', 'cashout_role_access',
+            'drawer_auto_open', 'drawer_pulse_pin',
+            'printer_paper_size', 'printer_auto_print', 'printer_font_small'
         ]);
         
         // BEP Analysis Data
@@ -88,6 +90,7 @@ class PosController extends Controller
             'discount' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:nominal,percentage',
             'delivery_fee' => 'nullable|numeric|min:0',
+            'delivery_destination' => 'nullable|string|max:255',
             'customer_name' => 'nullable|string|max:100',
             'customer_phone' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
@@ -180,6 +183,7 @@ class PosController extends Controller
                 'discount_type' => $discountType,
                 'tax' => $tax,
                 'delivery_fee' => $deliveryFee,
+                'delivery_destination' => $request->delivery_destination,
                 'total' => $total,
                 'paid_amount' => $isPiutang ? $dpAmount : $request->paid_amount,
                 'change_amount' => $isPiutang ? 0 : max(0, $change),
@@ -219,23 +223,20 @@ class PosController extends Controller
 
             DB::commit();
 
-            $transaction->load('items');
+            $transaction->load(['items', 'user']);
 
-            // --- AUTO OPEN CASH DRAWER LOGIC (TEMPORARILY DISABLED) ---
             $printerStatus = null;
-            /*
-            if ($request->payment_method === 'cash') {
+            $drawerAutoOpen = \App\Models\Setting::get('drawer_auto_open', '0');
+            if ($drawerAutoOpen === '1' && $request->payment_method === 'cash') {
                 try {
                     $printerService = app(\App\Services\PrinterService::class);
                     $printResult = $printerService->openDrawer($transaction->id);
                     $printerStatus = $printResult;
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Drawer Error: ' . $e->getMessage());
-                    $printerStatus = ['success' => false, 'message' => 'Gagal membuka laci kasir (System Error)'];
+                    \Illuminate\Support\Facades\Log::warning('Drawer server-side skipped (printer not available): ' . $e->getMessage());
+                    $printerStatus = null;
                 }
             }
-            */
-            // ------------------------------------
 
             return response()->json([
                 'success' => true,

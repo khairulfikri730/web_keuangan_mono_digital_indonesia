@@ -350,7 +350,10 @@
                 {{-- Ongkos Kirim Input (Shows when Delivery Mode is ON) --}}
                 <div x-show="activeWorksheet.deliveryMode" x-collapse>
                     <div class="pt-3 border-t border-slate-200/50">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Ongkos Kirim (Rp)</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tujuan & Ongkos Kirim (Rp)</label>
+                        <div class="mb-2">
+                            <input type="text" x-model="activeWorksheet.deliveryDestination" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all" placeholder="Tujuan Delivery (opsional)">
+                        </div>
                         <div class="relative mb-3">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">Rp</span>
                             <input type="number" x-model.number="activeWorksheet.deliveryFee" min="0" class="w-full bg-slate-900 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all appearance-none" placeholder="0">
@@ -360,7 +363,7 @@
                         <template x-if="deliveryPresets && deliveryPresets.length > 0">
                             <div class="flex flex-wrap gap-2">
                                 <template x-for="preset in deliveryPresets" :key="preset.name">
-                                    <button @click="activeWorksheet.deliveryFee = preset.price" 
+                                    <button @click="activeWorksheet.deliveryFee = preset.price; activeWorksheet.deliveryDestination = preset.name;" 
                                             class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm">
                                         <span x-text="preset.name"></span>
                                         <span class="opacity-50 ml-1" x-text="'(' + formatRp(preset.price) + ')'"></span>
@@ -1649,6 +1652,8 @@ function closeCashOut() {
             printerName: '',
             printerHandle: null,
             printerFeedLines: {{ $settings['printer_feed_lines'] ?? 0 }},
+            drawerAutoOpen: {{ ($settings['drawer_auto_open'] ?? '0') === '1' ? 'true' : 'false' }},
+            drawerPulsePin: {{ $settings['drawer_pulse_pin'] ?? '0' }},
             isScanning: false,
             discoveredDevices: [],
             
@@ -2014,6 +2019,7 @@ function closeCashOut() {
                     notes: '',
                     deliveryMode: false,
                     deliveryFee: 0,
+                    deliveryDestination: '',
                     globalDiscount: 0,
                     discountType: 'nominal'
                 });
@@ -2204,6 +2210,7 @@ function closeCashOut() {
                             discount: w.globalDiscount, 
                             discount_type: w.discountType,
                             delivery_fee: w.deliveryMode ? (parseFloat(w.deliveryFee) || 0) : 0,
+                            delivery_destination: w.deliveryMode ? w.deliveryDestination : '',
                             customer_name: w.customerName, 
                             customer_phone: w.customerPhone, 
                             notes: finalNotes
@@ -2425,9 +2432,7 @@ function closeCashOut() {
                                 console.log("Auto-reconnected USB printer:", this.printerName);
                             } else {
                                 console.warn("USB printer authorized but not found in current session.");
-                                // We keep printerStatus as 'connected' because it's "Saved", 
-                                // but printing will prompt for reconnect if handle is null.
-                                this.printerStatus = 'connected'; 
+                                this.printerStatus = 'disconnected';
                             }
                         } catch (e) { console.error("Auto-reconnect failed:", e); }
                     } else if (this.printerName) {
@@ -2707,7 +2712,12 @@ function closeCashOut() {
                         commands.push(encoder.encode('No : ' + tx.invoice_number + '\n'));
                         commands.push(encoder.encode('Tgl: ' + tx.created_at + '\n'));
                         if (tx.customer_name) commands.push(encoder.encode('Plg: ' + tx.customer_name + '\n'));
-                        if (tx.customer_phone) commands.push(encoder.encode('Hp : ' + tx.customer_phone + '\n'));
+                        if (tx.customer_phone) {
+                            let phone = tx.customer_phone;
+                            let maskedHp = phone.length > 4 ? phone.substring(0, phone.length - 4) + '****' : '*'.repeat(phone.length);
+                            commands.push(encoder.encode('Hp : ' + maskedHp + '\n'));
+                        }
+                        commands.push(encoder.encode('Petugas: ' + (tx.user ? tx.user.name : 'Admin') + '\n'));
                         commands.push(encoder.encode('--------------------------------\n'));
                         
                         tx.items.forEach(item => {
@@ -2718,17 +2728,20 @@ function closeCashOut() {
                         });
                         
                         commands.push(encoder.encode('--------------------------------\n'));
+                        
+                        if (tx.delivery_fee > 0) {
+                            let dest = tx.delivery_destination ? ' (' + tx.delivery_destination + ')' : '';
+                            let devVal = this.fmt(tx.delivery_fee);
+                            commands.push(encoder.encode(('Ongkir' + dest + ':').padEnd(32 - devVal.length) + devVal + '\n'));
+                            commands.push(encoder.encode('--------------------------------\n'));
+                        }
+
                         let subVal = this.fmt(tx.subtotal);
                         commands.push(encoder.encode('Subtotal:'.padEnd(32 - subVal.length) + subVal + '\n'));
                         
                         if (tx.discount > 0) {
                             let discVal = '-' + this.fmt(tx.discount);
                             commands.push(encoder.encode('Diskon:'.padEnd(32 - discVal.length) + discVal + '\n'));
-                        }
-
-                        if (tx.delivery_fee > 0) {
-                            let devVal = '+' + this.fmt(tx.delivery_fee);
-                            commands.push(encoder.encode('Ongkir:'.padEnd(32 - devVal.length) + devVal + '\n'));
                         }
 
                         let totalVal = this.fmt(tx.total);
@@ -2767,7 +2780,13 @@ function closeCashOut() {
                         }
                         
                         const success = await this.printRaw(combined);
-                        if (success) return;
+                        if (success) {
+                            if (this.drawerAutoOpen && tx.payment_method.toLowerCase() === 'cash') {
+                                const drawerCmd = new Uint8Array([0x1B, 0x70, this.drawerPulsePin, 0x19, 0xFA]);
+                                this.printRaw(drawerCmd).catch(() => {});
+                            }
+                            return;
+                        }
                     } catch (e) {
                         console.error("Direct Print failed:", e);
                     }

@@ -424,6 +424,9 @@
 
                                         {{-- Totals --}}
                                         <div class="space-y-2 text-sm">
+                                            @if($model->delivery_fee > 0)
+                                            <div class="flex justify-between"><span class="text-slate-500">Ongkir{{ $model->delivery_destination ? ' (' . $model->delivery_destination . ')' : '' }}</span><span class="font-medium text-slate-700">Rp {{ number_format($model->delivery_fee, 0, ',', '.') }}</span></div>
+                                            @endif
                                             <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span class="font-medium text-slate-700">Rp {{ number_format($model->subtotal, 0, ',', '.') }}</span></div>
                                             @if($model->discount > 0)
                                             <div class="flex justify-between"><span class="text-slate-500">Diskon</span><span class="font-medium text-red-500">-Rp {{ number_format($model->discount, 0, ',', '.') }}</span></div>
@@ -755,7 +758,12 @@
                         commands.push(encoder.encode('No : ' + tx.invoice_number + '\n'));
                         commands.push(encoder.encode('Tgl: ' + tx.created_at + '\n'));
                         if (tx.customer_name) commands.push(encoder.encode('Plg: ' + tx.customer_name + '\n'));
-                        if (tx.customer_phone) commands.push(encoder.encode('Hp : ' + tx.customer_phone + '\n'));
+                        if (tx.customer_phone) {
+                            let phone = tx.customer_phone;
+                            let maskedHp = phone.length > 4 ? phone.substring(0, phone.length - 4) + '****' : '*'.repeat(phone.length);
+                            commands.push(encoder.encode('Hp : ' + maskedHp + '\n'));
+                        }
+                        commands.push(encoder.encode('Petugas: ' + (tx.user ? tx.user.name : 'Admin') + '\n'));
                         commands.push(encoder.encode('--------------------------------\n'));
                         
                         tx.items.forEach(item => {
@@ -766,6 +774,14 @@
                         });
                         
                         commands.push(encoder.encode('--------------------------------\n'));
+                        
+                        if (tx.delivery_fee > 0) {
+                            let dest = tx.delivery_destination ? ' (' + tx.delivery_destination + ')' : '';
+                            let devVal = this.fmt(tx.delivery_fee);
+                            commands.push(encoder.encode(('Ongkir' + dest + ':').padEnd(32 - devVal.length) + devVal + '\n'));
+                            commands.push(encoder.encode('--------------------------------\n'));
+                        }
+
                         let subVal = this.fmt(tx.subtotal);
                         commands.push(encoder.encode('Subtotal:'.padEnd(32 - subVal.length) + subVal + '\n'));
                         

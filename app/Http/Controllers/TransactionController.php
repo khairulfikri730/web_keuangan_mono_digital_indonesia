@@ -279,6 +279,8 @@ class TransactionController extends Controller
                 'subtotal' => $transaction->subtotal,
                 'discount' => $transaction->discount,
                 'tax' => $transaction->tax,
+                'delivery_fee' => $transaction->delivery_fee,
+                'delivery_destination' => $transaction->delivery_destination,
                 'total' => $transaction->total,
                 'paid_amount' => $transaction->paid_amount,
                 'change_amount' => $transaction->change_amount,
@@ -287,6 +289,7 @@ class TransactionController extends Controller
                 'customer_name' => $transaction->customer_name,
                 'customer_phone' => $transaction->customer_phone,
                 'notes' => $transaction->notes,
+                'user' => $transaction->user,
                 'items' => $transaction->items->map(fn($i) => [
                     'product_name' => $i->product_name,
                     'quantity' => $i->quantity,

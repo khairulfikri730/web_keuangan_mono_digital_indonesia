@@ -21,7 +21,25 @@ class PrinterService
      */
     public function openDrawer($transactionId = null, $force = false)
     {
-        return ['success' => false, 'message' => 'Fitur buka laci otomatis dinonaktifkan sementara.'];
+        try {
+            $settings = Setting::getMultiple(['printer_connection', 'printer_name', 'drawer_pulse_pin']);
+            $type = $settings['printer_connection'] ?? 'windows';
+            $name = $settings['printer_name'] ?? 'POS-58';
+            $pin = (int) ($settings['drawer_pulse_pin'] ?? 0);
+
+            $connector = $this->getConnector($type, $name);
+            $printer = new Printer($connector);
+            $printer->pulse($pin, 25, 250);
+            $printer->close();
+
+            $this->logAction($transactionId, 'success', "Drawer opened via $type printer: $name, pin: $pin");
+
+            return ['success' => true, 'message' => "Laci berhasil dibuka (Pin $pin via $name)"];
+        } catch (Exception $e) {
+            Log::error('Drawer open error: ' . $e->getMessage());
+            $this->logAction($transactionId, 'failed', $e->getMessage());
+            return ['success' => false, 'message' => 'Gagal membuka laci: ' . $e->getMessage()];
+        }
     }
 
     /**
@@ -29,7 +47,43 @@ class PrinterService
      */
     public function printReceiptAndOpenDrawer($transaction, $openDrawer = true)
     {
-        return ['success' => false, 'message' => 'Fitur cetak server dinonaktifkan sementara. Silakan cetak via web browser.'];
+        try {
+            $settings = Setting::getMultiple([
+                'store_name', 'store_address', 'store_phone', 'store_footer',
+                'printer_connection', 'printer_name', 'printer_paper_size', 'printer_font_small',
+                'printer_feed_lines', 'drawer_pulse_pin', 'drawer_auto_open'
+            ]);
+            $type = $settings['printer_connection'] ?? 'windows';
+            $name = $settings['printer_name'] ?? 'POS-58';
+
+            $connector = $this->getConnector($type, $name);
+            $printer = new Printer($connector);
+
+            $this->generateReceiptContent($printer, $transaction);
+
+            if ($settings['printer_feed_lines'] ?? 0) {
+                $printer->feed((int) $settings['printer_feed_lines']);
+            }
+
+            $printer->cut(Printer::CUT_FULL);
+            $printer->close();
+
+            $pin = (int) ($settings['drawer_pulse_pin'] ?? 0);
+            if ($openDrawer && ($settings['drawer_auto_open'] ?? '0') === '1'
+                && $transaction->payment_method === 'cash') {
+                $connector2 = $this->getConnector($type, $name);
+                $printer2 = new Printer($connector2);
+                $printer2->pulse($pin, 25, 250);
+                $printer2->close();
+            }
+
+            $this->logAction($transaction->id, 'success', "Printed + drawer (if cash) via $name");
+            return ['success' => true, 'message' => 'Struk berhasil dicetak via ' . $name];
+        } catch (Exception $e) {
+            Log::error('Print error: ' . $e->getMessage());
+            $this->logAction($transaction->id ?? null, 'failed', $e->getMessage());
+            return ['success' => false, 'message' => 'Gagal mencetak: ' . $e->getMessage()];
+        }
     }
 
     private function getConnector($type, $target)

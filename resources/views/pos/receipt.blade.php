@@ -52,12 +52,16 @@
     <div class="border-top border-bottom">
         <div class="flex"><span>No:</span> <span>{{ $transaction->invoice_number }}</span></div>
         <div class="flex"><span>Tgl:</span> <span>{{ $transaction->created_at->format('d/m/y H:i') }}</span></div>
-        <div class="flex"><span>Ksr:</span> <span>{{ $transaction->user->name }}</span></div>
+        <div class="flex"><span>Petugas:</span> <span>{{ $transaction->user->name }}</span></div>
         @if($transaction->customer_name)
         <div class="flex"><span>Plg:</span> <span>{{ $transaction->customer_name }}</span></div>
         @endif
         @if($transaction->customer_phone)
-        <div class="flex"><span>Telp Plg:</span> <span>{{ $transaction->customer_phone }}</span></div>
+        @php
+            $phone = $transaction->customer_phone;
+            $maskedPhone = strlen($phone) > 4 ? substr($phone, 0, -4) . '****' : str_repeat('*', strlen($phone));
+        @endphp
+        <div class="flex"><span>Telp Plg:</span> <span>{{ $maskedPhone }}</span></div>
         @endif
         @if($transaction->notes)
         <div class="flex"><span>Catatan:</span> <span>{{ $transaction->notes }}</span></div>
@@ -82,15 +86,19 @@
     </table>
 
     <div class="space-y-1">
+        @if($transaction->delivery_fee > 0)
+        <div class="flex font-bold" style="border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px;">
+            <span>Ongkir{{ $transaction->delivery_destination ? ' (' . $transaction->delivery_destination . ')' : '' }}:</span> 
+            <span>{{ number_format($transaction->delivery_fee, 0, ',', '.') }}</span>
+        </div>
+        @endif
+        
         <div class="flex"><span>Subtotal:</span> <span>{{ number_format($transaction->subtotal, 0, ',', '.') }}</span></div>
         @if($transaction->discount > 0)
         <div class="flex"><span>Diskon:</span> <span>-{{ number_format($transaction->discount, 0, ',', '.') }}</span></div>
         @endif
         @if($transaction->tax > 0)
         <div class="flex"><span>Pajak:</span> <span>{{ number_format($transaction->tax, 0, ',', '.') }}</span></div>
-        @endif
-        @if($transaction->delivery_fee > 0)
-        <div class="flex"><span>Ongkir:</span> <span>{{ number_format($transaction->delivery_fee, 0, ',', '.') }}</span></div>
         @endif
         
         <div class="flex font-bold" style="font-size: 1.1em; border-top: 1px solid #000; padding-top: 2px; margin-top: 2px;">

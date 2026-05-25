@@ -258,10 +258,23 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-3">
-                            <button type="button" onclick="testCashDrawer()" class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold rounded-xl border border-indigo-500/30 transition-all text-[10px] uppercase tracking-wider">
-                                <i class="fas fa-plug"></i> Test Buka Laci
-                            </button>
+                        <div class="mt-3" x-data="cashDrawerTest" x-init="loadConnection()">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div :class="printerStatus === 'connected' ? 'bg-emerald-500' : 'bg-slate-500'" class="w-2.5 h-2.5 rounded-full animate-pulse"></div>
+                                <span x-text="printerStatus === 'connected' ? 'USB Terhubung: ' + printerName : (printerStatus === 'connecting' ? 'Menghubungkan...' : 'USB tidak terhubung')" class="text-[10px] font-bold" :class="printerStatus === 'connected' ? 'text-emerald-400' : 'text-slate-400'"></span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" @click="connectUsb()" x-show="printerStatus !== 'connected' && !supportsWebUsb" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-all">WebUSB Tidak Didukung</button>
+                                <button type="button" @click="connectUsb()" x-show="printerStatus !== 'connected' && supportsWebUsb" class="flex items-center gap-1.5 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 border border-indigo-500/30 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-all">
+                                    <i class="fas fa-usb"></i> Hubungkan USB
+                                </button>
+                                <button type="button" @click="testDrawer()" :disabled="printerStatus !== 'connected'" class="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold rounded-lg border border-indigo-500/30 transition-all text-[10px] uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed">
+                                    <i class="fas fa-plug"></i> Test Buka Laci
+                                </button>
+                                <button type="button" @click="disconnectPrinter()" x-show="printerStatus === 'connected'" class="px-2 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-lg text-[10px] uppercase transition-all">
+                                    <i class="fas fa-xmark"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -464,33 +477,132 @@
             });
         }
 
-        function testCashDrawer() {
-            Swal.fire({
-                title: 'Testing Cash Drawer...',
-                text: 'Pastikan printer terhubung dan drawer tersambung via RJ11',
-                icon: 'info',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Trigger Pulse',
-                confirmButtonColor: '#4f46e5',
-                cancelButtonColor: '#334155',
-                background: '#1e293b',
-                color: '#f8fafc'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch("{{ route('settings.test-drawer') }}", {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        Swal.fire({ title: data.success ? 'Berhasil!' : 'Gagal!', text: data.message, icon: data.success ? 'success' : 'error', background: '#1e293b', color: '#f8fafc' });
-                    })
-                    .catch(() => {
-                        Swal.fire({ title: 'Error!', text: 'Kesalahan sistem atau printer offline.', icon: 'error', background: '#1e293b', color: '#f8fafc' });
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('cashDrawerTest', () => ({
+                printerHandle: null,
+                printerName: '',
+                printerStatus: 'disconnected',
+                supportsWebUsb: !!navigator.usb,
+                pulsePin: {{ $settings['drawer_pulse_pin'] ?? '0' }},
+
+                loadConnection() {
+                    const saved = localStorage.getItem('pos_printer_settings');
+                    if (!saved || !navigator.usb) return;
+                    try {
+                        const settings = JSON.parse(saved);
+                        if (settings.connectionMethod === 'usb_direct' && settings.printerName) {
+                            navigator.usb.getDevices().then(devices => {
+                                const match = devices.find(d => d.productName === settings.printerName);
+                                if (match) {
+                                    this.printerHandle = match;
+                                    this.printerName = settings.printerName;
+                                    this.printerStatus = 'connected';
+                                }
+                            }).catch(() => {});
+                        }
+                    } catch(e) {}
+                },
+
+                async connectUsb() {
+                    if (!navigator.usb) {
+                        Swal.fire({ icon: 'error', title: 'Tidak Didukung', text: 'Browser tidak mendukung WebUSB. Gunakan Chrome/Edge.', background: '#1e293b', color: '#f8fafc' });
+                        return;
+                    }
+                    try {
+                        this.printerStatus = 'connecting';
+                        const device = await navigator.usb.requestDevice({ filters: [] });
+                        this.printerHandle = device;
+                        this.printerName = device.productName || 'USB Thermal Printer';
+                        this.printerStatus = 'connected';
+
+                        const s = JSON.parse(localStorage.getItem('pos_printer_settings') || '{}');
+                        s.connectionMethod = 'usb_direct';
+                        s.printerName = this.printerName;
+                        localStorage.setItem('pos_printer_settings', JSON.stringify(s));
+
+                        Swal.fire({ icon: 'success', title: 'Terhubung', text: 'USB Printer: ' + this.printerName, background: '#1e293b', color: '#f8fafc' });
+                    } catch (e) {
+                        this.printerStatus = 'disconnected';
+                        if (e.name !== 'NotFoundError') {
+                            console.error('USB Connect Error:', e);
+                        }
+                    }
+                },
+
+                disconnectPrinter() {
+                    this.printerHandle = null;
+                    this.printerName = '';
+                    this.printerStatus = 'disconnected';
+                },
+
+                async testDrawer() {
+                    if (!this.printerHandle) {
+                        Swal.fire({ icon: 'warning', title: 'Belum Terhubung', text: 'Hubungkan printer USB terlebih dahulu.', background: '#1e293b', color: '#f8fafc' });
+                        return;
+                    }
+
+                    const result = await Swal.fire({
+                        title: 'Testing Cash Drawer...',
+                        text: 'Pastikan drawer tersambung ke printer via RJ11',
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Trigger Pulse',
+                        confirmButtonColor: '#4f46e5',
+                        cancelButtonColor: '#334155',
+                        background: '#1e293b',
+                        color: '#f8fafc'
                     });
+
+                    if (!result.isConfirmed) return;
+
+                    try {
+                        const device = this.printerHandle;
+                        if (!device.opened) await device.open();
+                        await device.selectConfiguration(1);
+
+                        let ifaceNum = -1, epOut = -1;
+                        for (const iface of device.configuration.interfaces) {
+                            for (const alt of iface.alternates) {
+                                if (alt.interfaceClass === 7) {
+                                    ifaceNum = iface.interfaceNumber;
+                                    for (const ep of alt.endpoints) {
+                                        if (ep.direction === 'out') { epOut = ep.endpointNumber; break; }
+                                    }
+                                }
+                            }
+                            if (ifaceNum !== -1 && epOut !== -1) break;
+                        }
+                        if (ifaceNum === -1 || epOut === -1) {
+                            for (const iface of device.configuration.interfaces) {
+                                for (const alt of iface.alternates) {
+                                    for (const ep of alt.endpoints) {
+                                        if (ep.direction === 'out') {
+                                            ifaceNum = iface.interfaceNumber;
+                                            epOut = ep.endpointNumber;
+                                            break;
+                                        }
+                                    }
+                                    if (ifaceNum !== -1) break;
+                                }
+                                if (ifaceNum !== -1) break;
+                            }
+                        }
+                        if (ifaceNum === -1 || epOut === -1) throw new Error('Tidak menemukan endpoint printer.');
+
+                        await device.claimInterface(ifaceNum);
+                        const drawerCmd = new Uint8Array([0x1B, 0x70, this.pulsePin, 0x19, 0xFA]);
+                        await device.transferOut(epOut, drawerCmd);
+                        await device.releaseInterface(ifaceNum);
+                        await device.close();
+
+                        Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Sinyal pulse dikirim ke laci. Pin: ' + this.pulsePin, background: '#1e293b', color: '#f8fafc' });
+                    } catch (e) {
+                        console.error('Drawer Kick Error:', e);
+                        Swal.fire({ icon: 'error', title: 'Gagal!', text: 'Error: ' + e.message, background: '#1e293b', color: '#f8fafc' });
+                    }
                 }
-            });
-        }
+            }));
+        });
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('deliveryPresets', () => ({
