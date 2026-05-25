@@ -12,20 +12,20 @@
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Omset Hari Ini</p>
             <p class="text-lg font-black text-emerald-400">Rp {{ number_format($todayTotalSales, 0, ',', '.') }}</p>
         </div>
-        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                <i class="fas fa-wallet text-xl"></i>
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 hover:bg-slate-800/60 transition-all shadow-sm flex items-center gap-2 md:gap-4">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                <i class="fas fa-wallet text-lg md:text-xl"></i>
             </div>
-            <div>
+            <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Biaya</p>
-                <p class="text-xl font-black text-red-400 leading-none mb-2">Rp {{ number_format($todayExpenses, 0, ',', '.') }}</p>
+                <p class="text-base md:text-xl font-black text-red-400 leading-none mb-2 truncate">Rp {{ number_format($todayExpenses, 0, ',', '.') }}</p>
                 <div class="space-y-0.5">
-                    <div class="flex items-center gap-1.5 text-[9px] truncate">
+                    <div class="flex items-center gap-1.5 text-[8px] md:text-[9px] truncate">
                         <i class="fas fa-money-bill-wave text-emerald-400 w-3 text-center"></i>
                         <span class="text-slate-500 font-semibold">Tunai:</span>
                         <span class="font-bold text-slate-300">Rp {{ number_format($todayCashExpense, 0, ',', '.') }}</span>
                     </div>
-                    <div class="flex items-center gap-1.5 text-[9px] truncate">
+                    <div class="flex items-center gap-1.5 text-[8px] md:text-[9px] truncate">
                         <i class="fas fa-university text-blue-400 w-3 text-center"></i>
                         <span class="text-slate-500 font-semibold">Bank:</span>
                         <span class="font-bold text-slate-300">Rp {{ number_format($todayBankExpense, 0, ',', '.') }}</span>

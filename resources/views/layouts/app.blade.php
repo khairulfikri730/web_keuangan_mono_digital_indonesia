@@ -479,7 +479,7 @@
     {{-- Main Content --}}
     <div class="flex-1 min-w-0 lg:ml-64 min-h-screen flex flex-col">
         {{-- Topbar --}}
-        <header class="sticky top-0 z-[100] topbar-bg backdrop-blur-md border-b px-6 py-4 flex items-center justify-between">
+        <header class="fixed top-0 right-0 left-0 lg:left-64 z-[100] topbar-bg backdrop-blur-md border-b px-6 py-4 flex items-center justify-between transition-all">
             <div class="flex items-center gap-4">
                 <button @click="sidebarOpen = true" class="lg:hidden text-slate-400 hover:text-white transition-colors">
                     <i class="fas fa-bars-staggered text-xl"></i>
@@ -614,7 +614,7 @@
         </div>
 
         {{-- Page Content --}}
-        <main class="flex-1 min-w-0 px-6 pb-8 pt-4">
+        <main class="flex-1 min-w-0 px-4 sm:px-6 pb-8 pt-24">
             {{-- Big Worksheet Selector --}}
             {{-- Big Worksheet Selector --}}
             @if(auth()->user()->isOwner() || (isset($userWorksheets) && $userWorksheets->count() > 0))
@@ -671,16 +671,16 @@
                         
                         {{-- Action Buttons --}}
                         @if(auth()->user()->isOwner())
-                        <div class="flex items-center gap-2 shrink-0">
+                        <div class="flex items-center gap-1.5 shrink-0">
                             {{-- Add --}}
-                            <button x-data @click="$dispatch('open-modal', 'add-worksheet')" class="w-[50px] h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Tambah Worksheet">
-                                <i class="fas fa-plus text-lg"></i>
+                            <button x-data @click="$dispatch('open-modal', 'add-worksheet')" class="w-10 h-10 md:w-[50px] md:h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Tambah Worksheet">
+                                <i class="fas fa-plus md:text-lg text-sm"></i>
                             </button>
                             
                             @if($activeWorksheet)
                                 {{-- Edit --}}
-                                <button x-data @click="$dispatch('open-modal', 'edit-worksheet-{{ $activeWorksheet->id }}')" class="w-[50px] h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Edit Worksheet">
-                                    <i class="fas fa-pen text-lg"></i>
+                                <button x-data @click="$dispatch('open-modal', 'edit-worksheet-{{ $activeWorksheet->id }}')" class="w-10 h-10 md:w-[50px] md:h-[50px] rounded-xl border border-emerald-500/50 hover:border-emerald-400 text-emerald-400 bg-[#111827] flex items-center justify-center transition-all shadow-inner focus:outline-none" title="Edit Worksheet">
+                                    <i class="fas fa-pen md:text-lg text-sm"></i>
                                 </button>
                                 
                                 {{-- Delete --}}
@@ -699,8 +699,8 @@
                                             }).then((result) => {
                                                 if (result.isConfirmed) document.getElementById('form-delete-worksheet').submit();
                                             })"
-                                            class="w-[50px] h-[50px] rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-md shadow-red-500/20" title="Hapus Worksheet">
-                                        <i class="fas fa-trash text-lg"></i>
+                                            class="w-10 h-10 md:w-[50px] md:h-[50px] rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-md shadow-red-500/20" title="Hapus Worksheet">
+                                        <i class="fas fa-trash md:text-lg text-sm"></i>
                                     </button>
                                 </form>
                             @endif

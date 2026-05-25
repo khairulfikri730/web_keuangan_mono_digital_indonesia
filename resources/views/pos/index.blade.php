@@ -19,7 +19,7 @@
 <div x-data="posApp()" class="pos-height flex flex-col lg:flex-row bg-slate-900 -mx-6 -mt-4 text-slate-200 font-sans">
     
     {{-- MAIN CONTENT (TENGAH) --}}
-    <div class="flex-1 flex flex-col h-full bg-slate-900 border-r border-white/5 p-4 lg:p-6">
+    <div class="flex-1 flex flex-col h-full bg-slate-900 border-r border-white/5 p-4 pb-24 lg:p-6">
         
         {{-- HEADER BAR --}}
         <div class="flex items-center gap-4 mb-4 bg-slate-800 p-3 rounded-2xl shadow-sm border border-white/10 shrink-0">
@@ -206,11 +206,27 @@
         </div>
     </div>
 
+    {{-- MOBILE FLOATING BOTTOM BAR (Trigger Cart) --}}
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-emerald-600 text-white p-4 z-40 flex justify-between items-center rounded-t-2xl shadow-[0_-10px_30px_rgba(0,0,0,0.3)] transition-transform duration-300"
+         :class="mobileCartOpen ? 'translate-y-full' : 'translate-y-0'">
+        <div class="flex flex-col">
+            <span class="text-[10px] font-bold bg-emerald-500 rounded-full px-2 py-0.5 inline-block w-max mb-1 shadow-sm" x-text="(activeWorksheet ? activeWorksheet.cart.reduce((a,b)=>a+b.quantity, 0) : 0) + ' Item'"></span>
+            <div class="font-black text-lg" x-text="fmt(total)"></div>
+        </div>
+        <button @click="mobileCartOpen = true" class="bg-white text-emerald-600 hover:bg-slate-100 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-colors text-sm">
+            Lihat Pesanan <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
     {{-- RIGHT PANEL: ORDER PANEL (CLEAN & TIDY) --}}
-    <div class="w-full lg:w-[420px] flex flex-col bg-slate-800 shadow-[-10px_0_30px_rgba(0,0,0,0.2)] z-10 h-full border-l border-white/5 shrink-0 overflow-hidden">
+    <div class="fixed inset-y-0 right-0 w-full md:w-[420px] lg:static lg:w-[420px] flex flex-col bg-slate-800 shadow-[-10px_0_30px_rgba(0,0,0,0.2)] z-50 h-full border-l border-white/5 shrink-0 overflow-hidden transition-transform duration-300"
+         :class="mobileCartOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'">
         
         {{-- PANEL HEADER --}}
-        <div class="p-6 border-b border-white/10 bg-slate-800 shrink-0">
+        <div class="p-6 border-b border-white/10 bg-slate-800 shrink-0 relative">
+            <button @click="mobileCartOpen = false" class="lg:hidden absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-slate-700 text-white rounded-full hover:bg-slate-600 transition-colors shadow-sm">
+                <i class="fas fa-times"></i>
+            </button>
             <div class="flex justify-between items-start mb-1">
                 <h3 class="text-lg font-black text-white tracking-tight">Pesanan Saat Ini</h3>
                 <div class="flex gap-2">
@@ -1610,6 +1626,7 @@ function closeCashOut() {
             activeCategory: '',
             viewMode: 'grid',
             cartView: 'active',
+            mobileCartOpen: false,
             showGroupManagerModal: false,
             posGroups: @json($posGroups),
             // Drag & Drop Layout Editor States
