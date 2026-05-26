@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('content')
 <div class="p-6 sm:p-10 min-h-screen bg-[#0f172a]" x-data="{ 
@@ -30,7 +30,7 @@
                 @forelse($categories->where('parent_category', $cat) as $item)
                 <div class="group flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-{{ $color }}-500/30 transition-all">
                     <span class="text-sm font-bold text-slate-300 group-hover:text-white">{{ $item->name }}</span>
-                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
                         <button @click="editData = { id: '{{ $item->id }}', name: '{{ $item->name }}', parent_category: '{{ $item->parent_category }}' }; showEditModal = true" 
                                 class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-blue-400 flex items-center justify-center transition-all">
                             <i class="fas fa-edit text-[10px]"></i>

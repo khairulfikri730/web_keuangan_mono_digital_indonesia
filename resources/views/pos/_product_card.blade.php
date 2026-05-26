@@ -24,7 +24,7 @@
 
     {{-- Image / Placeholder --}}
     <div :class="viewMode === 'grid' ? 'h-40 w-full' : 'h-20 w-20 rounded-xl'" class="relative overflow-hidden shrink-0 z-10"
-         :style="`background: linear-gradient(135deg, ${adjustBrightness(p.category?.color || (p.is_stockless ? '#e0e7ff' : '#f1f5f9'), 20)} 0%, ${p.category?.color || (p.is_stockless ? '#c7d2fe' : '#f1f5f9')} 100%);` font-weight: 100;">
+         :style="`background: linear-gradient(135deg, ${adjustBrightness(p.category?.color || (p.is_stockless ? '#e0e7ff' : '#f1f5f9'), 20)} 0%, ${p.category?.color || (p.is_stockless ? '#c7d2fe' : '#f1f5f9')} 100%); font-weight: 100;`">
         <template x-if="p.image">
             <img :src="'/storage/'+p.image" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 relative z-10">
         </template>

@@ -378,7 +378,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <label class="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded-xl cursor-pointer hover:border-teal-500/50 transition-all">
                         <div><span class="text-xs font-bold text-slate-200">Wajib Approve Tutup Shift</span><p class="text-[9px] text-slate-500">Kasir lapor, Owner approve</p></div>
-                        <input type="hidden" name="shift_approval_required" value="0"><input type="checkbox" name="shift_approval_required" value="1" class="sr-only peer" {{ ($settings['shift_approval_required'] ?? '0') == '1' ? 'checked' : '' }}><div class="w-10 h-5 bg-slate-700 rounded-full peer-checked:bg-teal-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 relative shrink-0 ml-2"></div>
+                        <input type="hidden" name="shift_approval_required" value="0"><input type="checkbox" name="shift_approval_required" value="1" class="sr-only peer" {{ ($settings['shift_approval_required'] ?? '1') == '1' ? 'checked' : '' }}><div class="w-10 h-5 bg-slate-700 rounded-full peer-checked:bg-teal-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 relative shrink-0 ml-2"></div>
                     </label>
                 </div>
             </div>

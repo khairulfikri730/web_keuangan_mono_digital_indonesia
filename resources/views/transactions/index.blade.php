@@ -343,7 +343,11 @@
                                         <button onclick="document.getElementById('detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Detail"><i class="fas fa-eye text-xs"></i></button>
                                         {{-- Pelunasan --}}
                                         @if($isPending)
-                                            <button onclick="document.getElementById('pay-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 flex items-center justify-center transition-all" title="Pelunasan Piutang"><i class="fas fa-hand-holding-dollar text-xs"></i></button>
+                                            @if($activeShift && $activeShift->status === 'open')
+                                                <button onclick="document.getElementById('pay-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 flex items-center justify-center transition-all" title="Pelunasan Piutang"><i class="fas fa-hand-holding-dollar text-xs"></i></button>
+                                            @else
+                                                <button type="button" onclick="Swal.fire({icon: 'error', title: 'Akses Ditolak', text: 'Anda harus membuka shift kasir terlebih dahulu untuk melakukan pelunasan piutang.', background: '#1e293b', color: '#f8fafc', confirmButtonColor: '#3b82f6'})" class="w-8 h-8 rounded-lg bg-orange-500/5 hover:bg-orange-500/10 text-orange-400/50 cursor-not-allowed flex items-center justify-center transition-all" title="Buka shift untuk pelunasan"><i class="fas fa-hand-holding-dollar text-xs"></i></button>
+                                            @endif
                                         @endif
                                         {{-- Edit --}}
                                         @if(!$isCancelled && auth()->user()->hasPermission('transactions.edit'))
@@ -381,159 +385,6 @@
                                     </div>
                                 </td>
                             </tr>
-                            
-                            {{-- Detail Transaksi Modal (Santai Scale Style) --}}
-                            <div id="detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto max-h-[90vh] overflow-y-auto scrollbar-hide ">
-                                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
-                                        <h3 class="text-lg font-black text-slate-800">Detail Transaksi</h3>
-                                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
-                                    </div>
-                                    <div class="p-5 space-y-4">
-                                        {{-- Product list --}}
-                                        @foreach($model->items as $item)
-                                        <div class="flex justify-between text-sm">
-                                            <div>
-                                                <div class="flex items-center gap-1.5">
-                                                    <p class="font-bold text-slate-800">{{ $item->product_name }}</p>
-                                                    @if($item->is_custom_price)
-                                                        <span class="bg-orange-100 text-orange-600 border border-orange-200 text-[8px] font-black px-1.5 py-0.5 rounded uppercase" title="Harga Khusus">Khusus</span>
-                                                    @endif
-                                                </div>
-                                                <p class="text-slate-400 text-xs">{{ $item->quantity }}x @ Rp {{ number_format($item->is_custom_price ? $item->custom_price : $item->price, 0, ',', '.') }}</p>
-                                            </div>
-                                            <p class="font-bold text-slate-700">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</p>
-                                        </div>
-                                        @endforeach
-
-                                        <hr class="border-slate-100">
-
-                                        {{-- Info rows --}}
-                                        <div class="space-y-2 text-sm">
-                                            <div class="flex justify-between"><span class="text-slate-500">No. Pesanan</span><span class="font-bold text-slate-700">{{ $model->invoice_number }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->created_at->translatedFormat('d F Y') }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->created_at->format('H:i') }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Kasir</span><span class="font-bold text-slate-700">{{ $model->user->name }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Pembayaran</span><span class="font-bold text-slate-700">{{ ucfirst($model->payment_method) }}</span></div>
-                                            @if($model->payment_method === 'piutang')
-                                            <div class="flex justify-between"><span class="text-slate-500">Status</span>
-                                                @if($isPending)<span class="font-bold text-orange-500">Belum Lunas</span>
-                                                @else<span class="font-bold text-emerald-500">Lunas</span>@endif
-                                            </div>
-                                            @if($model->paid_so_far > 0)
-                                            <div class="flex justify-between"><span class="text-slate-500">DP Dibayar</span><span class="font-bold text-slate-700">Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span></div>
-                                            @endif
-                                            @endif
-                                        </div>
-
-                                        <hr class="border-slate-100">
-
-                                        {{-- Totals --}}
-                                        <div class="space-y-2 text-sm">
-                                            @if($model->delivery_fee > 0)
-                                            <div class="flex justify-between"><span class="text-slate-500">Ongkir{{ $model->delivery_destination ? ' (' . $model->delivery_destination . ')' : '' }}</span><span class="font-medium text-slate-700">Rp {{ number_format($model->delivery_fee, 0, ',', '.') }}</span></div>
-                                            @endif
-                                            <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span class="font-medium text-slate-700">Rp {{ number_format($model->subtotal, 0, ',', '.') }}</span></div>
-                                            @if($model->discount > 0)
-                                            <div class="flex justify-between"><span class="text-slate-500">Diskon</span><span class="font-medium text-red-500">-Rp {{ number_format($model->discount, 0, ',', '.') }}</span></div>
-                                            @endif
-                                            @if($model->tax > 0)
-                                            <div class="flex justify-between"><span class="text-slate-500">Pajak</span><span class="font-medium text-slate-700">Rp {{ number_format($model->tax, 0, ',', '.') }}</span></div>
-                                            @endif
-                                        </div>
-
-                                        <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-                                            <span class="font-black text-slate-700">Total</span>
-                                            <span class="text-xl font-black text-emerald-600">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
-                                        </div>
-
-                                        {{-- Action buttons --}}
-                                        <div class="flex gap-3 pt-2">
-                                            <button @click="doPrint('{{ $model->id }}')" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all text-center text-sm flex items-center justify-center gap-2">
-                                                <i class="fas fa-print"></i> Cetak Struk
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Piutang Payment Modal (Santai Scale Style) --}}
-                            @if($isPending)
-                            <div id="pay-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" 
-                                 x-data="{ 
-                                    pelunasanMethod: 'cash', 
-                                    pelunasanAmount: {{ $model->remaining }},
-                                    get kembalian() { return Math.max(0, this.pelunasanAmount - {{ $model->remaining }}) }
-                                 }">
-                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto max-h-[90vh] overflow-y-auto scrollbar-hide ">
-                                    {{-- Header --}}
-                                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
-                                        <h3 class="text-lg font-black text-slate-800">Detail Pelunasan</h3>
-                                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
-                                    </div>
-
-                                    <form action="{{ route('transactions.pay', $model) }}" method="POST">
-                                        @csrf
-                                        <div class="p-5 space-y-5">
-                                            {{-- Summary --}}
-                                            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2 text-sm">
-                                                <div class="flex justify-between">
-                                                    <span class="text-slate-500 font-medium">Total Nilai Pesanan:</span>
-                                                    <span class="font-bold text-slate-800">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-slate-500 font-medium">Uang Muka (DP) Dibayar:</span>
-                                                    <span class="font-bold text-red-500">- Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span>
-                                                </div>
-                                            </div>
-
-                                            {{-- Nominal Pelunasan --}}
-                                            <div class="bg-red-50 border-2 border-red-100 rounded-2xl p-5 text-center">
-                                                <p class="text-xs font-black text-red-600 uppercase tracking-wider mb-1">Nominal Pelunasan:</p>
-                                                <p class="text-3xl font-black text-red-600 tracking-tight">Rp {{ number_format($model->remaining, 0, ',', '.') }}</p>
-                                            </div>
-
-                                            {{-- Metode Pelunasan --}}
-                                            <div>
-                                                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Metode Pelunasan</label>
-                                                <div class="flex gap-2">
-                                                    <button type="button" @click="pelunasanMethod = 'cash'" 
-                                                        :class="pelunasanMethod === 'cash' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
-                                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Tunai</button>
-                                                    <button type="button" @click="pelunasanMethod = 'qris'" 
-                                                        :class="pelunasanMethod === 'qris' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
-                                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">QRIS</button>
-                                                    <button type="button" @click="pelunasanMethod = 'transfer'" 
-                                                        :class="pelunasanMethod === 'transfer' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
-                                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Transfer</button>
-                                                </div>
-                                                <input type="hidden" name="payment_method" :value="pelunasanMethod">
-                                            </div>
-
-                                            {{-- Jumlah Uang Diterima --}}
-                                            <div>
-                                                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-2 block">Jumlah Uang Diterima</label>
-                                                <input type="number" name="amount" x-model.number="pelunasanAmount" min="1" max="{{ $model->remaining }}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-lg font-black text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors" required>
-                                            </div>
-
-                                            {{-- Kembalian --}}
-                                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100" x-show="pelunasanMethod === 'cash'">
-                                                <span class="text-sm font-bold text-slate-500">Kembalian:</span>
-                                                <span class="text-xl font-black text-emerald-600 tracking-tight" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(kembalian)"></span>
-                                            </div>
-
-                                            {{-- Catatan --}}
-                                            <input type="text" name="notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 transition-colors" placeholder="Catatan (opsional)">
-
-                                            {{-- Button --}}
-                                            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
-                                                <i class="fas fa-check-circle"></i> Konfirmasi Pelunasan
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                            @endif
                         @elseif($entryType === 'expense')
                             @php
                                 $isBankExpense = in_array($model->source, ['pos_bank', 'transfer', 'bank']);
@@ -568,61 +419,8 @@
                                     </div>
                                 </td>
                             </tr>
-
-                            {{-- Expense Detail Modal --}}
-                            <div id="expense-detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto scrollbar-hide">
-                                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
-                                        <h3 class="text-lg font-black text-slate-800">Detail Pengeluaran</h3>
-                                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
-                                    </div>
-                                    <div class="p-5 space-y-4">
-                                        @php
-                                            $expLabels = \App\Models\Cashflow::sourceLabels();
-                                            $expSourceLabel = $expLabels[$model->source] ?? ucfirst($model->source ?? '-');
-                                            $expIsBank = in_array($model->source, ['pos_bank', 'transfer', 'bank']);
-                                        @endphp
-
-                                        <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-                                            <span class="font-black text-slate-700">Nominal</span>
-                                            <span class="text-xl font-black text-red-600">-Rp {{ number_format($model->amount, 0, ',', '.') }}</span>
-                                        </div>
-
-                                        <div class="space-y-2 text-sm">
-                                            <div class="flex justify-between">
-                                                <span class="text-slate-500">Tipe</span>
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase {{ $expIsBank ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20' }}">
-                                                    {{ $expIsBank ? 'EXP. BANK' : 'EXP. TUNAI' }}
-                                                </span>
-                                            </div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->translatedFormat('d F Y') : '-' }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->format('H:i') : ($model->created_at ? $model->created_at->format('H:i') : '-') }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Kategori</span><span class="font-bold text-slate-700">{{ $model->category ?: '-' }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Sumber Dana</span><span class="font-bold text-slate-700">{{ $expSourceLabel }}</span></div>
-                                            <div class="flex justify-between"><span class="text-slate-500">Petugas</span><span class="font-bold text-slate-700">{{ $model->user->name ?? '-' }}</span></div>
-                                            @if($model->description)
-                                            <div class="flex justify-between"><span class="text-slate-500">Deskripsi</span><span class="font-bold text-slate-700 text-right ml-2">{{ $model->description }}</span></div>
-                                            @endif
-                                            @if($model->notes)
-                                            <div class="flex justify-between"><span class="text-slate-500">Catatan</span><span class="font-bold text-slate-700 text-right ml-2">{{ $model->notes }}</span></div>
-                                            @endif
-                                            @if($model->worksheet)
-                                            <div class="flex justify-between"><span class="text-slate-500">Cabang</span><span class="font-bold text-slate-700">{{ $model->worksheet->name }}</span></div>
-                                            @endif
-                                            @if($model->reference)
-                                            <div class="flex justify-between"><span class="text-slate-500">Referensi</span><span class="font-bold text-slate-700">{{ $model->reference }}</span></div>
-                                            @endif
-                                        </div>
-
-                                        <div class="flex gap-3 pt-2">
-                                            <button onclick="this.closest('.fixed').classList.add('hidden')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-all text-center text-sm">
-                                                Tutup
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         @endif
+
                     @empty
                         <tr>
                             <td colspan="10" class="py-12 text-center">
@@ -638,6 +436,229 @@
             </table>
         </div>
     </div>
+
+    {{-- Render Modals Outside Table to avoid Invalid HTML parsing issues --}}
+    @foreach($transactions as $entry)
+        @php
+            $entryType = $entry->type;
+            $model = $entry->model;
+        @endphp
+
+        @if($entryType === 'penjualan')
+            @php
+                $isPending = $model->status === 'pending';
+                $isCancelled = $model->status === 'cancelled';
+                $isLunas = $model->status === 'completed' && $model->payment_method === 'piutang';
+            @endphp
+            {{-- Detail Transaksi Modal (Santai Scale Style) --}}
+            <div id="detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto max-h-[90vh] overflow-y-auto scrollbar-hide ">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                        <h3 class="text-lg font-black text-slate-800">Detail Transaksi</h3>
+                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        {{-- Product list --}}
+                        @foreach($model->items as $item)
+                        <div class="flex justify-between text-sm">
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <p class="font-bold text-slate-800">{{ $item->product_name }}</p>
+                                    @if($item->is_custom_price)
+                                        <span class="bg-orange-100 text-orange-600 border border-orange-200 text-[8px] font-black px-1.5 py-0.5 rounded uppercase" title="Harga Khusus">Khusus</span>
+                                    @endif
+                                </div>
+                                <p class="text-slate-400 text-xs">{{ $item->quantity }}x @ Rp {{ number_format($item->is_custom_price ? $item->custom_price : $item->price, 0, ',', '.') }}</p>
+                            </div>
+                            <p class="font-bold text-slate-700">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</p>
+                        </div>
+                        @endforeach
+
+                        <hr class="border-slate-100">
+
+                        {{-- Info rows --}}
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between"><span class="text-slate-500">No. Pesanan</span><span class="font-bold text-slate-700">{{ $model->invoice_number }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->created_at->translatedFormat('d F Y') }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->created_at->format('H:i') }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Kasir</span><span class="font-bold text-slate-700">{{ $model->user->name }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Pembayaran</span><span class="font-bold text-slate-700">{{ ucfirst($model->payment_method) }}</span></div>
+                            @if($model->payment_method === 'piutang')
+                            <div class="flex justify-between"><span class="text-slate-500">Status</span>
+                                @if($isPending)<span class="font-bold text-orange-500">Belum Lunas</span>
+                                @else<span class="font-bold text-emerald-500">Lunas</span>@endif
+                            </div>
+                            @if($model->paid_so_far > 0)
+                            <div class="flex justify-between"><span class="text-slate-500">DP Dibayar</span><span class="font-bold text-slate-700">Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span></div>
+                            @endif
+                            @endif
+                        </div>
+
+                        <hr class="border-slate-100">
+
+                        {{-- Totals --}}
+                        <div class="space-y-2 text-sm">
+                            @if($model->delivery_fee > 0)
+                            <div class="flex justify-between"><span class="text-slate-500">Ongkir{{ $model->delivery_destination ? ' (' . $model->delivery_destination . ')' : '' }}</span><span class="font-medium text-slate-700">Rp {{ number_format($model->delivery_fee, 0, ',', '.') }}</span></div>
+                            @endif
+                            <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span class="font-medium text-slate-700">Rp {{ number_format($model->subtotal, 0, ',', '.') }}</span></div>
+                            @if($model->discount > 0)
+                            <div class="flex justify-between"><span class="text-slate-500">Diskon</span><span class="font-medium text-red-500">-Rp {{ number_format($model->discount, 0, ',', '.') }}</span></div>
+                            @endif
+                            @if($model->tax > 0)
+                            <div class="flex justify-between"><span class="text-slate-500">Pajak</span><span class="font-medium text-slate-700">Rp {{ number_format($model->tax, 0, ',', '.') }}</span></div>
+                            @endif
+                        </div>
+
+                        <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+                            <span class="font-black text-slate-700">Total</span>
+                            <span class="text-xl font-black text-emerald-600">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
+                        </div>
+
+                        {{-- Action buttons --}}
+                        <div class="flex gap-3 pt-2">
+                            <button @click="doPrint('{{ $model->id }}')" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all text-center text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-print"></i> Cetak Struk
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Piutang Payment Modal (Santai Scale Style) --}}
+            @if($isPending)
+            <div id="pay-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" 
+                 x-data="{ 
+                    pelunasanMethod: 'cash', 
+                    pelunasanAmount: {{ $model->remaining }},
+                    get kembalian() { return Math.max(0, this.pelunasanAmount - {{ $model->remaining }}) }
+                 }">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto max-h-[90vh] overflow-y-auto scrollbar-hide ">
+                    {{-- Header --}}
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                        <h3 class="text-lg font-black text-slate-800">Detail Pelunasan</h3>
+                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <form action="{{ route('transactions.pay', $model) }}" method="POST">
+                        @csrf
+                        <div class="p-5 space-y-5">
+                            {{-- Summary --}}
+                            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500 font-medium">Total Nilai Pesanan:</span>
+                                    <span class="font-bold text-slate-800">Rp {{ number_format($model->total, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500 font-medium">Uang Muka (DP) Dibayar:</span>
+                                    <span class="font-bold text-red-500">- Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span>
+                                </div>
+                            </div>
+
+                            {{-- Nominal Pelunasan --}}
+                            <div class="bg-red-50 border-2 border-red-100 rounded-2xl p-5 text-center">
+                                <p class="text-xs font-black text-red-600 uppercase tracking-wider mb-1">Nominal Pelunasan:</p>
+                                <p class="text-3xl font-black text-red-600 tracking-tight">Rp {{ number_format($model->remaining, 0, ',', '.') }}</p>
+                            </div>
+
+                            {{-- Metode Pelunasan --}}
+                            <div>
+                                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 block">Metode Pelunasan</label>
+                                <div class="flex gap-2">
+                                    <button type="button" @click="pelunasanMethod = 'cash'" 
+                                        :class="pelunasanMethod === 'cash' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
+                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Tunai</button>
+                                    <button type="button" @click="pelunasanMethod = 'qris'" 
+                                        :class="pelunasanMethod === 'qris' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
+                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">QRIS</button>
+                                    <button type="button" @click="pelunasanMethod = 'transfer'" 
+                                        :class="pelunasanMethod === 'transfer' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'"
+                                        class="flex-1 py-2.5 px-3 border-2 rounded-xl text-sm font-bold transition-all">Transfer</button>
+                                </div>
+                                <input type="hidden" name="payment_method" :value="pelunasanMethod">
+                            </div>
+
+                            {{-- Jumlah Uang Diterima --}}
+                            <div>
+                                <label class="text-xs font-black text-slate-600 uppercase tracking-wider mb-2 block">Jumlah Uang Diterima</label>
+                                <input type="number" name="amount" x-model.number="pelunasanAmount" min="1" max="{{ $model->remaining }}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-lg font-black text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors" required>
+                            </div>
+
+                            {{-- Kembalian --}}
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100" x-show="pelunasanMethod === 'cash'">
+                                <span class="text-sm font-bold text-slate-500">Kembalian:</span>
+                                <span class="text-xl font-black text-emerald-600 tracking-tight" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(kembalian)"></span>
+                            </div>
+
+                            {{-- Catatan --}}
+                            <input type="text" name="notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 transition-colors" placeholder="Catatan (opsional)">
+
+                            {{-- Button --}}
+                            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
+                                <i class="fas fa-check-circle"></i> Konfirmasi Pelunasan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @endif
+        @elseif($entryType === 'expense')
+            {{-- Expense Detail Modal --}}
+            <div id="expense-detail-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto scrollbar-hide">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                        <h3 class="text-lg font-black text-slate-800">Detail Pengeluaran</h3>
+                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        @php
+                            $expLabels = \App\Models\Cashflow::sourceLabels();
+                            $expSourceLabel = $expLabels[$model->source] ?? ucfirst($model->source ?? '-');
+                            $expIsBank = in_array($model->source, ['pos_bank', 'transfer', 'bank']);
+                        @endphp
+
+                        <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+                            <span class="font-black text-slate-700">Nominal</span>
+                            <span class="text-xl font-black text-red-600">-Rp {{ number_format($model->amount, 0, ',', '.') }}</span>
+                        </div>
+
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Tipe</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase {{ $expIsBank ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20' }}">
+                                    {{ $expIsBank ? 'EXP. BANK' : 'EXP. TUNAI' }}
+                                </span>
+                            </div>
+                            <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->translatedFormat('d F Y') : '-' }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->format('H:i') : ($model->created_at ? $model->created_at->format('H:i') : '-') }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Kategori</span><span class="font-bold text-slate-700">{{ $model->category ?: '-' }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Sumber Dana</span><span class="font-bold text-slate-700">{{ $expSourceLabel }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Petugas</span><span class="font-bold text-slate-700">{{ $model->user->name ?? '-' }}</span></div>
+                            @if($model->description)
+                            <div class="flex justify-between"><span class="text-slate-500">Deskripsi</span><span class="font-bold text-slate-700 text-right ml-2">{{ $model->description }}</span></div>
+                            @endif
+                            @if($model->notes)
+                            <div class="flex justify-between"><span class="text-slate-500">Catatan</span><span class="font-bold text-slate-700 text-right ml-2">{{ $model->notes }}</span></div>
+                            @endif
+                            @if($model->worksheet)
+                            <div class="flex justify-between"><span class="text-slate-500">Cabang</span><span class="font-bold text-slate-700">{{ $model->worksheet->name }}</span></div>
+                            @endif
+                            @if($model->reference)
+                            <div class="flex justify-between"><span class="text-slate-500">Referensi</span><span class="font-bold text-slate-700">{{ $model->reference }}</span></div>
+                            @endif
+                        </div>
+
+                        <div class="flex gap-3 pt-2">
+                            <button onclick="this.closest('.fixed').classList.add('hidden')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-all text-center text-sm">
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+    @endforeach
+
 
     {{-- Pagination --}}
     @if($transactions->hasPages())

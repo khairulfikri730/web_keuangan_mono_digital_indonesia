@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — KasirPro</title>
+    <title>Login — FINANCE MONO</title>
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -14,11 +15,11 @@
     <div class="w-full max-w-md">
         {{-- Logo --}}
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-xl shadow-blue-500/30">
-                <i class="fas fa-cash-register text-white text-2xl"></i>
+            <div class="inline-flex items-center justify-center mb-4">
+                <img src="{{ asset('logo.png') }}?v={{ time() }}" alt="FINANCE MONO" class="w-20 h-20 object-contain drop-shadow-xl">
             </div>
-            <h1 class="text-2xl font-bold text-white">KasirPro</h1>
-            <p class="text-slate-400 text-sm mt-1">Sistem Kasir & Manajemen Bisnis</p>
+            <h1 class="text-2xl font-bold text-white uppercase tracking-wider">FINANCE MONO</h1>
+            <p class="text-blue-100 font-medium text-sm mt-1.5 drop-shadow">Sistem Kasir & Manajemen Bisnis</p>
         </div>
 
         {{-- Card --}}
@@ -68,27 +69,11 @@
                     </a>
                 </div>
             </form>
-
-            <div class="mt-6 pt-5 border-t border-slate-700 space-y-1">
-                <p class="text-xs text-slate-500 text-center mb-3">Demo Credentials</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="fillLogin('monoframestudio01@gmail.com')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-crown text-yellow-400 mr-1"></i>Owner
-                    </button>
-                    <button onclick="fillLogin('operator@kasirpro.com')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-user text-blue-400 mr-1"></i>Kasir
-                    </button>
-                </div>
-            </div>
         </div>
-        <p class="text-center text-xs text-slate-600 mt-6">© {{ date('Y') }} KasirPro. All rights reserved.</p>
+        <p class="text-center text-xs text-slate-600 mt-6">© {{ date('Y') }} monodev.id All rights reserved.</p>
     </div>
 
     <script>
-        function fillLogin(email) {
-            document.querySelector('input[name=email]').value = email;
-            document.querySelector('input[name=password]').value = 'password';
-        }
         function togglePass() {
             const p = document.getElementById('password');
             const i = document.getElementById('eyeIcon');

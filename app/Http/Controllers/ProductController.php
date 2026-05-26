@@ -246,8 +246,17 @@ class ProductController extends Controller
 
     public function export(Request $request, string $format)
     {
-        // Placeholder — install maatwebsite/excel & barryvdh/laravel-dompdf for full implementation
-        return back()->with('error', 'Fitur export ' . strtoupper($format) . ' sedang dalam pengembangan.');
+        $productType = $request->get('product_type', 'finished');
+        
+        if ($format === 'excel') {
+            return Excel::download(new \App\Exports\ProductsExport($productType), 'katalog_produk_'.$productType.'_'.date('YmdHis').'.xlsx');
+        } elseif ($format === 'pdf') {
+            $products = Product::with('category')->where('product_type', $productType)->orderBy('name')->get();
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('products.pdf', compact('products', 'productType'));
+            return $pdf->download('katalog_produk_'.$productType.'_'.date('YmdHis').'.pdf');
+        }
+
+        return back()->with('error', 'Format tidak didukung.');
     }
 
     /**

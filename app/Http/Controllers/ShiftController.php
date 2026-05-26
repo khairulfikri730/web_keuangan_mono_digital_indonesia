@@ -281,7 +281,7 @@ class ShiftController extends Controller
         $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses + $transfers;
         $discrepancy = $request->closing_cash - $expectedCash;
 
-        $approvalRequired = \App\Models\Setting::get('shift_approval_required') == '1';
+        $approvalRequired = \App\Models\Setting::get('shift_approval_required', '1') == '1';
         $isKasir = auth()->user()->isKasir();
         $newStatus = ($approvalRequired && $isKasir) ? 'pending_approval' : 'closed';
 

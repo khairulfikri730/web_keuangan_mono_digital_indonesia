@@ -50,7 +50,16 @@ class ScheduleController extends Controller
         // Stats
         $todayAssignments = ScheduleAssignment::where('date', now()->format('Y-m-d'))->count();
         $todayOpen = ScheduleAssignment::where('date', now()->format('Y-m-d'))->where('status', 'open')->count();
-        $todayClosed = ScheduleAssignment::where('date', now()->format('Y-m-d'))->where('status', 'close')->count();
+        $todayClosedDb = ScheduleAssignment::where('date', now()->format('Y-m-d'))->where('status', 'close')->count();
+        
+        $totalCapacityToday = 0;
+        foreach($locations as $loc) {
+            foreach($loc->shifts as $s) {
+                $totalCapacityToday += $s->max_crew;
+            }
+        }
+        $todayEmptySlots = max(0, $totalCapacityToday - $todayAssignments);
+        $todayClosed = $todayClosedDb + $todayEmptySlots;
         $totalShifts = ScheduleShift::count();
         $activeLocations = ScheduleLocation::where('is_active', true)->count();
 

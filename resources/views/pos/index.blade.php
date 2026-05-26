@@ -180,8 +180,8 @@
                 </div>
             </div>
             
-            {{-- CUSTOM POS GROUPS (Only show in 'All' or Category mode) --}}
-            <div class="space-y-6 w-full mb-6" x-show="!['PROMO', 'BEST SELLER'].includes(activeCategory)">
+            {{-- CUSTOM POS GROUPS (Only show in 'All' mode) --}}
+            <div class="space-y-6 w-full mb-6" x-show="activeCategory === ''">
                 <template x-for="group in posGroups" :key="'pos-group-'+group.id">
                     <div class="w-full" x-show="group.products.filter(p => filterProduct(p)).length > 0">
                         {{-- Group Header --}}
@@ -205,7 +205,7 @@
             <div class="w-full" x-show="!['PROMO', 'BEST SELLER'].includes(activeCategory) && products.filter(p => filterProduct(p)).length > 0">
                 <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-white/10 flex items-center gap-3">
                     <span class="w-3 h-3 rounded-full shadow-inner bg-slate-300"></span>
-                    <h3 class="font-black text-slate-300 text-sm uppercase tracking-widest">Semua Produk</h3>
+                    <h3 class="font-black text-slate-300 text-sm uppercase tracking-widest" x-text="activeCategory === '' ? 'Semua Produk' : (categories.find(c => c.id == activeCategory)?.name || 'Produk')"></h3>
                     <span class="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md" x-text="products.filter(p => filterProduct(p)).length + ' Item'"></span>
                 </div>
 
@@ -457,19 +457,19 @@
     <template x-teleport="body">
         <div x-show="showGroupManagerModal" x-transition x-cloak class="fixed inset-0 bg-slate-100 z-[200] flex flex-col h-screen overflow-hidden">
         {{-- HEADER MODAL --}}
-        <div class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm z-10">
-            <div class="flex items-center gap-4">
-                <button @click="closeGroupManager()" class="w-10 h-10 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-arrow-left"></i></button>
+        <div class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 shadow-sm z-10 gap-3 sm:gap-0">
+            <div class="flex items-start sm:items-center gap-3 sm:gap-4">
+                <button @click="closeGroupManager()" class="w-8 h-8 sm:w-10 sm:h-10 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors shrink-0 flex items-center justify-center mt-1 sm:mt-0"><i class="fas fa-arrow-left"></i></button>
                 <div>
-                    <h3 class="text-xl font-black text-slate-800">Edit Layout POS</h3>
-                    <p class="text-xs font-bold text-slate-500">Seret produk untuk mengatur urutan & kelompok</p>
+                    <h3 class="text-lg sm:text-xl font-black text-slate-800 leading-tight">Edit Layout POS</h3>
+                    <p class="text-[10px] sm:text-xs font-bold text-slate-500 mt-0.5 leading-tight">Seret produk untuk mengatur urutan & kelompok</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                <button @click="addNewDraftGroup()" class="px-5 py-2.5 rounded-xl font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-2">
-                    <i class="fas fa-plus"></i> Tambah Grup
+            <div class="flex items-center justify-end gap-2 sm:gap-3">
+                <button @click="addNewDraftGroup()" class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 sm:gap-2">
+                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Tambah Grup</span><span class="sm:hidden">Tambah</span>
                 </button>
-                <button @click="saveLayoutEditor()" :disabled="isSavingGroup" class="px-8 py-2.5 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center gap-2">
+                <button @click="saveLayoutEditor()" :disabled="isSavingGroup" class="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center gap-1.5 sm:gap-2">
                     <i x-show="!isSavingGroup" class="fas fa-check"></i>
                     <i x-show="isSavingGroup" class="fas fa-spinner fa-spin"></i>
                     Selesai
@@ -484,14 +484,14 @@
                 <div class="bg-white rounded-3xl border-2 shadow-sm p-5 relative transition-all" 
                      :style="`border-color: ${dragOverGroup === gIndex ? g.color : g.color+'40'}; background-color: ${g.color}05;`">
                     {{-- Group Header --}}
-                    <div class="flex items-center justify-between mb-4 border-b border-white/50 pb-3">
-                        <div class="flex items-center gap-3 w-1/3">
-                            <input type="color" x-model="g.color" class="w-8 h-8 rounded-xl cursor-pointer border-2 border-white shadow-sm p-0">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 border-b border-white/50 pb-3 gap-3 sm:gap-0">
+                        <div class="flex items-center gap-3 flex-1 sm:max-w-xs">
+                            <input type="color" x-model="g.color" class="w-8 h-8 rounded-xl cursor-pointer border-2 border-white shadow-sm p-0 shrink-0">
                             <input type="text" x-model="g.name" class="font-black text-slate-700 bg-transparent border-b border-dashed border-slate-300 focus:border-slate-500 focus:outline-none px-1 w-full text-lg" placeholder="Nama Grup">
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3 justify-end">
                             <span class="text-xs font-bold text-slate-500 bg-white/60 px-3 py-1 rounded-lg shadow-sm" x-text="g.products.length + ' produk'"></span>
-                            <button @click="deleteDraftGroup(gIndex)" class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white shadow-sm transition-colors flex items-center justify-center"><i class="fas fa-trash-alt text-xs"></i></button>
+                            <button @click="deleteDraftGroup(gIndex)" class="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white shadow-sm transition-colors flex items-center justify-center shrink-0"><i class="fas fa-trash-alt text-xs"></i></button>
                         </div>
                     </div>
                     
@@ -1210,6 +1210,8 @@
         </div>
     </template>
 
+@endif
+
     {{-- MODAL PENGATURAN PRINTER (PREMIUM UI) --}}
     <template x-teleport="body">
         <div x-show="showPrinterSettings" x-transition x-cloak class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[201] flex items-center justify-center p-4">
@@ -1607,8 +1609,6 @@ function closeCashOut() {
 }
 </script>
 
-@endif
-
 @push('scripts')
 <script>
     function registerPosApp() {
@@ -1617,6 +1617,11 @@ function closeCashOut() {
         
         Alpine.data('posApp', () => ({
             // Init Data Backend
+            business: {
+                name: '{{ addslashes(\App\Models\Setting::get("store_name", "KasirPro")) }}',
+                address: '{{ addslashes(\App\Models\Setting::get("store_address", "-")) }}',
+                phone: '{{ addslashes(\App\Models\Setting::get("store_phone", "-")) }}'
+            },
             categories: @json($categories),
             products: @json($products),
             promoProductIds: @json($promoProductIds),
@@ -2320,7 +2325,8 @@ function closeCashOut() {
                             delivery_destination: w.deliveryMode ? w.deliveryDestination : '',
                             customer_name: w.customerName, 
                             customer_phone: w.customerPhone, 
-                            notes: finalNotes
+                            notes: finalNotes,
+                            is_mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768
                         })
                     });
                     const data = await res.json();
@@ -2462,6 +2468,7 @@ function closeCashOut() {
                 let w = this.activeWorksheet;
                 w.cart = []; w.globalDiscount = 0; w.customerName = '';
                 this.receiptData = null;
+                this.mobileCartOpen = false;
             },
 
             resetCurrentWorksheet() {

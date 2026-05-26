@@ -385,6 +385,11 @@ class TransactionController extends Controller
             return back()->with('error', 'Transaksi ini bukan piutang!');
         }
 
+        $activeShift = Shift::activeShiftForUser(auth()->id());
+        if (!$activeShift) {
+            return back()->with('error', 'Anda harus membuka shift terlebih dahulu untuk menerima pelunasan piutang!');
+        }
+
         $remaining = $transaction->total - $transaction->paid_so_far;
 
         $request->validate([

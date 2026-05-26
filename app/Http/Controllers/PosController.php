@@ -264,8 +264,10 @@ class PosController extends Controller
             $transaction->load(['items', 'user']);
 
             $printerStatus = null;
+            $isMobile = $request->boolean('is_mobile', false);
             $drawerAutoOpen = \App\Models\Setting::get('drawer_auto_open', '0');
-            if ($drawerAutoOpen === '1' && $request->payment_method === 'cash') {
+            
+            if ($drawerAutoOpen === '1' && $request->payment_method === 'cash' && !$isMobile) {
                 try {
                     $printerService = app(\App\Services\PrinterService::class);
                     $printResult = $printerService->openDrawer($transaction->id);

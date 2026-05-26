@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'KasirPro') — {{ \App\Models\Setting::get('store_name', 'KasirPro') }}</title>
+    <title>@yield('title', 'MONOFRAME') — {{ \App\Models\Setting::get('store_name', 'MONOFRAME') }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Apply theme BEFORE page render to prevent flash
@@ -737,7 +738,7 @@
         @if(session('success'))
             Toast.fire({
                 icon: 'success',
-                title: '{{ session('success') }}',
+                html: {!! json_encode(session('success')) !!},
                 customClass: { popup: 'border border-emerald-500/20 shadow-xl shadow-emerald-900/20', icon: 'text-emerald-400' }
             });
         @endif
@@ -745,7 +746,7 @@
         @if(session('error'))
             Toast.fire({
                 icon: 'error',
-                title: '{{ session('error') }}',
+                html: {!! json_encode(session('error')) !!},
                 customClass: { popup: 'border border-red-500/20 shadow-xl shadow-red-900/20', icon: 'text-red-400' }
             });
         @endif
@@ -753,7 +754,7 @@
         @if($errors->any())
             Toast.fire({
                 icon: 'error',
-                title: '{!! implode("<br>", $errors->all()) !!}',
+                html: {!! json_encode(implode("<br>", $errors->all())) !!},
                 customClass: { popup: 'border border-red-500/20 shadow-xl shadow-red-900/20', icon: 'text-red-400' }
             });
         @endif
