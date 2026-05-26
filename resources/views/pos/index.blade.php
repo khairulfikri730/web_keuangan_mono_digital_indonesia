@@ -7,7 +7,7 @@
 <style>
     /* Desktop: fixed layout inner scroll. Mobile: native body scroll */
     @media (min-width: 1024px) {
-        .pos-height { height: calc(100vh - 6rem); }
+        .pos-height { height: calc(100vh - 7.5rem); }
     }
     @media (max-width: 1023px) {
         .pos-height { min-height: 100vh; }
@@ -28,13 +28,13 @@
 @section('content')
 
 
-<div x-data="posApp()" class="pos-height flex flex-col lg:flex-row bg-slate-900 -mx-6 -mt-4 text-slate-200 font-sans">
+<div x-data="posApp()" class="pos-height flex flex-col lg:flex-row bg-slate-900 -mx-4 sm:-mx-6 -mt-4 text-slate-200 font-sans overflow-x-hidden">
     
     {{-- MAIN CONTENT (TENGAH) --}}
-    <div class="flex-1 flex flex-col h-full bg-slate-900 border-r border-white/5 p-4 pb-24 lg:p-6">
+    <div class="flex-1 min-w-0 flex flex-col h-full bg-slate-900 border-r border-white/5 p-4 pb-24 lg:p-6">
         
         {{-- HEADER BAR --}}
-        <div class="flex items-center gap-4 mb-4 bg-slate-800 p-3 rounded-2xl shadow-sm border border-white/10 shrink-0">
+        <div class="flex items-center gap-4 mb-4 bg-slate-800 p-3 rounded-2xl shadow-sm border border-white/10 shrink-0 overflow-x-auto scrollbar-hide">
             <h2 class="text-xl font-black text-white hidden md:block px-2">POS Kasir</h2>
             
             <div class="relative flex-1">
@@ -164,7 +164,7 @@
                         </div>
                         
                         {{-- Inner Grid --}}
-                        <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                        <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                             <template x-for="p in group.products.filter(x => filterProduct(x))" :key="'group-item-'+p.id">
                                 @include('pos._product_card')
                             </template>
@@ -182,7 +182,7 @@
                     <span class="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md" x-text="products.filter(p => filterProduct(p)).length + ' Item'"></span>
                 </div>
 
-                <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
+                <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
                     <template x-for="p in products.filter(p => filterProduct(p))" :key="p.id">
                         @include('pos._product_card')
                     </template>

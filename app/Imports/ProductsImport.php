@@ -21,7 +21,7 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
     private array $categoryCache = [];
     public int $importedCount = 0;
     public int $skippedCount = 0;
-    public array $errors = [];
+    public array $customErrors = [];
 
     public function model(array $row): ?Product
     {
@@ -58,18 +58,18 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             $sku        = trim((string)($row['sku'] ?? '')) ?: null;
             $barcode    = trim((string)($row['barcode'] ?? '')) ?: null;
             $desc       = trim((string)($row['deskripsi'] ?? '')) ?: null;
-            $kind       = trim(strtolower((string)($row['tipe'] ?? 'regular')));
+            $kind       = trim(strtolower((string)($row['tipe'] ?? 'unlimited')));
             $isActive   = !in_array(strtolower((string)($row['status'] ?? 'aktif')), ['nonaktif', 'inactive', '0', 'false', 'tidak']);
 
             // Normalize kind
             $allowedKinds = ['regular', 'unlimited', 'service', 'weight'];
             if (!in_array($kind, $allowedKinds)) {
-                $kind = 'regular';
+                $kind = 'unlimited';
             }
 
             // Check duplicate SKU
             if ($sku && Product::where('sku', $sku)->exists()) {
-                $this->errors[] = "SKU '{$sku}' sudah ada, baris untuk produk '{$name}' dilewati.";
+                $this->customErrors[] = "SKU '{$sku}' sudah ada, baris untuk produk '{$name}' dilewati.";
                 $this->skippedCount++;
                 return null;
             }
@@ -88,13 +88,14 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
                 'product_type' => 'finished',
                 'product_kind' => $kind,
                 'is_active'    => $isActive,
+                'worksheet_id' => session('active_worksheet_id'),
             ]);
 
             $this->importedCount++;
             return $product;
 
         } catch (Throwable $e) {
-            $this->errors[] = "Baris '{$row['nama_produk']}': " . $e->getMessage();
+            $this->customErrors[] = "Baris '{$row['nama_produk']}': " . $e->getMessage();
             $this->skippedCount++;
             return null;
         }

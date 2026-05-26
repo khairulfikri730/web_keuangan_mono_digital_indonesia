@@ -63,11 +63,11 @@
         
         <div class="flex items-center justify-between mt-auto pt-2 border-t"
              :class="p.is_stockless ? 'border-indigo-500/20' : 'border-white/10'">
-            <div class="flex flex-col">
+            <div class="flex flex-col min-w-0">
                 <template x-if="p.is_promo && p.discount_price > 0">
-                    <span class="text-[9px] text-slate-400 line-through font-bold mb-[-4px]" x-text="formatRp(p.price)"></span>
+                    <span class="text-[9px] text-slate-400 line-through font-bold mb-[-4px] truncate" x-text="formatRp(p.price)"></span>
                 </template>
-                <p class="font-black text-lg tracking-tight transition-colors"
+                <p class="font-black text-lg tracking-tight transition-colors truncate"
                    :class="p.is_stockless ? 'text-indigo-600' : 'text-emerald-600'"
                    x-text="p.is_promo && p.discount_price > 0 ? formatRp(p.discount_price) : formatRp(p.price)"></p>
             </div>

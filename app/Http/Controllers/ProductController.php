@@ -280,8 +280,8 @@ class ProductController extends Controller
             if ($import->skippedCount > 0) {
                 $msg .= ", <strong>{$import->skippedCount}</strong> baris dilewati";
             }
-            if (!empty($import->errors)) {
-                $msg .= '. Catatan: ' . implode('; ', array_slice($import->errors, 0, 3));
+            if (!empty($import->customErrors)) {
+                $msg .= '. Catatan: ' . implode('; ', array_slice($import->customErrors, 0, 3));
             }
 
             return redirect()->route('products.index')->with('success', $msg);
