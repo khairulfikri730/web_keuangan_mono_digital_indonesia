@@ -139,7 +139,7 @@ class DashboardController extends Controller
                 $dt = Carbon::today()->subDays($i);
                 $s = Transaction::completed()->whereDate('created_at', $dt)->sum('total');
                 $t = Transaction::completed()->whereDate('created_at', $dt)->count();
-                $e = Cashflow::where('type', 'expense')->whereDate('transaction_date', $dt)->sum('amount');
+                $e = Cashflow::where('transaction_category', 'expense')->whereDate('transaction_date', $dt)->sum('amount');
                 $sparklineSales[] = $s;
                 $sparklineTrx[] = $t;
                 $sparklineExp[] = $e;
@@ -286,7 +286,7 @@ class DashboardController extends Controller
                     'time' => $i->created_at, 'user' => $i->user->name
                 ];
             });
-            $recentExp = Cashflow::where('type', 'expense')->with('user')->latest('transaction_date')->take(5)->get()->map(function($i) {
+            $recentExp = Cashflow::where('transaction_category', 'expense')->with('user')->latest('transaction_date')->take(5)->get()->map(function($i) {
                 return (object)[
                     'type' => 'expense', 'icon' => 'fa-money-bill-wave', 'color' => 'text-red-400', 'bg' => 'bg-red-500/20',
                     'title' => 'Pengeluaran', 'desc' => $i->description . ' (Rp ' . number_format($i->amount, 0, ',', '.') . ')',
@@ -432,7 +432,7 @@ class DashboardController extends Controller
                     ];
                 }
                 
-                $shiftExp = Cashflow::where('worksheet_id', $activeShift->worksheet_id)->where('type', 'expense')->whereBetween('transaction_date', [$activeShift->opened_at, Carbon::now()])->latest('transaction_date')->take(3)->get();
+                $shiftExp = Cashflow::where('worksheet_id', $activeShift->worksheet_id)->where('transaction_category', 'expense')->whereBetween('transaction_date', [$activeShift->opened_at, Carbon::now()])->latest('transaction_date')->take(3)->get();
                 foreach($shiftExp as $exp) {
                     $activities[] = (object)[
                         'type' => 'expense',
@@ -473,11 +473,11 @@ class DashboardController extends Controller
             ];
 
             // Detailed Metrics (Requested by User)
-            $totalBiaya = Cashflow::where('type', 'expense')
+            $totalBiaya = Cashflow::where('transaction_category', 'expense')
                 ->whereDate('transaction_date', Carbon::today())
                 ->sum('amount');
                 
-            $totalBiayaTunai = Cashflow::where('type', 'expense')
+            $totalBiayaTunai = Cashflow::where('transaction_category', 'expense')
                 ->where('source', 'pos_cash')
                 ->whereDate('transaction_date', Carbon::today())
                 ->sum('amount');
@@ -492,7 +492,7 @@ class DashboardController extends Controller
                 $awalShift = $activeShift->opening_cash;
                 $pemasukanTunaiShift = Transaction::completed()->where('shift_id', $activeShift->id)->where('payment_method', 'cash')->sum('total');
                 $pengeluaranTunaiShift = Cashflow::where('worksheet_id', $activeShift->worksheet_id)
-                    ->where('type', 'expense')
+                    ->where('transaction_category', 'expense')
                     ->where('source', 'pos_cash')
                     ->whereBetween('transaction_date', [$activeShift->opened_at, Carbon::now()])
                     ->sum('amount');

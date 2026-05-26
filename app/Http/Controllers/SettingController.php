@@ -159,7 +159,7 @@ class SettingController extends Controller
                 if ($type === 'income_only') {
                     // Reset stats pemasukan shift agar tidak rancu
                     \App\Models\Shift::where('worksheet_id', $worksheetId)
-                        ->update(['cash_sales' => 0, 'qris_sales' => 0, 'transfer_sales' => 0]);
+                        ->update(['cash_sales' => 0, 'bank_sales' => 0]);
                 }
             }
 

@@ -89,7 +89,7 @@ class ShiftController extends Controller
         $totalDiscrepancy = 0;
         foreach ($closedShifts as $s) {
             $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
             $expected = $s->opening_cash + $cashSales - $cashExpenses;
             $totalDiscrepancy += ($s->closing_cash - $expected);
         }
@@ -407,7 +407,7 @@ class ShiftController extends Controller
         // Recalculate for the view
         $cashSales = Transaction::where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
         $bankSales = Transaction::where('shift_id', $shift->id)->completed()->whereIn('payment_method', ['transfer', 'qris', 'debit'])->sum('total');
-        $cashExpenses = Cashflow::where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+        $cashExpenses = Cashflow::where('shift_id', $shift->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
         
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)
@@ -490,7 +490,7 @@ class ShiftController extends Controller
         $closingCash = $request->closing_cash ?? $shift->closing_cash;
 
         $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
-        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
         
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)

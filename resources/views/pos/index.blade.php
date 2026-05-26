@@ -896,8 +896,8 @@
                     $closeTransferSales = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->where('payment_method', 'transfer')->sum('total');
                     $closeDebitSales = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->where('payment_method', 'debit')->sum('total');
                     
-                    $closeCashExp   = \App\Models\Cashflow::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_cash')->sum('amount');
-                    $closeBankExp   = \App\Models\Cashflow::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_bank')->sum('amount');
+                    $closeCashExp   = \App\Models\Cashflow::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_cash')->where('transaction_category', 'expense')->sum('amount');
+                    $closeBankExp   = \App\Models\Cashflow::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->where('type','expense')->where('source','pos_bank')->where('transaction_category', 'expense')->sum('amount');
                     $closeTotalTrx  = \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->count();
                     $closeTotalSales= \App\Models\Transaction::withoutGlobalScope('worksheet')->where('shift_id', $activeShift->id)->completed()->sum('total');
                     

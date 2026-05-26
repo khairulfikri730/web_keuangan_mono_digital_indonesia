@@ -476,30 +476,41 @@ class TransactionController extends Controller
 
         $transaction->update(['status' => 'cancelled']);
 
-        $sourceMap = [
-            'cash' => 'pos_cash',
-            'qris' => 'pos_bank',
-            'debit' => 'pos_bank',
-            'transfer' => 'transfer',
-        ];
-        $source = $sourceMap[$transaction->payment_method] ?? 'pos';
-
-        Cashflow::create([
-            'user_id' => auth()->id(),
-            'shift_id' => $transaction->shift_id,
-            'worksheet_id' => $transaction->worksheet_id,
-            'type' => 'expense',
-            'transaction_category' => 'expense',
-            'category' => 'Refund / Retur',
-            'description' => 'Refund POS - Batal ' . $transaction->invoice_number,
-            'amount' => $transaction->total,
-            'reference' => $transaction->invoice_number,
-            'reference_id' => $transaction->id,
-            'source' => $source,
-            'transaction_date' => today(),
-        ]);
-
         return back()->with('success', 'Transaksi berhasil dibatalkan dan stok dikembalikan!');
+    }
+
+    public function restore(Transaction $transaction)
+    {
+        if (!auth()->user()->isOwner()) {
+            abort(403, 'Hanya Super Admin yang bisa memulihkan transaksi.');
+        }
+
+        if ($transaction->status !== 'cancelled') {
+            return back()->with('error', 'Hanya transaksi batal yang bisa dipulihkan!');
+        }
+
+        // Potong stok kembali
+        foreach ($transaction->items as $item) {
+            $product = $item->product;
+            if ($product && !$product->isStockless()) {
+                $stockBefore = $product->stock;
+                $product->decrement('stock', $item->quantity);
+                StockMutation::create([
+                    'product_id' => $product->id,
+                    'user_id' => auth()->id(),
+                    'type' => 'out',
+                    'quantity' => $item->quantity,
+                    'stock_before' => $stockBefore,
+                    'stock_after' => $product->fresh()->stock,
+                    'reference' => $transaction->invoice_number,
+                    'notes' => 'Pemulihan transaksi - stok dipotong kembali',
+                ]);
+            }
+        }
+
+        $transaction->update(['status' => 'completed']);
+
+        return back()->with('success', 'Transaksi berhasil dipulihkan!');
     }
 
     public function destroy(Transaction $transaction)

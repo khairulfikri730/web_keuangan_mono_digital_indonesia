@@ -363,8 +363,8 @@
                                             <i class="fab fa-whatsapp text-xs"></i>
                                         </button>
                                         @endif
-                                        {{-- Hapus / Batal --}}
-                                        @if(auth()->user()->hasPermission('transactions.delete'))
+                                        {{-- Hapus / Batal / Pulih --}}
+                                        @if(!$isCancelled && auth()->user()->hasPermission('transactions.delete'))
                                             <form action="{{ route('transactions.cancel', $model) }}" method="POST" class="inline">@csrf
                                                 <button type="button" 
                                                         onclick="Swal.fire({
@@ -380,6 +380,24 @@
                                                             if (result.isConfirmed) this.closest('form').submit();
                                                         })"
                                                         class="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-all" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+                                            </form>
+                                        @elseif($isCancelled && auth()->user()->isOwner())
+                                            {{-- Pulihkan --}}
+                                            <form action="{{ route('transactions.restore', $model) }}" method="POST" class="inline">@csrf
+                                                <button type="button" 
+                                                        onclick="Swal.fire({
+                                                            title: 'Pulihkan Transaksi?',
+                                                            text: 'Transaksi {{ $model->invoice_number }} akan dipulihkan dan stok akan disesuaikan kembali.',
+                                                            icon: 'info',
+                                                            showCancelButton: true,
+                                                            confirmButtonColor: '#3b82f6',
+                                                            cancelButtonColor: '#64748b',
+                                                            confirmButtonText: 'Ya, Pulihkan!',
+                                                            cancelButtonText: 'Batal'
+                                                        }).then((result) => {
+                                                            if (result.isConfirmed) this.closest('form').submit();
+                                                        })"
+                                                        class="w-8 h-8 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 flex items-center justify-center transition-all" title="Pulihkan Transaksi"><i class="fas fa-trash-restore text-xs"></i></button>
                                             </form>
                                         @endif
                                     </div>

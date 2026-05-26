@@ -238,6 +238,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Transaksi Actions (Protected by granular permissions)
     Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->middleware('permission:transactions.edit')->name('transactions.cancel');
+    Route::post('/transactions/{transaction}/restore', [TransactionController::class, 'restore'])->name('transactions.restore');
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('permission:transactions.delete')->name('transactions.destroy');
 
     // Bayar piutang (Protected by granular permission)

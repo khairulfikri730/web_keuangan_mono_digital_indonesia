@@ -478,7 +478,7 @@ class ReportController extends Controller
         $totalDiscrepancy = 0;
         foreach ($closedShifts as $s) {
             $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
+            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
             
             $cashTransfers = Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $s->id)
@@ -741,11 +741,17 @@ class ReportController extends Controller
                 foreach ($reportData['shifts'] as $s) {
                     $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
                     $rowBankSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', '!=', 'cash')->where('status', 'completed')->sum('total');
-                    $rowCashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
-                    $rowBankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
+                    $rowCashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
+                    $rowBankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('transaction_category', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
                     $csvTotalCashExp += $rowCashExpenses;
                     $csvTotalBankExp += $rowBankExpenses;
-                    $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses;
+                    $cashTransfers = \App\Models\Cashflow::withoutGlobalScopes()
+                        ->where('shift_id', $s->id)
+                        ->where('source', 'pos_cash')
+                        ->where('category', '!=', 'Penjualan')
+                        ->where('transaction_category', '!=', 'expense')
+                        ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+                    $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses + $cashTransfers;
                     $selisih = $s->closed_at ? ($s->closing_cash - $expected) : 0;
 
                     fputcsv($file, [
