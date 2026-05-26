@@ -127,13 +127,21 @@
           {{-- Harga Jual --}}
           <div x-show="pkind !== 'formula'">
             <label class="text-xs font-bold text-slate-400 mb-1.5 block" x-text="['semi_finished','raw_material'].includes(ptype) ? (pkind==='weight' ? 'Estimasi Harga/Satuan Berat (Opsional)' : 'Estimasi Harga / Nilai (Opsional)') : (pkind==='weight' ? 'Harga per Satuan Berat (Rp) *' : (pkind==='service' ? 'Harga Jasa (Rp) *' : 'Harga Jual (Rp) *'))"></label>
-            <input type="number" name="price" x-model.number="price" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white outline-none" min="0">
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">Rp</span>
+              <input type="text" :value="formatRibuan(price)" @input="price = parseNumber($event.target.value)" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+              <input type="hidden" name="price" :value="price">
+            </div>
           </div>
           
           {{-- Harga Modal --}}
           <div x-show="pkind !== 'formula' && pkind !== 'bundle'">
             <label class="text-xs font-bold text-slate-400 mb-1.5 block">Harga Modal / HPP (Rp)</label>
-            <input type="number" name="cost_price" x-model.number="cost" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white outline-none" min="0">
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">Rp</span>
+              <input type="text" :value="formatRibuan(cost)" @input="cost = parseNumber($event.target.value)" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+              <input type="hidden" name="cost_price" :value="cost">
+            </div>
           </div>
 
           {{-- Stok Awal --}}
@@ -394,7 +402,7 @@
 function createProduct() {
   return {
     ptype: 'finished',
-    pkind: 'regular',
+    pkind: 'unlimited',
     name: '',
     price: 0,
     cost: 0,
@@ -456,7 +464,14 @@ function createProduct() {
     },
 
     formatRibuan(num) {
+      if (num === null || num === undefined || num === '') return '';
       return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    },
+
+    parseNumber(val) {
+      if (!val) return 0;
+      let num = parseInt(val.toString().replace(/[^0-9]/g, ''));
+      return isNaN(num) ? 0 : num;
     },
 
     calculateMargin() {

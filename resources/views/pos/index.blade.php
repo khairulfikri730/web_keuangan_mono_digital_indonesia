@@ -115,13 +115,16 @@
                 Semua
             </button>
             
-            {{-- SPECIAL FILTERS (PROMO & BEST SELLER) --}}
-            <button @click="setCategory('PROMO')" :class="activeCategory==='PROMO' ? 'bg-rose-500 text-white shadow-lg border-rose-500 active' : 'bg-slate-800 border-rose-500/30 text-rose-400 hover:bg-slate-700'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
-                <i class="fas fa-fire"></i> Promo
-            </button>
-            <button @click="setCategory('BEST SELLER')" :class="activeCategory==='BEST SELLER' ? 'bg-amber-500 text-white shadow-lg border-amber-500 active' : 'bg-slate-800 border-amber-500/30 text-amber-400 hover:bg-slate-700'" class="category-btn px-6 py-2 border rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
-                <i class="fas fa-star"></i> Terlaris
-            </button>
+            {{-- CUSTOM POS GROUPS FILTERS --}}
+            <template x-for="group in posGroups" :key="'filter-group-'+group.id">
+                <button @click="setCategory('G_' + group.id)" 
+                        :class="activeCategory === 'G_' + group.id ? 'shadow-lg border active' : 'bg-slate-800 border hover:bg-slate-700'"
+                        :style="activeCategory === 'G_' + group.id ? `background-color: ${group.color || '#f97316'}; border-color: ${group.color || '#f97316'}; color: ${getContrastYIQ(group.color || '#f97316')}; box-shadow: 0 4px 15px -3px ${group.color || '#f97316'}60;` : `border-color: ${group.color || '#e2e8f0'}30; color: ${group.color || '#f97316'};`"
+                        class="category-btn px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full shadow-inner" :style="`background-color: ${activeCategory === 'G_' + group.id ? getContrastYIQ(group.color || '#f97316') : (group.color || '#f97316')}`"></span>
+                    <span x-text="group.name"></span>
+                </button>
+            </template>
 
             <template x-for="cat in categories" :key="cat.id">
                 <button @click="setCategory(cat.id)" 
@@ -148,38 +151,7 @@
                 </a>
             </div>
             
-            {{-- VIRTUAL SECTION: PROMO (Only show in 'All' or 'PROMO' mode) --}}
-            <div class="space-y-6 w-full mb-6" x-show="activeCategory === '' || activeCategory === 'PROMO'">
-                <div class="w-full" x-show="promoProducts.length > 0">
-                    <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-rose-500/20 flex items-center gap-3">
-                        <span class="w-3 h-3 rounded-full shadow-inner bg-rose-500 animate-pulse"></span>
-                        <h3 class="font-black text-rose-400 text-sm uppercase tracking-widest">PROMO</h3>
-                        <span class="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20" x-text="promoProducts.length + ' Item'"></span>
-                    </div>
-                    <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
-                        <template x-for="p in promoProducts" :key="'promo-view-'+p.id">
-                            @include('pos._product_card')
-                        </template>
-                    </div>
-                </div>
-            </div>
 
-            {{-- VIRTUAL SECTION: BEST SELLER (Only show in 'All' or 'BEST SELLER' mode) --}}
-            <div class="space-y-6 w-full mb-6" x-show="activeCategory === '' || activeCategory === 'BEST SELLER'">
-                <div class="w-full" x-show="bestSellerProducts.length > 0">
-                    <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-amber-500/20 flex items-center gap-3">
-                        <span class="w-3 h-3 rounded-full shadow-inner bg-amber-500"></span>
-                        <h3 class="font-black text-amber-400 text-sm uppercase tracking-widest">BEST SELLER</h3>
-                        <span class="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20" x-text="bestSellerProducts.length + ' Item'"></span>
-                    </div>
-                    <div :class="viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start' : 'flex flex-col gap-3'" class="relative z-0">
-                        <template x-for="p in bestSellerProducts" :key="'best-view-'+p.id">
-                            @include('pos._product_card')
-                        </template>
-                    </div>
-                </div>
-            </div>
-            
             {{-- CUSTOM POS GROUPS (Only show in 'All' mode) --}}
             <div class="space-y-6 w-full mb-6" x-show="activeCategory === ''">
                 <template x-for="group in posGroups" :key="'pos-group-'+group.id">
@@ -202,10 +174,11 @@
             </div>
 
             {{-- SEMUA PRODUK (REMAINING / ALL) --}}
-            <div class="w-full" x-show="!['PROMO', 'BEST SELLER'].includes(activeCategory) && products.filter(p => filterProduct(p)).length > 0">
+            <div class="w-full" x-show="products.filter(p => filterProduct(p)).length > 0">
                 <div class="sticky top-0 z-20 bg-slate-900 py-3 mb-4 border-b border-white/10 flex items-center gap-3">
-                    <span class="w-3 h-3 rounded-full shadow-inner bg-slate-300"></span>
-                    <h3 class="font-black text-slate-300 text-sm uppercase tracking-widest" x-text="activeCategory === '' ? 'Semua Produk' : (categories.find(c => c.id == activeCategory)?.name || 'Produk')"></h3>
+                    <span class="w-3 h-3 rounded-full shadow-inner bg-slate-300" x-show="!activeCategory.toString().startsWith('G_')"></span>
+                    <span class="w-3 h-3 rounded-full shadow-inner" x-show="activeCategory.toString().startsWith('G_')" :style="`background-color: ${posGroups.find(g => g.id.toString() === activeCategory.substring(2))?.color || '#f97316'}`"></span>
+                    <h3 class="font-black text-slate-300 text-sm uppercase tracking-widest" x-text="activeCategory === '' ? 'Semua Produk' : (activeCategory.toString().startsWith('G_') ? posGroups.find(g => g.id.toString() === activeCategory.substring(2))?.name : (categories.find(c => c.id == activeCategory)?.name || 'Produk'))"></h3>
                     <span class="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md" x-text="products.filter(p => filterProduct(p)).length + ' Item'"></span>
                 </div>
 
@@ -1940,25 +1913,13 @@ function closeCashOut() {
 
             filterProduct(p) {
                 if (this.activeCategory === '') return true;
-                
-                if (this.activeCategory === 'PROMO') {
-                    // 1. Cek apakah ada group layout bernama "promo"
-                    let promoGroup = this.posGroups.find(g => g.name.toLowerCase() === 'promo');
-                    if (promoGroup && promoGroup.products) {
-                        return promoGroup.products.some(gp => gp.id === p.id);
+                if (typeof this.activeCategory === 'string' && this.activeCategory.startsWith('G_')) {
+                    let groupId = this.activeCategory.substring(2);
+                    let group = this.posGroups.find(g => g.id.toString() === groupId);
+                    if (group && group.products) {
+                        return group.products.some(gp => gp.id === p.id);
                     }
-                    // 2. Fallback ke data otomatis is_promo
-                    return this.promoProductIds.includes(p.id);
-                }
-                
-                if (this.activeCategory === 'BEST SELLER') {
-                    // 1. Cek apakah ada group layout bernama "best seller" atau "terlaris"
-                    let bestGroup = this.posGroups.find(g => g.name.toLowerCase() === 'best seller' || g.name.toLowerCase() === 'terlaris');
-                    if (bestGroup && bestGroup.products) {
-                        return bestGroup.products.some(gp => gp.id === p.id);
-                    }
-                    // 2. Fallback ke data otomatis penjualan
-                    return this.bestSellerProductIds.includes(p.id);
+                    return false;
                 }
                 
                 return (p.category_id || p.category?.id || '') == this.activeCategory;
