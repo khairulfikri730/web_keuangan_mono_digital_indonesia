@@ -105,6 +105,21 @@
                     </div>
 
                     <div class="border-t border-slate-700/50 pt-4">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2"><i class="fas fa-sync mr-1"></i> Mode Sinkronisasi Arus Kas</label>
+                        <div class="grid grid-cols-1 gap-3">
+                            <label class="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500/50 transition-all">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-200">Auto Sinkron saat Tutup Shift</span>
+                                    <p class="text-[9px] text-slate-500 mt-1">Jika ON: Saldo langsung masuk tanpa konfirmasi manual.<br>Jika OFF: Harus disinkronkan manual di menu Arus Kas.</p>
+                                </div>
+                                <input type="hidden" name="auto_sync_cashflow" value="0">
+                                <input type="checkbox" name="auto_sync_cashflow" value="1" class="sr-only peer" {{ ($settings['auto_sync_cashflow'] ?? '1') == '1' ? 'checked' : '' }}>
+                                <div class="w-10 h-5 bg-slate-700 rounded-full peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 relative shrink-0 ml-2"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-700/50 pt-4">
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2"><i class="fas fa-hand-holding-dollar mr-1"></i> Pengaturan Cash Out</label>
                         <div class="grid grid-cols-2 gap-3">
                             <div>

@@ -297,20 +297,49 @@
 
     {{-- SECTION: BALANCES --}}
     @if(in_array('balances', $meta['sections']))
+    @php $isKasir = auth()->check() && auth()->user()->isKasir(); @endphp
+    
+    <div class="section-header uppercase">Pemasukan & Saldo Kas</div>
+    
+    <table class="card-grid" style="margin-bottom: 15px;">
+        <tr>
+            <td style="border: none; width: 33.3%;">
+                <div class="card">
+                    <div class="card-label">PEMASUKAN TUNAI</div>
+                    <div class="card-value text-emerald">Rp {{ number_format(isset($payment_methods) ? $payment_methods->where('payment_method', 'cash')->sum('total') : 0, 0, ',', '.') }}</div>
+                </div>
+            </td>
+            <td style="border: none; width: 33.3%;">
+                <div class="card">
+                    <div class="card-label">PEMASUKAN QRIS</div>
+                    <div class="card-value text-blue">Rp {{ number_format(isset($payment_methods) ? $payment_methods->where('payment_method', 'qris')->sum('total') : 0, 0, ',', '.') }}</div>
+                </div>
+            </td>
+            <td style="border: none; width: 33.3%;">
+                <div class="card">
+                    <div class="card-label">PEMASUKAN TRANSFER</div>
+                    <div class="card-value text-amber">Rp {{ number_format(isset($payment_methods) ? $payment_methods->where('payment_method', 'transfer')->sum('total') : 0, 0, ',', '.') }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
     <table class="card-grid" style="margin-top: -10px;">
         <tr>
-            <td style="border: none; width: 50%;">
+            <td style="border: none; width: {{ $isKasir ? '100%' : '50%' }};">
                 <div class="card">
                     <div class="card-label">SALDO LACI / KASIR</div>
                     <div class="card-value">Rp {{ number_format($saldo_laci, 0, ',', '.') }}</div>
                 </div>
             </td>
+            @if(!$isKasir)
             <td style="border: none; width: 50%;">
                 <div class="card">
                     <div class="card-label">SALDO BANK / DIGITAL</div>
                     <div class="card-value text-blue">Rp {{ number_format($saldo_bank, 0, ',', '.') }}</div>
                 </div>
             </td>
+            @endif
         </tr>
     </table>
     @endif

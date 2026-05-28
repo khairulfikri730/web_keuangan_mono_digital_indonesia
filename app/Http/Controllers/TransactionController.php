@@ -521,6 +521,14 @@ class TransactionController extends Controller
                     ->orWhere('reference_id', $transaction->id)
                     ->delete();
             StockMutation::where('reference', $transaction->invoice_number)->delete();
+            
+            // Delete related invoice if exists
+            $invoice = \App\Models\Invoice::where('invoice_number', $transaction->invoice_number)->first();
+            if ($invoice) {
+                $invoice->items()->delete();
+                $invoice->delete();
+            }
+
             $transaction->delete();
 
             DB::commit();

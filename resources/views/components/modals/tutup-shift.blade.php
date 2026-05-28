@@ -59,7 +59,7 @@
         <!-- MODAL CONTENT (Scrollable) -->
         <div class="px-8 py-4 overflow-y-auto custom-scrollbar space-y-6">
             
-            <!-- SECTION 2 â€” INFO SHIFT AKTIF -->
+            <!-- SECTION 2 &mdash; INFO SHIFT AKTIF -->
             <div class="bg-white/5 border border-white/5 rounded-3xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 backdrop-blur-sm relative overflow-hidden group transition-all duration-300 hover:bg-white/[0.08]">
                 <div class="space-y-1">
                     <p class="text-[9px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -87,7 +87,7 @@
                 </div>
             </div>
 
-            <!-- SECTION 3 â€” RINGKASAN KEUANGAN -->
+            <!-- SECTION 3 &mdash; RINGKASAN KEUANGAN -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div class="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-2xl p-4 space-y-2 group hover:border-emerald-500/40 transition-all duration-300">
                     <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400 text-xs shadow-inner group-hover:scale-110 transition-transform">
@@ -130,7 +130,7 @@
             <form action="{{ route('shifts.close', $activeShift->id ?? 0) }}" method="POST" id="tutupShiftFormMain">
                 @csrf
                 <div class="space-y-6">
-                    <!-- SECTION 4 â€” INPUT UANG FISIK -->
+                    <!-- SECTION 4 &mdash; INPUT UANG FISIK -->
                     <div class="space-y-3">
                         <div class="flex justify-between items-end ml-2">
                             <label class="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -171,11 +171,11 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 5 â€” CATATAN -->
+                    <!-- SECTION 5 &mdash; CATATAN -->
                     <div class="space-y-2">
                         <div class="flex justify-between items-end ml-2">
                             <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Catatan Penutupan</label>
-                            <span class="text-[8px] font-bold text-slate-600 uppercase">Opsional â€¢ Audit Internal</span>
+                            <span class="text-[8px] font-bold text-slate-600 uppercase">Opsional &bull; Audit Internal</span>
                         </div>
                         <div class="relative">
                             <textarea name="notes" x-model="notes" 
@@ -186,7 +186,7 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 6 â€” VALIDATION BOX -->
+                    <!-- SECTION 6 &mdash; VALIDATION BOX -->
                     <div class="bg-slate-900/80 border border-white/5 rounded-3xl p-5 space-y-3 shadow-inner relative overflow-hidden">
                         <div class="absolute top-0 right-0 p-3 opacity-10">
                             <i class="fas fa-clipboard-check text-4xl"></i>
@@ -215,7 +215,7 @@
             </form>
         </div>
 
-        <!-- SECTION 7 â€” ACTION BUTTONS -->
+        <!-- SECTION 7 &mdash; ACTION BUTTONS -->
         <div class="p-8 space-y-4 bg-slate-900/50 border-t border-white/10">
             <div class="flex flex-col md:flex-row gap-4">
                 <button @click="showCloseModal = false" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] transition-all active:scale-95 border border-white/5 order-2 md:order-1">
@@ -237,7 +237,7 @@
             <!-- FOOTER -->
             <div class="flex items-center justify-center gap-2 text-slate-600">
                 <i class="fas fa-shield-halved text-[10px]"></i>
-                <span class="text-[9px] font-black uppercase tracking-[0.15em]">Sistem Audit Keuangan Profesional â€¢ MONOFRAME</span>
+                <span class="text-[9px] font-black uppercase tracking-[0.15em]">Sistem Audit Keuangan Profesional &bull; MONOFRAME</span>
             </div>
         </div>
 

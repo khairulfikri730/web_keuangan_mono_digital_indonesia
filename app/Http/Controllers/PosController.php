@@ -239,25 +239,65 @@ class PosController extends Controller
             }
             TransactionItem::insert($itemsData);
 
-            // Dispatch event to handle Cashflow creation (only for non-piutang or piutang with DP)
-            if (!$isPiutang) {
-                event(new \App\Events\TransactionCreated($transaction));
-            } elseif ($dpAmount > 0) {
-                // Record DP as income
-                Cashflow::create([
-                    'user_id' => auth()->id(),
-                    'shift_id' => $activeShift->id,
-                    'type' => 'income',
-                    'category' => 'Uang Muka (DP)',
-                    'description' => 'DP pesanan #' . $transaction->invoice_number,
-                    'amount' => $dpAmount,
-                    'source' => $request->dp_method ?? 'pos_cash',
-                    'transaction_date' => today(),
-                    'reference_id' => $transaction->id,
-                    'transaction_category' => 'income',
-                    'worksheet_id' => $activeShift->worksheet_id,
-                ]);
+            // Sync to Invoice module
+            $invoiceRecord = \App\Models\Invoice::where('invoice_number', $transaction->invoice_number)->first();
+            
+            if ($transaction->status === 'cancelled' || $transaction->status === 'batal') {
+                if ($invoiceRecord) {
+                    $invoiceRecord->items()->delete();
+                    $invoiceRecord->delete();
+                }
+            } else {
+                $invStatus = 'pending';
+                if ($transaction->status === 'completed') {
+                    $invStatus = 'paid';
+                } elseif ($transaction->status === 'pending' && $transaction->paid_so_far > 0) {
+                    $invStatus = 'partial';
+                }
+                
+                $invoiceData = [
+                    'date' => $transaction->created_at->toDateString(),
+                    'due_date' => $transaction->created_at->toDateString(),
+                    'business_name' => \App\Models\Setting::get('store_name', 'MONOFRAME STUDIO'),
+                    'business_email' => \App\Models\Setting::get('store_email', ''),
+                    'business_phone' => \App\Models\Setting::get('store_phone', ''),
+                    'business_address' => \App\Models\Setting::get('store_address', ''),
+                    'client_name' => $transaction->customer_name ?: 'Umum',
+                    'client_phone' => $transaction->customer_phone,
+                    'subtotal' => $transaction->subtotal,
+                    'discount_type' => $transaction->discount_type === 'percentage' ? 'percentage' : 'fixed',
+                    'discount_value' => $transaction->discount,
+                    'discount' => $transaction->discount,
+                    'total_amount' => $transaction->total,
+                    'paid_amount' => $transaction->paid_so_far,
+                    'status' => $invStatus,
+                    'notes' => $transaction->notes,
+                    'worksheet_id' => $transaction->worksheet_id,
+                    'created_by' => $transaction->user_id,
+                ];
+
+                if ($invoiceRecord) {
+                    $invoiceRecord->update($invoiceData);
+                    $invoiceRecord->items()->delete();
+                } else {
+                    $invoiceData['invoice_number'] = $transaction->invoice_number;
+                    $invoiceRecord = \App\Models\Invoice::create($invoiceData);
+                }
+
+                foreach ($itemsData as $item) {
+                    \App\Models\InvoiceItem::create([
+                        'invoice_id' => $invoiceRecord->id,
+                        'name' => $item['product_name'],
+                        'description' => $item['custom_price_reason'] ?? '',
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],
+                        'total' => $item['subtotal']
+                    ]);
+                }
             }
+
+            // Dispatch event for all transactions (Cashflow creation is deferred to shift closure)
+            event(new \App\Events\TransactionCreated($transaction));
 
             DB::commit();
 

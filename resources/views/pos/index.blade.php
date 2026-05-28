@@ -18,6 +18,16 @@
             flex: none; 
         }
     }
+    
+    /* Hide arrows on number inputs */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
 
     /* Scrollbar minimal */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -278,11 +288,11 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] font-bold text-slate-400" x-text="formatRp(item.is_custom_price ? item.custom_price : item.price)"></span>
-                                    <span class="text-[10px] text-slate-300">×</span>
+                                    <span class="text-[10px] text-slate-300">&times;</span>
                                     <div class="flex items-center gap-1 bg-slate-700 border border-white/10 rounded-md px-1.5 py-0.5">
-                                        <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500"><i class="fas fa-minus"></i></button>
-                                        <span class="text-xs font-black text-white w-5 text-center" x-text="item.quantity"></span>
-                                        <button @click="changeQty(index, 1)" class="text-[10px] text-slate-400 hover:text-emerald-500"><i class="fas fa-plus"></i></button>
+                                        <button @click="changeQty(index, -1)" class="text-[10px] text-slate-400 hover:text-red-500 shrink-0"><i class="fas fa-minus"></i></button>
+                                        <input type="number" min="1" :value="item.quantity" @change="updateQty(index, $event.target.value)" class="w-8 bg-transparent text-xs font-black text-white text-center focus:outline-none appearance-none" style="-moz-appearance: textfield;">
+                                        <button @click="changeQty(index, 1)" class="text-[10px] text-slate-400 hover:text-emerald-500 shrink-0"><i class="fas fa-plus"></i></button>
                                     </div>
                                 </div>
                             </div>
@@ -1912,6 +1922,15 @@ function closeCashOut() {
             },
 
             filterProduct(p) {
+                if (this.searchQuery) {
+                    const q = this.searchQuery.toLowerCase();
+                    const name = p.name ? p.name.toLowerCase() : '';
+                    const sku = p.sku ? p.sku.toLowerCase() : '';
+                    if (!name.includes(q) && !sku.includes(q)) {
+                        return false;
+                    }
+                }
+
                 if (this.activeCategory === '') return true;
                 if (typeof this.activeCategory === 'string' && this.activeCategory.startsWith('G_')) {
                     let groupId = this.activeCategory.substring(2);
@@ -2191,6 +2210,27 @@ function closeCashOut() {
                     } else {
                         Toast.fire({ icon: 'warning', title: 'Stok tidak mencukupi!' });
                     }
+                }
+            },
+
+            updateQty(index, value) {
+                let item = this.activeWorksheet.cart[index];
+                let newQty = parseInt(value) || 1;
+                if(newQty < 1) newQty = 1;
+                
+                let isUnlimited = !!(item.is_stockless);
+                let totalInCartOther = this.activeWorksheet.cart.filter((i, idx) => i.product_id === item.product_id && idx !== index).reduce((sum, i) => sum + i.quantity, 0);
+                
+                if(!isUnlimited && (newQty + totalInCartOther) > item.stock) {
+                    newQty = item.stock - totalInCartOther;
+                    Toast.fire({ icon: 'warning', title: 'Stok tidak mencukupi, disesuaikan ke maksimal stok!' });
+                }
+                
+                item.quantity = newQty;
+                // Force input re-render if value was modified
+                if (parseInt(value) !== newQty) {
+                    let eventSource = event.target;
+                    eventSource.value = newQty;
                 }
             },
 

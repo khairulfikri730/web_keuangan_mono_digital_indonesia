@@ -124,7 +124,7 @@
 
     <!-- 2. SUMMARY STRIP (PREMIUM CARDS) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8" style="position: relative; z-index: 1;">
-        <!-- Modal Investasi â†’ redirect ke capitals dengan auto-open edit modal -->
+        <!-- Modal Investasi &rarr; redirect ke capitals dengan auto-open edit modal -->
         <div onclick="window.location.href='{{ route('capitals.index') }}?action=edit_latest'" class="glass-card grad-blue rounded-[2.5rem] p-7 transition-premium group relative overflow-hidden cursor-pointer block hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(59,130,246,0.4)]">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-premium"></div>
             <div class="flex justify-between items-start mb-4">
@@ -247,7 +247,7 @@
                 </div>
                 <div class="text-right">
                     <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Saldo Bank</span>
-                    <span class="inline-block mt-1 text-[8px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest">âœ“ Synced</span>
+                    <span class="inline-block mt-1 text-[8px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest">&check; Synced</span>
                 </div>
             </div>
             <h3 class="text-2xl font-black text-white tracking-tight transition-all duration-500" id="valSaldoBankSynced">Rp {{ number_format($saldoBankSynced, 0, ',', '.') }}</h3>
@@ -257,7 +257,7 @@
             </div>
         </div>
 
-        <!-- Adjustment Kas â†’ buka modal khusus -->
+        <!-- Adjustment Kas &rarr; buka modal khusus -->
         <div onclick="openModalAdjKas()" class="glass-card grad-amber rounded-[2.5rem] p-7 transition-premium group relative overflow-hidden bg-slate-900/40 border-amber-500/20 cursor-pointer hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(245,158,11,0.35)]">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-premium"></div>
             <div class="flex justify-between items-start mb-4">
@@ -346,7 +346,7 @@
                         <i class="fas fa-paper-plane"></i>
                     </div>
                     <h4 class="text-xl font-black text-white tracking-tighter leading-none mb-2">Pindahkan Uang</h4>
-                    <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-80">Setoran Laci â†’ Bank</p>
+                    <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-80">Setoran Laci &rarr; Bank</p>
                 </div>
                 <button onclick="document.getElementById('transferModal').classList.remove('hidden')" 
                     class="w-full mt-8 py-4 bg-white text-blue-700 rounded-2xl font-black text-xs uppercase tracking-widest transition-premium shadow-xl hover:shadow-white/20 active:scale-95">
@@ -808,8 +808,8 @@
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Arah Transfer</label>
                     <select name="direction" class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
-                        <option value="laci_to_bank">Laci (Kasir) â†’ Bank Rekening</option>
-                        <option value="bank_to_laci">Bank Rekening â†’ Laci (Kasir)</option>
+                        <option value="laci_to_bank">Laci (Kasir) &rarr; Bank Rekening</option>
+                        <option value="bank_to_laci">Bank Rekening &rarr; Laci (Kasir)</option>
                     </select>
                 </div>
                 

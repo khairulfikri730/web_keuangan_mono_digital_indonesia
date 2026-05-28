@@ -292,6 +292,9 @@
                                     @if($model->table_number)
                                         <span class="text-[10px] font-black text-blue-400 uppercase">Meja {{ $model->table_number }}</span>
                                     @endif
+                                    @if($model->notes)
+                                        <p class="text-[10px] text-slate-400 mt-1 italic max-w-[150px] truncate" title="{{ $model->notes }}">Catatan: {{ $model->notes }}</p>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-4">
                                     <div class="max-w-[250px]">
@@ -509,6 +512,9 @@
                             @if($model->paid_so_far > 0)
                             <div class="flex justify-between"><span class="text-slate-500">DP Dibayar</span><span class="font-bold text-slate-700">Rp {{ number_format($model->paid_so_far, 0, ',', '.') }}</span></div>
                             @endif
+                            @endif
+                            @if($model->notes)
+                            <div class="flex justify-between"><span class="text-slate-500">Catatan</span><span class="font-bold text-slate-700 text-right ml-4">{{ $model->notes }}</span></div>
                             @endif
                         </div>
 

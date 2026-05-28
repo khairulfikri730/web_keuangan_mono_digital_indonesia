@@ -1,4 +1,4 @@
-﻿{{-- Premium Redesign Buka Shift Modal --}}
+{{-- Premium Redesign Buka Shift Modal --}}
 <div x-data="{ 
         physicCash: {{ (int)$laciBalance }}, 
         systemCash: {{ (int)$laciBalance }},
@@ -44,7 +44,7 @@
         <!-- MODAL CONTENT (Scrollable) -->
         <div class="px-8 py-4 overflow-y-auto custom-scrollbar space-y-6">
             
-            <!-- SECTION 1 â€” AUTO SYNC INFO -->
+            <!-- SECTION 1 &mdash; AUTO SYNC INFO -->
             <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-5 flex items-center gap-5 group hover:bg-emerald-500/10 transition-all duration-300 neon-border-green">
                 <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/10 group-hover:scale-110 transition-transform">
                     <i class="fas fa-sync-alt animate-spin-slow"></i>
@@ -54,7 +54,7 @@
                         <h4 class="text-xs font-black text-emerald-400 uppercase tracking-[0.15em]">Disinkronkan dari Shift Terakhir</h4>
                         <span class="bg-emerald-500 text-[8px] font-black px-2 py-0.5 rounded-full text-emerald-950 uppercase tracking-tighter">Sinkron Laci Aktif</span>
                     </div>
-                    <p class="text-sm font-bold text-white truncate">{{ auth()->user()->name }} â€¢ {{ now()->translatedFormat('d M Y') }} â€¢ {{ now()->format('H:i') }}</p>
+                    <p class="text-sm font-bold text-white truncate">{{ auth()->user()->name }} &bull; {{ now()->translatedFormat('d M Y') }} &bull; {{ now()->format('H:i') }}</p>
                     <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                         <i class="fas fa-check-circle text-emerald-500"></i> Sinkronisasi laci kasir otomatis
                     </p>
@@ -66,7 +66,7 @@
                 <input type="hidden" name="opening_cash" :value="physicCash">
                 
                 <div class="space-y-6">
-                    <!-- SECTION 2 â€” PILIH KASIR (MULTI) -->
+                    <!-- SECTION 2 &mdash; PILIH KASIR (MULTI) -->
                     @if(auth()->user()->isOwner())
                     <div class="space-y-2" x-data="{ selectedUsers: [{{ auth()->id() }}] }">
                         <div class="flex items-center justify-between">
@@ -111,21 +111,21 @@
                     @endif
 
 
-                    <!-- SECTION 3 â€” KAS AWAL SISTEM -->
+                    <!-- SECTION 3 &mdash; KAS AWAL SISTEM -->
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Kas Awal Sistem (Auto Sync)</label>
-                        <div class="relative bg-slate-900/80 border border-white/5 rounded-2xl px-5 py-4 flex items-center justify-between shadow-inner">
-                            <span class="text-xl font-black text-white/40 tracking-tight">Rp {{ number_format($laciBalance ?? 0, 0, ',', '.') }}</span>
-                            <i class="fas fa-lock text-slate-700 text-sm"></i>
-                            <div class="absolute -bottom-3 right-5 bg-slate-800 px-2 text-[9px] font-bold text-slate-500 italic rounded border border-white/5">
+                        <div class="relative bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 flex items-center justify-between shadow-inner">
+                            <span class="text-xl font-black text-blue-800 tracking-tight">Rp {{ number_format($laciBalance ?? 0, 0, ',', '.') }}</span>
+                            <i class="fas fa-lock text-blue-300 text-sm"></i>
+                            <div class="absolute -bottom-3 right-5 bg-white px-2 text-[9px] font-bold text-slate-500 italic rounded border border-slate-200">
                                 Nominal tersimpan di database
                             </div>
                         </div>
                     </div>
 
-                    <!-- SECTION 4 â€” INPUT UANG FISIK -->
+                    <!-- SECTION 4 &mdash; INPUT UANG FISIK -->
                     <div class="space-y-2 pt-2">
-                        <label class="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
+                        <label class="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
                             Uang Fisik di Laci Saat Ini
                             <span class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></span>
                         </label>
@@ -133,15 +133,15 @@
                             <input type="text" 
                                    :value="formattedPhysic" 
                                    @input="updatePhysic($event.target.value)"
-                                   class="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl px-6 py-5 text-2xl font-black text-white focus:outline-none neon-border-blue transition-all focus:bg-blue-500/10 tracking-tight"
+                                   class="w-full bg-blue-50 border border-blue-200 rounded-2xl px-6 py-5 text-2xl font-black text-slate-800 focus:outline-none neon-border-blue transition-all focus:bg-white tracking-tight shadow-inner"
                                    placeholder="Rp 0">
-                            <div class="absolute right-6 top-1/2 -translate-y-1/2 text-blue-500/30">
+                            <div class="absolute right-6 top-1/2 -translate-y-1/2 text-blue-300">
                                 <i class="fas fa-keyboard text-xl"></i>
                             </div>
                         </div>
                     </div>
 
-                    <!-- SECTION 5 â€” VALIDASI SELISIH -->
+                    <!-- SECTION 5 &mdash; VALIDASI SELISIH -->
                     <div x-show="diff != 0" 
                          x-transition:enter="transition ease-out duration-300"
                          x-transition:enter-start="opacity-0 -translate-y-2"
@@ -165,36 +165,24 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 5.5 â€” WAKTU BUKA SHIFT (Opsional / Testing) -->
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Waktu Buka Shift (Opsional)</label>
-                        <div class="relative">
-                            <input type="datetime-local" name="opened_at"
-                                   class="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-blue-500/30 transition-all cursor-text"
-                                   title="Biarkan kosong untuk menggunakan waktu saat ini">
-                            <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
-                                <i class="fas fa-calendar-alt text-lg"></i>
-                            </div>
-                        </div>
-                        <p class="text-[9px] text-slate-600 ml-2 italic">Kosongkan untuk menggunakan waktu sekarang. Isi hanya jika ingin backdate shift.</p>
-                    </div>
 
-                    <!-- SECTION 6 â€” CATATAN -->
+
+                    <!-- SECTION 6 &mdash; CATATAN -->
                     <div class="space-y-2">
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Catatan Pembukaan</label>
                         <div class="relative">
                             <textarea name="notes" x-model="notes" 
                                       maxlength="200"
-                                      class="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-blue-500/30 transition-all min-h-[100px] resize-none"
+                                      class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-all min-h-[100px] resize-none shadow-inner"
                                       placeholder="Contoh: Titipan modal tambahan, catatan khusus..."></textarea>
-                            <span class="absolute bottom-4 right-5 text-[9px] font-black text-slate-600 uppercase tracking-widest" x-text="notes.length + '/200'"></span>
+                            <span class="absolute bottom-4 right-5 text-[9px] font-black text-slate-400 uppercase tracking-widest" x-text="notes.length + '/200'"></span>
                         </div>
                     </div>
                 </div>
             </form>
         </div>
 
-        <!-- SECTION 7 â€” ACTION BUTTONS -->
+        <!-- SECTION 7 &mdash; ACTION BUTTONS -->
         <div class="p-8 space-y-4 bg-slate-900/50 border-t border-white/10">
             <div class="flex gap-4">
                 <button @click="showOpenModal = false" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] transition-all active:scale-95 border border-white/5">

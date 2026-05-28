@@ -52,14 +52,25 @@ class InvoiceController extends Controller
 
     public function create(Request $request)
     {
-        $lastInvoice = Invoice::latest()->first();
+        $prefix = 'INV-' . date('dmy') . '-';
+        // Get the latest invoice that starts with this prefix
+        $lastInvoice = Invoice::where('invoice_number', 'like', $prefix . '%')
+                              ->orderBy('invoice_number', 'desc')
+                              ->first();
+                              
         $nextNumber = 1;
         if ($lastInvoice) {
             $parts = explode('-', $lastInvoice->invoice_number);
             $lastId = end($parts);
             $nextNumber = (is_numeric($lastId)) ? (int)$lastId + 1 : 1;
         }
-        $invoiceNumber = 'INV-' . date('dmy') . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        $invoiceNumber = $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        
+        // Final fallback just in case
+        while (Invoice::where('invoice_number', $invoiceNumber)->exists()) {
+            $nextNumber++;
+            $invoiceNumber = $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        }
         
         $transaction = null;
         if ($request->transaction_id) {

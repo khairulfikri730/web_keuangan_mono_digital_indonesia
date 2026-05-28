@@ -301,6 +301,8 @@ class ShiftController extends Controller
             'closed_at' => now(),
         ]);
 
+        $this->syncShiftTransactionsToCashflow($shift);
+
         if ($newStatus === 'pending_approval') {
             auth()->logout();
             $request->session()->invalidate();
@@ -326,7 +328,59 @@ class ShiftController extends Controller
             'closed_at' => $shift->closed_at ?? now(), // Ensure closed_at is set
         ]);
 
+        $this->syncShiftTransactionsToCashflow($shift);
+
         return back()->with('success', 'Shift berhasil disetujui dan ditutup!');
+    }
+
+    private function syncShiftTransactionsToCashflow(Shift $shift)
+    {
+        $isAutoSync = \App\Models\Setting::get('auto_sync_cashflow', '1') === '1';
+        $syncStatus = $isAutoSync ? 'synced' : 'pending';
+
+        $transactions = \App\Models\Transaction::withoutGlobalScopes()
+            ->where('shift_id', $shift->id)
+            ->whereIn('status', ['completed', 'pending'])
+            ->get();
+        
+        foreach ($transactions as $tx) {
+            if ($tx->status === 'completed' || ($tx->status === 'pending' && $tx->paid_so_far > 0)) {
+                $amount = $tx->status === 'completed' && $tx->payment_method !== 'piutang' ? $tx->total : $tx->paid_so_far;
+                if ($amount > 0) {
+                    $sourceMap = [
+                        'cash'     => 'pos_cash',
+                        'qris'     => 'pos_bank',
+                        'debit'    => 'pos_bank',
+                        'transfer' => 'transfer',
+                    ];
+                    $source = $sourceMap[$tx->payment_method] ?? 'pos_cash';
+                    if ($tx->payment_method === 'piutang') {
+                        $source = 'pos_cash';
+                    }
+
+                    $cashflow = \App\Models\Cashflow::firstOrCreate([
+                        'reference_id' => $tx->id,
+                        'category' => $tx->payment_method === 'piutang' ? 'Uang Muka (DP)' : 'Penjualan'
+                    ], [
+                        'user_id'          => $tx->user_id,
+                        'shift_id'         => $tx->shift_id,
+                        'type'             => 'income',
+                        'transaction_category' => 'income',
+                        'description'      => ($tx->payment_method === 'piutang' ? 'DP pesanan #' : 'Penjualan POS #') . $tx->invoice_number,
+                        'amount'           => $amount,
+                        'reference'        => $tx->invoice_number,
+                        'source'           => $source,
+                        'bank_sync_status' => $syncStatus,
+                        'transaction_date' => $tx->created_at ? $tx->created_at->format('Y-m-d') : today(),
+                        'worksheet_id'     => $tx->worksheet_id,
+                    ]);
+                    
+                    if ($cashflow->bank_sync_status !== $syncStatus) {
+                        $cashflow->update(['bank_sync_status' => $syncStatus]);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -531,6 +585,18 @@ class ShiftController extends Controller
                     $trx->delete();
                 }
                 
+                // Cari dan hapus MonthlyUsage (Pengeluaran Kasir) yang terkait dengan shift ini
+                $expenseCashflows = \App\Models\Cashflow::withoutGlobalScopes()
+                    ->where('shift_id', $shift->id)
+                    ->where('reference_type', 'MonthlyUsage')
+                    ->whereNotNull('reference_id')
+                    ->get();
+                
+                $monthlyUsageIds = $expenseCashflows->pluck('reference_id')->toArray();
+                if (!empty($monthlyUsageIds)) {
+                    \App\Models\MonthlyUsage::whereIn('id', $monthlyUsageIds)->delete();
+                }
+
                 // Delete related cashflows (juga ignore global scope)
                 \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->delete();
                 

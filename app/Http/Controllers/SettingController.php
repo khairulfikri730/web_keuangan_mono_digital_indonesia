@@ -19,7 +19,8 @@ class SettingController extends Controller
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
             'cashout_source_access', 'cashout_role_access',
-            'target_omzet', 'target_profit', 'target_transaksi'
+            'target_omzet', 'target_profit', 'target_transaksi',
+            'shift_approval_required', 'auto_sync_cashflow'
         ]);
         $worksheets = \App\Models\Worksheet::all();
         return view('settings.index', compact('settings', 'worksheets'));
@@ -61,6 +62,7 @@ class SettingController extends Controller
             'target_profit' => 'nullable|numeric|min:0',
             'target_transaksi' => 'nullable|integer|min:0',
             'shift_approval_required' => 'nullable|string|in:0,1',
+            'auto_sync_cashflow' => 'nullable|string|in:0,1',
         ]);
 
         $keys = [
@@ -71,7 +73,8 @@ class SettingController extends Controller
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
             'cashout_source_access', 'cashout_role_access',
-            'target_omzet', 'target_profit', 'target_transaksi', 'shift_approval_required'
+            'target_omzet', 'target_profit', 'target_transaksi', 'shift_approval_required',
+            'auto_sync_cashflow'
         ];
         foreach ($keys as $key) {
             Setting::set($key, $request->input($key));

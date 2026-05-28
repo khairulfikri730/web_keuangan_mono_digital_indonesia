@@ -11,6 +11,12 @@ class CreateCashflowFromTransaction
     {
         $transaction = $event->transaction;
 
+        // Shift-based transactions are now exclusively synced to Cashflow 
+        // during Shift closure/approval in ShiftController@syncShiftTransactionsToCashflow
+        if (!empty($transaction->shift_id)) {
+            return;
+        }
+
         $sourceMap = [
             'cash'     => 'pos_cash',
             'qris'     => 'pos_bank',
@@ -19,8 +25,8 @@ class CreateCashflowFromTransaction
         ];
         $source = $sourceMap[$transaction->payment_method] ?? 'pos';
 
-        // All POS transactions start as "pending" sync until owner confirms them
-        $bankSyncStatus = 'pending';
+        $isAutoSync = \App\Models\Setting::get('auto_sync_cashflow', '1') === '1';
+        $bankSyncStatus = $isAutoSync ? 'synced' : 'pending';
 
         Cashflow::create([
             'user_id'          => $transaction->user_id,

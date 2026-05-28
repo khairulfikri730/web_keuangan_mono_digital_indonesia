@@ -95,7 +95,7 @@
                         <span class="text-[9px] text-slate-500 font-bold">{{ $log->created_at->diffForHumans() }}</span>
                     </div>
                     <p class="text-[10px] text-slate-400">{{ $log->description }}</p>
-                    <p class="text-[9px] text-slate-600 mt-1"><i class="fas fa-desktop mr-1"></i>{{ Str::limit($log->user_agent, 30) }} â€¢ {{ $log->ip_address }}</p>
+                    <p class="text-[9px] text-slate-600 mt-1"><i class="fas fa-desktop mr-1"></i>{{ Str::limit($log->user_agent, 30) }} &bull; {{ $log->ip_address }}</p>
                 </div>
                 @empty
                 <p class="text-[10px] text-slate-500 italic text-center py-4">Belum ada aktivitas tercatat.</p>

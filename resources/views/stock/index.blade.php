@@ -158,7 +158,7 @@
                     <div class="flex items-center gap-2 mt-1">
                         @if($m->product && $m->product->category)
                             <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{{ $m->product->category->name }}</span>
-                            <span class="text-slate-600">â€¢</span>
+                            <span class="text-slate-600">&bull;</span>
                         @endif
                         @if($m->product && $m->product->is_stockless)
                             <span class="text-xs font-medium text-blue-400"><i class="fas fa-infinity text-[10px] mr-1"></i> Unlimited</span>
@@ -200,7 +200,7 @@
                 <p class="text-xs font-bold text-slate-300 mb-1 line-clamp-1"><i class="fas fa-comment-alt text-[10px] text-slate-500 mr-1"></i> {{ $m->notes }}</p>
                 <div class="flex items-center md:justify-end gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     <span><i class="far fa-clock mr-1"></i> {{ $m->created_at->diffForHumans() }}</span>
-                    <span>â€¢</span>
+                    <span>&bull;</span>
                     <span><i class="far fa-user mr-1"></i> {{ $m->user->name }}</span>
                 </div>
             </div>

@@ -939,6 +939,10 @@ class ReportController extends Controller
                                 - Cashflow::withoutGlobalScopes()->where('source', 'pos_cash')->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
             $data['saldo_bank'] = Cashflow::withoutGlobalScopes()->whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'income')->sum('amount')
                                 - Cashflow::withoutGlobalScopes()->whereIn('source', ['pos_bank', 'transfer'])->where('bank_sync_status', 'synced')->where('type', 'expense')->sum('amount');
+            
+            $data['payment_methods'] = (clone $queryTrx)
+                ->selectRaw('payment_method, SUM(total) as total')
+                ->groupBy('payment_method')->get();
         }
         if (in_array('roi', $sections)) {
             $totalCapital = Capital::sum('total_amount');

@@ -575,11 +575,26 @@
                 if (id) {
                     try {
                         const message = await fetch(`/invoices/${id}/invoice-text`).then(r => r.text());
-                        const phone = this.client.phone ? this.client.phone.replace(/\D/g, '') : '';
+                        let phone = this.client.phone ? this.client.phone.replace(/\D/g, '') : '';
+                        if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+                        
                         const waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : `https://wa.me/?text=${encodeURIComponent(message)}`;
-                        window.open(waUrl, '_blank');
+                        
+                        const a = document.createElement('a');
+                        a.href = waUrl;
+                        a.target = '_blank';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+
+                        setTimeout(() => {
+                            window.location.href = '{{ route("invoices.index") }}';
+                        }, 1000);
                     } catch (e) {
                         Toast.fire({ icon: 'warning', title: 'Invoice tersimpan, gagal buka WhatsApp' });
+                        setTimeout(() => {
+                            window.location.href = '{{ route("invoices.index") }}';
+                        }, 1000);
                     }
                 }
             }
