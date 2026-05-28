@@ -239,42 +239,6 @@ Route::middleware(['auth'])->group(function () {
     // Transaksi Actions (Protected by granular permissions)
     Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->middleware('permission:transactions.edit')->name('transactions.cancel');
     Route::post('/transactions/{transaction}/restore', [TransactionController::class, 'restore'])->name('transactions.restore');
-
-Route::get('/fix-bug-refund', function () {
-    // 1. Hapus cashflow Refund yang terduplikat
-    \App\Models\Cashflow::where('category', 'Refund / Retur')->where('description', 'like', 'Refund POS - Batal%')->delete();
-    
-    // 2. Hitung ulang Sesi Shift
-    $shifts = \App\Models\Shift::withoutGlobalScopes()->whereIn('status', ['closed', 'pending_approval'])->get();
-    $count = 0;
-    foreach ($shifts as $shift) {
-        $cashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
-        $bankSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', '!=', 'cash')->sum('total');
-        $totalSales = $cashSales + $bankSales;
-        
-        $totalTransactions = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->count();
-
-        $cashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
-        $bankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('transaction_category', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
-
-        $cashTransfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
-            ->where('shift_id', $shift->id)->where('source', 'pos_cash')
-            ->where('category', '!=', 'Penjualan')->where('transaction_category', '!=', 'expense')
-            ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
-
-        $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses + $cashTransfers;
-        $discrepancy = $shift->closing_cash - $expectedCash;
-
-        $shift->update([
-            'expected_cash' => $expectedCash, 'discrepancy' => $discrepancy,
-            'cash_sales' => $cashSales, 'bank_sales' => $bankSales,
-            'cash_expenses' => $cashExpenses, 'bank_expenses' => $bankExpenses,
-            'total_sales' => $totalSales, 'total_transactions' => $totalTransactions,
-        ]);
-        $count++;
-    }
-    return "Data Hosting Berhasil Diperbaiki! $count Shift dikalkulasi ulang. Silakan kembali ke Dashboard.";
-});
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('permission:transactions.delete')->name('transactions.destroy');
 
     // Bayar piutang (Protected by granular permission)
