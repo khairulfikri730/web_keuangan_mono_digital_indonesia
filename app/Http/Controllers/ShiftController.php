@@ -86,13 +86,7 @@ class ShiftController extends Controller
             ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->sum('total');
         
-        $totalDiscrepancy = 0;
-        foreach ($closedShifts as $s) {
-            $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
-            $expected = $s->opening_cash + $cashSales - $cashExpenses;
-            $totalDiscrepancy += ($s->closing_cash - $expected);
-        }
+        $totalDiscrepancy = $closedShifts->sum('discrepancy');
 
         // Total Expenses & Net Profit
         $currentSales = 0;
@@ -119,7 +113,7 @@ class ShiftController extends Controller
             $nonPosNet = (float) Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $activeShift->id)
                 ->where('source', 'pos_cash')
-                ->where('category', '!=', 'Penjualan')
+                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
                 ->where('transaction_category', '!=', 'expense')
                 ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -129,7 +123,7 @@ class ShiftController extends Controller
             $laciMovements = Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $activeShift->id)
                 ->where('source', 'pos_cash')
-                ->where('category', '!=', 'Penjualan')
+                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
                 ->orderBy('created_at')
                 ->get();
                 
@@ -273,7 +267,7 @@ class ShiftController extends Controller
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)
             ->where('source', 'pos_cash')
-            ->where('category', '!=', 'Penjualan')
+            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
             ->where('transaction_category', '!=', 'expense')
             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -353,10 +347,8 @@ class ShiftController extends Controller
                         'debit'    => 'pos_bank',
                         'transfer' => 'transfer',
                     ];
-                    $source = $sourceMap[$tx->payment_method] ?? 'pos_cash';
-                    if ($tx->payment_method === 'piutang') {
-                        $source = 'pos_cash';
-                    }
+                    $methodToUse = $tx->payment_method === 'piutang' ? ($tx->dp_payment_method ?: 'cash') : $tx->payment_method;
+                    $source = $sourceMap[$methodToUse] ?? 'pos_cash';
 
                     $cashflow = \App\Models\Cashflow::firstOrCreate([
                         'reference_id' => $tx->id,
@@ -458,15 +450,15 @@ class ShiftController extends Controller
         $shift->load(['opener', 'closer', 'transactions.items']);
         $transactions = $shift->transactions()->with(['user', 'items'])->paginate(20);
 
-        // Recalculate for the view
-        $cashSales = Transaction::where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
-        $bankSales = Transaction::where('shift_id', $shift->id)->completed()->whereIn('payment_method', ['transfer', 'qris', 'debit'])->sum('total');
-        $cashExpenses = Cashflow::where('shift_id', $shift->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
+        $summary = app(\App\Services\FinancialReportService::class)->getShiftSummary($shift->id, session('active_worksheet_id'));
+        $cashSales = $summary->cash_sales;
+        $bankSales = $summary->bank_sales;
+        $cashExpenses = $summary->cash_expense;
         
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)
             ->where('source', 'pos_cash')
-            ->where('category', '!=', 'Penjualan')
+            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
             ->where('transaction_category', '!=', 'expense')
             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -496,7 +488,7 @@ class ShiftController extends Controller
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
              ->where('shift_id', $shift->id)
              ->where('source', 'pos_cash')
-             ->where('category', '!=', 'Penjualan')
+             ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
              ->where('transaction_category', '!=', 'expense')
              ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -543,13 +535,14 @@ class ShiftController extends Controller
         $openingCash = $request->opening_cash;
         $closingCash = $request->closing_cash ?? $shift->closing_cash;
 
-        $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $shift->id)->completed()->where('payment_method', 'cash')->sum('total');
-        $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $shift->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
+        $summary = $this->financialService->getShiftSummary($shift->id, session('active_worksheet_id'));
+        $cashSales = $summary->cash_sales;
+        $cashExpenses = $summary->cash_expense;
         
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)
             ->where('source', 'pos_cash')
-            ->where('category', '!=', 'Penjualan')
+            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
             ->where('transaction_category', '!=', 'expense')
             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 

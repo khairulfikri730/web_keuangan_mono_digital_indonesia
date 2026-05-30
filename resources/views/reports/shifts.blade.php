@@ -270,9 +270,8 @@
 
                             @if($s->closed_at || $s->status === 'pending_approval')
                                 @php 
-                                    $rowCashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-                                    $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses; 
-                                    $selisih = $s->closing_cash - $expected;
+                                    $expected = $s->expected_cash; 
+                                    $selisih = $s->discrepancy ?? ($s->closing_cash - $s->expected_cash);
                                 @endphp
                                 
                                 {{-- Kas Laci --}}
@@ -632,9 +631,11 @@
                                     @php 
                                         $hasDiscrepancy = true; 
                                         // Redo the calculation to be explicit in the UI
-                                        $cashSales = \App\Models\Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-                                        $cashExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('type', 'expense')->where('source', 'pos_cash')->sum('amount');
-                                        $expected = $s->opening_cash + $cashSales - $cashExpenses;
+                                        // To accurately display breakdown, we use the values from FinancialReportService
+                                        $summary = app(\App\Services\FinancialReportService::class)->getShiftSummary($s->id);
+                                        $cashSales = $summary->cash_sales;
+                                        $cashExpenses = $summary->cash_expense;
+                                        $expected = $s->expected_cash;
                                     @endphp
                                     <tr class="group hover:bg-slate-800/30 transition-colors">
                                         <td class="py-4 px-2">

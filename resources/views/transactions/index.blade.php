@@ -276,7 +276,8 @@
                                     'debit' => ['icon' => 'fa-credit-card', 'color' => 'orange', 'label' => 'Debit'],
                                     'piutang' => ['icon' => 'fa-hand-holding-dollar', 'color' => 'orange', 'label' => 'Piutang'],
                                 ];
-                                $pm = $pmInfo[$model->payment_method] ?? ['icon' => 'fa-wallet', 'color' => 'slate', 'label' => ucfirst($model->payment_method)];
+                                $actualMethodToShow = ($isPending && $model->dp_payment_method) ? $model->dp_payment_method : $model->payment_method;
+                                $pm = $pmInfo[$actualMethodToShow] ?? ['icon' => 'fa-wallet', 'color' => 'slate', 'label' => ucfirst($actualMethodToShow)];
                             @endphp
                             <tr class="hover:bg-slate-800/60 transition-all group {{ $isCancelled ? 'opacity-50' : '' }}">
                                 <td class="px-4 py-4">
@@ -503,7 +504,7 @@
                             <div class="flex justify-between"><span class="text-slate-500">Tanggal</span><span class="font-bold text-slate-700">{{ $model->created_at->translatedFormat('d F Y') }}</span></div>
                             <div class="flex justify-between"><span class="text-slate-500">Jam</span><span class="font-bold text-slate-700">{{ $model->created_at->format('H:i') }}</span></div>
                             <div class="flex justify-between"><span class="text-slate-500">Kasir</span><span class="font-bold text-slate-700">{{ $model->user->name }}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">Pembayaran</span><span class="font-bold text-slate-700">{{ ucfirst($model->payment_method) }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Pembayaran</span><span class="font-bold text-slate-700">{{ ucfirst($model->payment_method === 'piutang' ? ($model->dp_payment_method ?? 'piutang') : $model->payment_method) }}</span></div>
                             @if($model->payment_method === 'piutang')
                             <div class="flex justify-between"><span class="text-slate-500">Status</span>
                                 @if($isPending)<span class="font-bold text-orange-500">Belum Lunas</span>

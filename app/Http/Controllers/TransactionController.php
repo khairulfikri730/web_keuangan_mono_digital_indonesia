@@ -219,7 +219,7 @@ class TransactionController extends Controller
             $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $activeShift->id)
                 ->where('source', 'pos_cash')
-                ->where('category', '!=', 'Penjualan')
+                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
                 ->where('transaction_category', '!=', 'expense')
                 ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 

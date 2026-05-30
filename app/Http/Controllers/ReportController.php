@@ -475,21 +475,7 @@ class ReportController extends Controller
             ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
             ->sum('total');
 
-        $totalDiscrepancy = 0;
-        foreach ($closedShifts as $s) {
-            $cashSales = Transaction::withoutGlobalScopes()->where('shift_id', $s->id)->where('payment_method', 'cash')->where('status', 'completed')->sum('total');
-            $cashExpenses = Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('transaction_category', 'expense')->where('source', 'pos_cash')->sum('amount');
-            
-            $cashTransfers = Cashflow::withoutGlobalScopes()
-                ->where('shift_id', $s->id)
-                ->where('source', 'pos_cash')
-                ->where('category', '!=', 'Penjualan')
-                ->where('transaction_category', '!=', 'expense')
-                ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
-
-            $expected = $s->opening_cash + $cashSales - $cashExpenses + $cashTransfers;
-            $totalDiscrepancy += ($s->closing_cash - $expected);
-        }
+        $totalDiscrepancy = $closedShifts->sum('discrepancy');
 
         $avgDiscrepancy = $closedShifts->count() > 0 ? $totalDiscrepancy / $closedShifts->count() : 0;
         $highestShift = $closedShifts->sortByDesc('total_sales')->first();
@@ -525,7 +511,7 @@ class ReportController extends Controller
             $nonPosNet = (float) Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $activeShift->id)
                 ->where('source', 'pos_cash')
-                ->where('category', '!=', 'Penjualan')
+                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
                 ->where('transaction_category', '!=', 'expense')
                 ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -535,7 +521,7 @@ class ReportController extends Controller
             $laciMovements = Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $activeShift->id)
                 ->where('source', 'pos_cash')
-                ->where('category', '!=', 'Penjualan')
+                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
                 ->where('transaction_category', '!=', 'expense')
                 ->orderBy('created_at')
                 ->get();
@@ -745,14 +731,8 @@ class ReportController extends Controller
                     $rowBankExpenses = \App\Models\Cashflow::withoutGlobalScopes()->where('shift_id', $s->id)->where('transaction_category', 'expense')->whereIn('source', ['pos_bank', 'transfer'])->sum('amount');
                     $csvTotalCashExp += $rowCashExpenses;
                     $csvTotalBankExp += $rowBankExpenses;
-                    $cashTransfers = \App\Models\Cashflow::withoutGlobalScopes()
-                        ->where('shift_id', $s->id)
-                        ->where('source', 'pos_cash')
-                        ->where('category', '!=', 'Penjualan')
-                        ->where('transaction_category', '!=', 'expense')
-                        ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
-                    $expected = $s->opening_cash + $rowCashSales - $rowCashExpenses + $cashTransfers;
-                    $selisih = $s->closed_at ? ($s->closing_cash - $expected) : 0;
+                    $expected = $s->expected_cash;
+                    $selisih = $s->closed_at ? $s->discrepancy : 0;
 
                     fputcsv($file, [
                         $s->id,

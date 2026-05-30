@@ -21,13 +21,19 @@ class FinancialReportService
     {
         // INCOME = Hanya dari POS Sales (transaksi riil)
         // Manual income (input saldo, adjustment kas) TIDAK dihitung sebagai pendapatan operasional
-        $incomeQuery = Transaction::withoutGlobalScopes()->completed()
+        $incomeQuery = Transaction::withoutGlobalScopes()
+            ->where(function($q) {
+                $q->where('status', 'completed')
+                  ->orWhere(function($sq) {
+                      $sq->where('status', 'pending')->where('paid_so_far', '>', 0);
+                  });
+            })
             ->whereBetween('created_at', [$dateFrom->copy()->startOfDay(), $dateTo->copy()->endOfDay()]);
             
         if ($worksheetId) {
             $incomeQuery->where('worksheet_id', $worksheetId);
         }
-        $totalIncome = $incomeQuery->sum('total');
+        $totalIncome = $incomeQuery->sum(DB::raw("CASE WHEN status = 'completed' AND payment_method != 'piutang' THEN total ELSE paid_so_far END"));
         $totalCount = (clone $incomeQuery)->count();
  
  
@@ -80,11 +86,17 @@ class FinancialReportService
     public function getAllTimeNetProfit($worksheetId = null)
     {
         // INCOME = Hanya dari POS Sales (konsisten dengan getSummary)
-        $incomeQuery = Transaction::withoutGlobalScopes()->completed();
+        $incomeQuery = Transaction::withoutGlobalScopes()
+            ->where(function($q) {
+                $q->where('status', 'completed')
+                  ->orWhere(function($sq) {
+                      $sq->where('status', 'pending')->where('paid_so_far', '>', 0);
+                  });
+            });
         if ($worksheetId) {
             $incomeQuery->where('worksheet_id', $worksheetId);
         }
-        $totalIncome = $incomeQuery->sum('total');
+        $totalIncome = $incomeQuery->sum(DB::raw("CASE WHEN status = 'completed' AND payment_method != 'piutang' THEN total ELSE paid_so_far END"));
  
         $cashflowExpense = Cashflow::withoutGlobalScopes()->where('transaction_category', 'expense')
             ->when($worksheetId, fn($q) => $q->where('worksheet_id', $worksheetId))
@@ -160,8 +172,41 @@ class FinancialReportService
         $openedAt = $shift->opened_at;
         $closedAt = $shift->closed_at ?? now();
 
-        $incomeQuery = Transaction::withoutGlobalScopes()->completed()->where('shift_id', $shiftId);
-        $posIncome = $incomeQuery->sum('total');
+        // 1. Full Sales (non-piutang)
+        $fullSalesQuery = Transaction::withoutGlobalScopes()
+            ->where('shift_id', $shiftId)
+            ->where('status', 'completed')
+            ->where('payment_method', '!=', 'piutang');
+        
+        $fullSalesTotal = (clone $fullSalesQuery)->sum('total');
+        $fullSalesCash = (clone $fullSalesQuery)->where('payment_method', 'cash')->sum('total');
+
+        // 2. DP Piutang (piutang transactions)
+        $dpQuery = Transaction::withoutGlobalScopes()
+            ->where('shift_id', $shiftId)
+            ->where('payment_method', 'piutang')
+            ->whereNotIn('status', ['cancelled', 'batal'])
+            ->where('paid_amount', '>', 0);
+
+        $dpTotal = (clone $dpQuery)->sum('paid_amount');
+        $dpCash = (clone $dpQuery)->where(function($q) {
+            $q->where('dp_payment_method', 'cash')->orWhereNull('dp_payment_method');
+        })->sum('paid_amount');
+
+        // 3. Pelunasan Piutang
+        $pelunasanQuery = Cashflow::withoutGlobalScopes()
+            ->where('category', 'Pelunasan Piutang')
+            ->where(function($q) use ($shiftId, $openedAt, $closedAt) {
+                $q->where('shift_id', $shiftId)
+                  ->orWhere(fn($q2) => $q2->whereNull('shift_id')->whereBetween('created_at', [$openedAt, $closedAt]));
+            });
+            
+        $pelunasanTotal = (clone $pelunasanQuery)->sum('amount');
+        $pelunasanCash = (clone $pelunasanQuery)->where('source', 'pos_cash')->sum('amount');
+
+        $posIncome = $fullSalesTotal + $dpTotal + $pelunasanTotal;
+        $cashSales = $fullSalesCash + $dpCash + $pelunasanCash;
+        $bankSales = $posIncome - $cashSales;
 
         $manualIncome = Cashflow::withoutGlobalScopes()->where('transaction_category', 'income')
             ->where(function($q) use ($shiftId, $openedAt, $closedAt) {
@@ -182,9 +227,6 @@ class FinancialReportService
         $totalExpense = (clone $expenseQuery)->sum('amount');
         $cashExpense = (clone $expenseQuery)->where('source', 'pos_cash')->sum('amount');
         $bankExpense = $totalExpense - $cashExpense;
-
-        $cashSales = (clone $incomeQuery)->where('payment_method', 'cash')->sum('total');
-        $bankSales = $posIncome - $cashSales;
 
         return (object) [
             'total_income' => $totalIncome,
