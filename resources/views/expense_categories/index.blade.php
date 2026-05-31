@@ -16,6 +16,7 @@
             <p class="text-slate-400 text-sm mt-1">Kelola sub-kategori pengeluaran untuk studio Anda.</p>
         </div>
         <div class="flex gap-2">
+            @if(auth()->user()->hasPermission('expense_categories.manage'))
             <button @click="showAddMasterModal = true" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold flex items-center gap-2 border border-white/10 transition-all">
                 <i class="fas fa-layer-group text-xs text-blue-400"></i>
                 Master Jenis Biaya
@@ -24,6 +25,7 @@
                 <i class="fas fa-plus text-xs"></i>
                 Tambah Jenis Biaya
             </button>
+            @endif
         </div>
     </div>
 
@@ -40,7 +42,14 @@
                     <h4 class="text-[10px] font-black text-{{ $color }}-400 uppercase tracking-widest">{{ $master->name }}</h4>
                     <span class="text-[10px] font-black text-slate-500">{{ $categories->where('parent_category', $catKey)->count() }} Items</span>
                 </div>
+                @if(auth()->user()->hasPermission('expense_categories.manage'))
                 <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
+                    <form action="{{ route('master_expense_categories.toggle_pos', $master->id) }}" method="POST" title="{{ $master->is_pos_hidden ? 'Saat ini disembunyikan di Kasir. Klik untuk menampilkan.' : 'Saat ini ditampilkan di Kasir. Klik untuk menyembunyikan.' }}">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="w-6 h-6 rounded bg-slate-800/50 flex items-center justify-center transition-all {{ $master->is_pos_hidden ? 'text-rose-500 hover:text-rose-400' : 'text-emerald-500 hover:text-emerald-400' }}">
+                            <i class="fas {{ $master->is_pos_hidden ? 'fa-toggle-off' : 'fa-toggle-on' }} text-[11px]"></i>
+                        </button>
+                    </form>
                     <button @click="editMasterData = { id: '{{ $master->id }}', name: '{{ $master->name }}', color: '{{ $master->color }}' }; showEditMasterModal = true" 
                             class="w-6 h-6 rounded bg-slate-800/50 text-slate-400 hover:text-blue-400 flex items-center justify-center transition-all">
                         <i class="fas fa-edit text-[9px]"></i>
@@ -52,11 +61,13 @@
                         </button>
                     </form>
                 </div>
+                @endif
             </div>
             <div class="p-4 space-y-2 max-h-[400px] overflow-y-auto hide-scrollbar">
                 @forelse($categories->where('parent_category', $catKey) as $item)
                 <div class="group flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-{{ $color }}-500/30 transition-all">
                     <span class="text-sm font-bold text-slate-300 group-hover:text-white">{{ $item->name }}</span>
+                    @if(auth()->user()->hasPermission('expense_categories.manage'))
                     <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
                         <button @click="editData = { id: '{{ $item->id }}', name: '{{ $item->name }}', parent_category: '{{ $item->parent_category }}' }; showEditModal = true" 
                                 class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-blue-400 flex items-center justify-center transition-all">
@@ -69,6 +80,7 @@
                             </button>
                         </form>
                     </div>
+                    @endif
                 </div>
                 @empty
                 <p class="text-[10px] text-slate-600 italic text-center py-4">Belum ada data</p>

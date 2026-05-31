@@ -49,8 +49,17 @@ class PosController extends Controller
             ->pluck('product_id')
             ->toArray();
 
+        // Hidden Master Categories
+        $hiddenParents = \App\Models\MasterExpenseCategory::where('is_pos_hidden', true)
+            ->get()
+            ->map(function ($master) {
+                return str_replace(' ', '_', strtolower($master->name));
+            })
+            ->toArray();
+
         // Expense Categories for Cash Out
         $expenseCategories = \App\Models\ExpenseCategory::where('is_active', true)
+            ->whereNotIn('parent_category', $hiddenParents)
             ->get()
             ->unique('name')
             ->groupBy('parent_category');

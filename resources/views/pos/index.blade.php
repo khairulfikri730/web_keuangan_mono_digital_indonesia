@@ -1144,7 +1144,7 @@
                     <div>
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Jenis Pengeluaran</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <template x-for="cat in ['operasional', 'consumable', 'bahan_baku', 'variabel']">
+                            <template x-for="cat in Object.keys(expenseCategories).sort()">
                                 <button @click="cashOutMainCategory = cat; cashOutSubCategory = ''"
                                         :class="cashOutMainCategory === cat ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20' : 'bg-slate-50 text-slate-500 border-slate-100 hover:border-orange-200'"
                                         class="py-2.5 px-3 border-2 rounded-xl text-[10px] font-black transition-all flex items-center justify-center uppercase tracking-tighter">

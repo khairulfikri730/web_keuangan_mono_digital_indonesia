@@ -115,6 +115,7 @@
             <h3 class="text-lg font-black text-white"><i class="fas fa-chart-bar text-purple-400 mr-2"></i>Statistik Kerja Crew</h3>
             <form action="{{ route('schedules.index') }}" method="GET" class="flex flex-wrap items-end gap-3">
                 <input type="hidden" name="tab" value="dashboard">
+                <input type="hidden" name="stats_filter" value="{{ $statsFilter }}">
                 <div class="flex rounded-xl overflow-hidden border border-slate-700">
                     <button type="submit" name="stats_filter" value="daily" class="px-3 py-1.5 text-[10px] font-bold transition-colors {{ $statsFilter === 'daily' ? 'bg-purple-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white' }}">Harian</button>
                     <button type="submit" name="stats_filter" value="weekly" class="px-3 py-1.5 text-[10px] font-bold transition-colors border-x border-slate-700 {{ $statsFilter === 'weekly' ? 'bg-purple-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white' }}">Mingguan</button>

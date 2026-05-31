@@ -209,6 +209,7 @@ Route::middleware(['auth'])->group(function () {
 
                 Route::post('master_expense_categories', [\App\Http\Controllers\MasterExpenseCategoryController::class, 'store'])->name('master_expense_categories.store');
                 Route::put('master_expense_categories/{master_expense_category}', [\App\Http\Controllers\MasterExpenseCategoryController::class, 'update'])->name('master_expense_categories.update');
+                Route::patch('master_expense_categories/{master_expense_category}/toggle-pos', [\App\Http\Controllers\MasterExpenseCategoryController::class, 'togglePos'])->name('master_expense_categories.toggle_pos');
                 Route::delete('master_expense_categories/{master_expense_category}', [\App\Http\Controllers\MasterExpenseCategoryController::class, 'destroy'])->name('master_expense_categories.destroy');
             });
         });

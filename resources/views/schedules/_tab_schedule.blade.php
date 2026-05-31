@@ -22,6 +22,7 @@
     <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
         <form action="{{ route('schedules.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
             <input type="hidden" name="tab" value="jadwal">
+            <input type="hidden" name="view" value="{{ $viewMode }}">
             <div>
                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mode Tampilan</label>
                 <div class="flex rounded-xl overflow-hidden border border-slate-700">

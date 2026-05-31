@@ -72,4 +72,13 @@ class MasterExpenseCategoryController extends Controller
         $master_expense_category->delete();
         return redirect()->route('expense_categories.index')->with('success', 'Master jenis biaya berhasil dihapus!');
     }
+
+    public function togglePos(MasterExpenseCategory $master_expense_category)
+    {
+        $master_expense_category->update([
+            'is_pos_hidden' => !$master_expense_category->is_pos_hidden
+        ]);
+
+        return redirect()->back()->with('success', 'Status visibilitas POS berhasil diperbarui!');
+    }
 }

@@ -29,9 +29,13 @@ class ExpenseCategoryController extends Controller
             }
         }
 
-        $masterCategories = \App\Models\MasterExpenseCategory::where('worksheet_id', $worksheetId)
-            ->orderBy('id')
-            ->get();
+        $masterQuery = \App\Models\MasterExpenseCategory::where('worksheet_id', $worksheetId);
+        
+        if (!auth()->user()->hasPermission('expense_categories.manage')) {
+            $masterQuery->where('is_pos_hidden', false);
+        }
+
+        $masterCategories = $masterQuery->orderBy('id')->get();
 
         $categories = ExpenseCategory::where('worksheet_id', $worksheetId)
             ->orderBy('parent_category')

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MasterExpenseCategory extends Model
 {
-    protected $fillable = ['worksheet_id', 'name', 'color'];
+    protected $fillable = ['worksheet_id', 'name', 'color', 'is_pos_hidden'];
 
     public function worksheet()
     {

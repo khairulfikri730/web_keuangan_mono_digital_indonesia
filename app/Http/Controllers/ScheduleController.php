@@ -14,8 +14,19 @@ class ScheduleController extends Controller
     public function index(Request $request)
     {
         $viewMode = $request->input('view', 'daily');
-        $date = $request->input('date', now()->format('Y-m-d'));
-        $month = $request->input('month', now()->format('Y-m'));
+        $date = $request->input('date');
+        $month = $request->input('month');
+
+        // Smart sync between date and month when transitioning views
+        if ($date && !$month) {
+            $month = Carbon::parse($date)->format('Y-m');
+        } elseif ($month && !$date) {
+            $date = Carbon::parse($month . '-01')->format('Y-m-d');
+        }
+
+        // Fallbacks
+        $date = $date ?? now()->format('Y-m-d');
+        $month = $month ?? now()->format('Y-m');
         $tab = $request->input('tab', 'dashboard');
 
         $locations = ScheduleLocation::with(['shifts' => function ($q) {
@@ -65,13 +76,24 @@ class ScheduleController extends Controller
 
         // ── Crew Statistics ───────────────────────────────────
         $statsFilter = $request->input('stats_filter', 'weekly');
-        $statsDate = $request->input('stats_date', now()->format('Y-m-d'));
+        $statsDate = $request->input('stats_date');
+        $statsMonth = $request->input('stats_month');
+
+        // Smart sync for stats dates
+        if ($statsDate && !$statsMonth) {
+            $statsMonth = Carbon::parse($statsDate)->format('Y-m');
+        } elseif ($statsMonth && !$statsDate) {
+            $statsDate = Carbon::parse($statsMonth . '-01')->format('Y-m-d');
+        }
+
+        // Fallbacks
+        $statsDate = $statsDate ?? now()->format('Y-m-d');
+        $statsMonth = $statsMonth ?? now()->format('Y-m');
 
         if ($statsFilter === 'daily') {
             $statsStart = Carbon::parse($statsDate);
             $statsEnd = $statsStart->copy();
         } elseif ($statsFilter === 'monthly') {
-            $statsMonth = $request->input('stats_month', now()->format('Y-m'));
             $statsStart = Carbon::parse($statsMonth . '-01')->startOfMonth();
             $statsEnd = $statsStart->copy()->endOfMonth();
         } else {
