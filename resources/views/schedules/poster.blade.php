@@ -25,7 +25,43 @@
         }
         .glow-circle { position: absolute; border-radius: 50%; filter: blur(100px); z-index: 0; }
         .content { z-index: 10; position: relative; padding: 60px 50px; }
-        @media print { .no-print { display: none !important; } body { background: white; } }
+        @media print { 
+            .no-print { display: none !important; } 
+            body, .poster-container { background: white !important; color: #1e293b !important; background-image: none !important; }
+            .poster-container { width: 100% !important; min-height: auto !important; padding: 0 !important; }
+            .content { padding: 20px !important; }
+            .bg-slate-800\/40, .bg-slate-900 { background: white !important; border-color: #cbd5e1 !important; box-shadow: none !important; }
+            .text-white { color: #0f172a !important; }
+            .text-slate-400, .text-slate-500 { color: #475569 !important; }
+            .border-slate-700, .border-slate-700\/50, .border-slate-700\/30, .border-slate-800 { border-color: #cbd5e1 !important; }
+            .bg-pattern, .glow-circle, .bg-gradient-to-b { display: none !important; }
+            .text-yellow-400 { color: #b45309 !important; }
+            .text-blue-400 { color: #1d4ed8 !important; }
+            .bg-yellow-500\/10 { background: transparent !important; color: #b45309 !important; border-color: #b45309 !important; }
+            .bg-slate-800\/50 { background: transparent !important; border-color: #94a3b8 !important; color: #475569 !important; }
+            .bg-blue-500\/15 { background: transparent !important; border-color: #1d4ed8 !important; color: #1d4ed8 !important; }
+            .bg-red-500\/15 { background: transparent !important; border-color: #b91c1c !important; color: #b91c1c !important; }
+            .bg-yellow-500\/5 { background: transparent !important; }
+            .text-red-400 { color: #dc2626 !important; }
+            .text-emerald-400 { color: #10b981 !important; }
+            .drop-shadow-md, .drop-shadow-sm { filter: none !important; }
+            
+            /* Override inline colors for high contrast reading */
+            [style*="color:#"] { color: #0f172a !important; font-weight: 800 !important; }
+            
+            /* Make pill borders darker */
+            [style*="border-color:#"] { border-color: #64748b !important; border-width: 1.5px !important; }
+            
+            /* Remove very light pill backgrounds */
+            [style*="background:#"] { background-color: transparent !important; }
+            
+            /* Except for the little shift color dot, give it a border so it's visible */
+            .w-3.h-3.rounded-full { border: 1px solid #000 !important; background-color: transparent !important; }
+
+            /* Prevent rows from splitting across pages */
+            tr { page-break-inside: avoid; break-inside: avoid; }
+            td, th { page-break-inside: avoid; break-inside: avoid; }
+        }
     </style>
 </head>
 <body class="flex flex-col items-center min-h-screen bg-slate-900 py-10">

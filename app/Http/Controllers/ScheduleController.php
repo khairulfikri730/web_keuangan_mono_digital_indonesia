@@ -90,12 +90,22 @@ class ScheduleController extends Controller
             $open = $crewAsgn->where('status', 'open')->count();
             $closed = $crewAsgn->where('status', 'close')->count();
             $replaced = $crewAsgn->whereNotNull('original_crew_id')->count();
+            
+            $indoor = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'indoor')->count();
+            $outdoor = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'outdoor')->count();
+            $pagi = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'pagi')->count();
+            $sore = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'sore')->count();
+
             $crewStats[] = [
                 'crew' => $crew,
                 'total_shifts' => $total,
                 'open' => $open,
                 'closed' => $closed,
                 'replaced' => $replaced,
+                'indoor' => $indoor,
+                'outdoor' => $outdoor,
+                'pagi' => $pagi,
+                'sore' => $sore,
                 'pct_active' => $total > 0 ? round(($open / $total) * 100) : 0,
             ];
         }

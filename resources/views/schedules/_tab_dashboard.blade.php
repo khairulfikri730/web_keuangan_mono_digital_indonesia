@@ -143,6 +143,10 @@
                     <tr>
                         <th class="px-4 py-3 text-left">Crew</th>
                         <th class="px-4 py-3 text-center">Total Shift</th>
+                        <th class="px-4 py-3 text-center">Indoor</th>
+                        <th class="px-4 py-3 text-center">Outdoor</th>
+                        <th class="px-4 py-3 text-center">Pagi</th>
+                        <th class="px-4 py-3 text-center">Sore</th>
                         <th class="px-4 py-3 text-center"><span class="text-emerald-400"><i class="fas fa-check-circle"></i></span> Open</th>
                         <th class="px-4 py-3 text-center"><span class="text-red-400"><i class="fas fa-times-circle"></i></span> Close</th>
                         <th class="px-4 py-3 text-center"><span class="text-orange-400"><i class="fas fa-exchange-alt"></i></span> Ganti</th>
@@ -164,6 +168,10 @@
                             </div>
                         </td>
                         <td class="px-4 py-3 text-center font-bold text-slate-800 dark:text-white">{{ $cs['total_shifts'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ $cs['indoor'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-blue-400">{{ $cs['outdoor'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-yellow-400">{{ $cs['pagi'] }}</td>
+                        <td class="px-4 py-3 text-center font-bold text-purple-400">{{ $cs['sore'] }}</td>
                         <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ $cs['open'] }}</td>
                         <td class="px-4 py-3 text-center font-bold {{ $cs['closed'] > 0 ? 'text-red-400' : 'text-slate-600' }}">{{ $cs['closed'] }}</td>
                         <td class="px-4 py-3 text-center font-bold {{ $cs['replaced'] > 0 ? 'text-orange-400' : 'text-slate-600' }}">{{ $cs['replaced'] }}</td>
