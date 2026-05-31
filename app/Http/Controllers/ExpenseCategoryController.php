@@ -11,18 +11,40 @@ class ExpenseCategoryController extends Controller
     public function index()
     {
         $worksheetId = session('worksheet_id') ?: Worksheet::first()->id;
+
+        // Ensure defaults exist for this worksheet
+        if (\App\Models\MasterExpenseCategory::where('worksheet_id', $worksheetId)->count() === 0) {
+            $defaults = [
+                ['name' => 'Operasional', 'color' => 'blue'],
+                ['name' => 'Consumable', 'color' => 'emerald'],
+                ['name' => 'Bahan Baku', 'color' => 'purple'],
+                ['name' => 'Variabel', 'color' => 'amber'],
+            ];
+            foreach ($defaults as $default) {
+                \App\Models\MasterExpenseCategory::create([
+                    'worksheet_id' => $worksheetId,
+                    'name' => $default['name'],
+                    'color' => $default['color'],
+                ]);
+            }
+        }
+
+        $masterCategories = \App\Models\MasterExpenseCategory::where('worksheet_id', $worksheetId)
+            ->orderBy('id')
+            ->get();
+
         $categories = ExpenseCategory::where('worksheet_id', $worksheetId)
             ->orderBy('parent_category')
             ->orderBy('name')
             ->get();
             
-        return view('expense_categories.index', compact('categories'));
+        return view('expense_categories.index', compact('categories', 'masterCategories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'parent_category' => 'required|in:operasional,consumable,bahan_baku,variabel',
+            'parent_category' => 'required|string',
             'name' => 'required|string|max:255',
         ]);
 
@@ -41,7 +63,7 @@ class ExpenseCategoryController extends Controller
     public function update(Request $request, ExpenseCategory $expense_category)
     {
         $request->validate([
-            'parent_category' => 'required|in:operasional,consumable,bahan_baku,variabel',
+            'parent_category' => 'required|string',
             'name' => 'required|string|max:255',
             'is_active' => 'boolean'
         ]);

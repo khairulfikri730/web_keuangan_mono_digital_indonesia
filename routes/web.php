@@ -206,6 +206,10 @@ Route::middleware(['auth'])->group(function () {
                 Route::post('expense_categories', [ExpenseCategoryController::class, 'store'])->name('expense_categories.store');
                 Route::put('expense_categories/{expense_category}', [ExpenseCategoryController::class, 'update'])->name('expense_categories.update');
                 Route::delete('expense_categories/{expense_category}', [ExpenseCategoryController::class, 'destroy'])->name('expense_categories.destroy');
+
+                Route::post('master_expense_categories', [\App\Http\Controllers\MasterExpenseCategoryController::class, 'store'])->name('master_expense_categories.store');
+                Route::put('master_expense_categories/{master_expense_category}', [\App\Http\Controllers\MasterExpenseCategoryController::class, 'update'])->name('master_expense_categories.update');
+                Route::delete('master_expense_categories/{master_expense_category}', [\App\Http\Controllers\MasterExpenseCategoryController::class, 'destroy'])->name('master_expense_categories.destroy');
             });
         });
     });
