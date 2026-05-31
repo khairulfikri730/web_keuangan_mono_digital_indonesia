@@ -321,8 +321,8 @@
                                 </div>
                                 @endforeach
                                 @for($i = $cellAsgn->count(); $i < $shift->max_crew; $i++)
-                                <div class="px-1.5 py-1 mt-0.5 rounded cursor-pointer text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all hover:ring-1 hover:ring-slate-500 bg-red-500/10 text-red-400 border border-red-500/20" @click="openQuickAssign('{{ $dt }}', {{ $shift->id }})" title="Klik untuk tugaskan crew (Slot kosong)">
-                                    <i class="fas fa-ban text-[7px]"></i> Close
+                                <div class="px-1.5 py-1 mt-0.5 rounded cursor-pointer text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all hover:bg-slate-700/50 bg-slate-800/50 text-slate-500 border border-dashed border-slate-600" @click="openQuickAssign('{{ $dt }}', {{ $shift->id }})" title="Klik untuk tugaskan crew (Slot kosong)">
+                                    <i class="fas fa-plus text-[7px]"></i> Kosong
                                 </div>
                                 @endfor
                             </td>

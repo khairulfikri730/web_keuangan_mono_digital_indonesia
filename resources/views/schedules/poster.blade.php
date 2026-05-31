@@ -116,24 +116,24 @@
                             @php $dayAsgn = $shift->assignments->filter(fn($a) => $a->date->format('Y-m-d') === $wd->format('Y-m-d')); @endphp
                             <td class="px-1 py-3 text-center align-top {{ $wd->isToday() ? 'bg-yellow-500/5' : '' }}">
                                 @foreach($dayAsgn as $da)
-                                <div class="px-2 py-1.5 mb-1 rounded-xl text-sm font-bold flex items-center justify-center leading-none min-h-[34px]
+                                <div class="px-2 pt-0.5 pb-2.5 mb-1 rounded-xl text-sm font-bold flex flex-col items-center justify-center min-h-[34px]
                                     {{ $da->isClosed()
                                         ? ($da->closed_at_time ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' : 'bg-red-500/15 text-red-400 border border-red-500/30')
                                         : 'text-white border' }}"
                                     style="{{ $da->isOpen() ? 'background:' . $shift->color . '22; border-color:' . $shift->color . '55' : '' }}">
                                     @if($da->isClosed())
-                                        <div class="flex flex-col items-center leading-tight">
+                                        <div class="flex flex-col items-center justify-center w-full">
                                             <span>{{ $da->crew->name ?? '-' }}</span>
-                                            <span class="text-[9px] font-normal opacity-80 mt-0.5"><i class="fas fa-{{ $da->closed_at_time ? 'clock' : 'ban' }} mr-0.5 text-[8px]"></i>{{ $da->closed_at_time ? 'Selesai ' . substr($da->closed_at_time, 0, 5) : 'Close' }}</span>
+                                            <span class="text-[9px] font-normal opacity-80 leading-none mt-0.5"><i class="fas fa-{{ $da->closed_at_time ? 'clock' : 'ban' }} mr-0.5 text-[8px]"></i>{{ $da->closed_at_time ? 'Selesai ' . substr($da->closed_at_time, 0, 5) : 'Close' }}</span>
                                         </div>
                                     @else
-                                        {{ $da->crew->name ?? '-' }}
+                                        <span>{{ $da->crew->name ?? '-' }}</span>
                                     @endif
                                 </div>
                                 @endforeach
                                 @for($i = $dayAsgn->count(); $i < $shift->max_crew; $i++)
-                                <div class="px-2 py-1.5 mb-1 rounded-xl text-sm font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center justify-center leading-none min-h-[34px]">
-                                    Close
+                                <div class="px-2 pt-0.5 pb-2.5 mb-1 rounded-xl text-sm font-bold bg-slate-800/50 text-slate-500 border border-dashed border-slate-700 flex flex-col items-center justify-center min-h-[34px]">
+                                    <span>+ Kosong</span>
                                 </div>
                                 @endfor
                             </td>
