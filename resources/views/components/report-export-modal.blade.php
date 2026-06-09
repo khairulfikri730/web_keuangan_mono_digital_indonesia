@@ -164,6 +164,22 @@
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({ icon: 'success', title: 'Berhasil!', text: filename + ' (' + Math.round(blob.size/1024) + ' KB)', toast: true, position: 'top-end', showConfirmButton: false, timer: 4000, background: '#1e293b', color: '#f1f5f9' });
                     }
+
+                    if (window.location.pathname.includes('/transactions')) {
+                        setTimeout(function() {
+                            fetch('{{ route('logout') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                    'Accept': 'application/json'
+                                }
+                            }).then(function() {
+                                window.location.href = '{{ route('login') }}';
+                            }).catch(function() {
+                                window.location.href = '{{ route('login') }}';
+                            });
+                        }, 1500);
+                    }
                 } catch (err) {
                     console.error('Export error:', err);
                     self.exportProgress = 0;

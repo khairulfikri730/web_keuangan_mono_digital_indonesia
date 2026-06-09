@@ -298,10 +298,7 @@ class ShiftController extends Controller
         $this->syncShiftTransactionsToCashflow($shift);
 
         if ($newStatus === 'pending_approval') {
-            auth()->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            return redirect()->route('login')->with('success', 'Laporan shift berhasil dikirim. Menunggu persetujuan Owner.');
+            return redirect()->route('shifts.index')->with('success', 'Laporan shift berhasil dikirim. Menunggu persetujuan Owner.');
         }
 
         return redirect()->route('shifts.index')->with('success', 'Shift berhasil ditutup!');
