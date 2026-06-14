@@ -47,7 +47,12 @@
                     </div>
                     <div>
                         <p class="text-slate-500 text-xs">Metode Pembayaran</p>
-                        <p class="font-medium text-white uppercase">{{ $transaction->payment_method }}</p>
+                        <div class="flex items-center gap-2">
+                            <p class="font-medium text-white uppercase">{{ $transaction->payment_method }}</p>
+                            @if($transaction->status === 'completed' && $transaction->payment_method !== 'piutang' && auth()->user()->isOwner())
+                                <button onclick="document.getElementById('modal-edit-payment').classList.remove('hidden')" class="text-xs text-blue-400 hover:text-blue-300"><i class="fas fa-edit"></i> Edit</button>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -113,4 +118,39 @@
         </div>
     </div>
 </div>
+
+@if($transaction->status === 'completed' && $transaction->payment_method !== 'piutang' && auth()->user()->isOwner())
+<div id="modal-edit-payment" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-2xl w-full max-w-sm shadow-2xl border border-slate-700 overflow-hidden">
+        <div class="p-5 border-b border-slate-700/50 flex justify-between items-center">
+            <h3 class="font-bold text-white"><i class="fas fa-edit text-blue-400 mr-2"></i>Ubah Metode Pembayaran</h3>
+            <button onclick="document.getElementById('modal-edit-payment').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <form action="{{ route('transactions.update-payment-method', $transaction) }}" method="POST" class="p-5 space-y-4">
+            @csrf
+            @method('PUT')
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Metode Saat Ini</label>
+                <input type="text" value="{{ strtoupper($transaction->payment_method) }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500" disabled>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Metode Baru</label>
+                <select name="payment_method" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-sm font-bold text-white outline-none focus:border-blue-500" required>
+                    <option value="cash" {{ $transaction->payment_method === 'cash' ? 'selected' : '' }}>CASH</option>
+                    <option value="qris" {{ $transaction->payment_method === 'qris' ? 'selected' : '' }}>QRIS</option>
+                    <option value="transfer" {{ $transaction->payment_method === 'transfer' ? 'selected' : '' }}>TRANSFER</option>
+                    <option value="debit" {{ $transaction->payment_method === 'debit' ? 'selected' : '' }}>DEBIT</option>
+                </select>
+            </div>
+            
+            <div class="pt-2 flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-edit-payment').classList.add('hidden')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">Batal</button>
+                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-500/20">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
+
 @endsection

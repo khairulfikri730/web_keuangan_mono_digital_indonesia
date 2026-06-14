@@ -113,7 +113,7 @@ class ShiftController extends Controller
             $nonPosNet = (float) Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $activeShift->id)
                 ->where('source', 'pos_cash')
-                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
+                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)', 'Pelunasan Piutang'])
                 ->where('transaction_category', '!=', 'expense')
                 ->sum(DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -123,7 +123,7 @@ class ShiftController extends Controller
             $laciMovements = Cashflow::withoutGlobalScopes()
                 ->where('shift_id', $activeShift->id)
                 ->where('source', 'pos_cash')
-                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
+                ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)', 'Pelunasan Piutang'])
                 ->orderBy('created_at')
                 ->get();
                 
@@ -267,7 +267,7 @@ class ShiftController extends Controller
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)
             ->where('source', 'pos_cash')
-            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
+            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)', 'Pelunasan Piutang'])
             ->where('transaction_category', '!=', 'expense')
             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -455,7 +455,7 @@ class ShiftController extends Controller
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)
             ->where('source', 'pos_cash')
-            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
+            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)', 'Pelunasan Piutang'])
             ->where('transaction_category', '!=', 'expense')
             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -485,7 +485,7 @@ class ShiftController extends Controller
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
              ->where('shift_id', $shift->id)
              ->where('source', 'pos_cash')
-             ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
+             ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)', 'Pelunasan Piutang'])
              ->where('transaction_category', '!=', 'expense')
              ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 
@@ -515,6 +515,7 @@ class ShiftController extends Controller
             'total_sales' => (float)$totalSales,
             'total_transactions' => $totalTransactions,
             'cash_expenses' => (float)$cashExpenses,
+            'transfers' => (float)$transfers,
             'expected_cash' => (float)$expectedCash,
             'discrepancy' => in_array($shift->status, ['closed', 'pending_approval']) ? (float)(($shift->closing_cash ?? 0) - $expectedCash) : null,
             'notes' => $shift->notes,
@@ -539,7 +540,7 @@ class ShiftController extends Controller
         $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
             ->where('shift_id', $shift->id)
             ->where('source', 'pos_cash')
-            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)'])
+            ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)', 'Pelunasan Piutang'])
             ->where('transaction_category', '!=', 'expense')
             ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
 

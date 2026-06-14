@@ -449,6 +449,78 @@ class TransactionController extends Controller
         }
     }
 
+    public function updatePaymentMethod(Request $request, Transaction $transaction)
+    {
+        $request->validate([
+            'payment_method' => 'required|in:cash,qris,transfer,debit',
+        ]);
+
+        if ($transaction->status !== 'completed') {
+            return back()->with('error', 'Hanya transaksi selesai yang bisa diubah metode pembayarannya.');
+        }
+
+        if ($transaction->payment_method === 'piutang') {
+            return back()->with('error', 'Transaksi piutang tidak bisa diubah metode pembayarannya dari sini.');
+        }
+
+        $oldMethod = $transaction->payment_method;
+        $newMethod = $request->payment_method;
+
+        if ($oldMethod === $newMethod) {
+            return back()->with('success', 'Metode pembayaran tidak berubah.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Update transaction
+            $transaction->update(['payment_method' => $newMethod]);
+
+            // 2. Update cashflow
+            $sourceMap = [
+                'cash'     => 'pos_cash',
+                'qris'     => 'pos_bank',
+                'debit'    => 'pos_bank',
+                'transfer' => 'transfer',
+            ];
+            
+            Cashflow::where('reference_id', $transaction->id)
+                ->where('reference', $transaction->invoice_number)
+                ->update(['source' => $sourceMap[$newMethod] ?? 'pos_cash']);
+
+            // 3. Update Shift expected cash if shift is closed
+            if ($transaction->shift_id) {
+                $shift = Shift::find($transaction->shift_id);
+                if ($shift && $shift->status === 'closed') {
+                    $financialService = app(\App\Services\FinancialReportService::class);
+                    $summary = $financialService->getShiftSummary($shift->id, $shift->worksheet_id);
+                    $cashSales = $summary->cash_sales;
+                    $cashExpenses = $summary->cash_expense;
+                    
+                    $transfers = (float) \App\Models\Cashflow::withoutGlobalScopes()
+                        ->where('shift_id', $shift->id)
+                        ->where('source', 'pos_cash')
+                        ->whereNotIn('category', ['Penjualan', 'Uang Muka (DP)', 'Pelunasan Piutang'])
+                        ->where('transaction_category', '!=', 'expense')
+                        ->sum(\Illuminate\Support\Facades\DB::raw('CASE WHEN type = "income" THEN amount ELSE -amount END'));
+
+                    $expectedCash = $shift->opening_cash + $cashSales - $cashExpenses + $transfers;
+                    $discrepancy = $shift->closing_cash - $expectedCash;
+
+                    $shift->update([
+                        'expected_cash' => $expectedCash,
+                        'discrepancy' => $discrepancy,
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return back()->with('success', "Metode pembayaran berhasil diubah dari " . strtoupper($oldMethod) . " menjadi " . strtoupper($newMethod));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal merubah metode pembayaran: ' . $e->getMessage());
+        }
+    }
+
     public function cancel(Transaction $transaction)
     {
         if ($transaction->status !== 'completed') {

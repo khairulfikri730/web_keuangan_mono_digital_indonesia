@@ -956,6 +956,12 @@
                     <span class="text-slate-500 font-medium">Pengeluaran Bank</span>
                     <span class="font-black text-red-500">Rp {{ number_format($closeBankExp, 0, ',', '.') }}</span>
                 </div>
+                @if(abs($closeTransfers) > 0)
+                <div class="flex justify-between">
+                    <span class="text-slate-500 font-medium">Transfer / Penyesuaian</span>
+                    <span class="font-black {{ $closeTransfers > 0 ? 'text-emerald-500' : 'text-red-500' }}">{{ $closeTransfers > 0 ? '+ Rp ' : '- Rp ' }}{{ number_format(abs($closeTransfers), 0, ',', '.') }}</span>
+                </div>
+                @endif
             </div>
 
             {{-- Expected Cash --}}

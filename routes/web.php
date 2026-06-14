@@ -242,6 +242,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/reports/export-csv', [ReportController::class, 'exportCsv'])->name('reports.export-csv');
 
     // Transaksi Actions (Protected by granular permissions)
+    Route::put('/transactions/{transaction}/payment-method', [TransactionController::class, 'updatePaymentMethod'])->middleware('permission:transactions.edit')->name('transactions.update-payment-method');
     Route::post('/transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])->middleware('permission:transactions.edit')->name('transactions.cancel');
     Route::post('/transactions/{transaction}/restore', [TransactionController::class, 'restore'])->name('transactions.restore');
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('permission:transactions.delete')->name('transactions.destroy');

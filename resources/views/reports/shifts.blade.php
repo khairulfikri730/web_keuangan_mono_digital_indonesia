@@ -432,6 +432,10 @@
                                     <span class="text-xs font-medium text-slate-400">- Pengeluaran Cash</span>
                                     <span class="text-sm font-bold text-red-400" x-text="'- Rp '+Number(detailData.cash_expenses).toLocaleString('id-ID')"></span>
                                 </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2" x-show="detailData.transfers !== 0 && detailData.transfers != null">
+                                    <span class="text-xs font-medium text-slate-400">Transfer / Penyesuaian</span>
+                                    <span class="text-sm font-bold" :class="detailData.transfers > 0 ? 'text-emerald-400' : 'text-red-400'" x-text="(detailData.transfers > 0 ? '+ Rp ' : '- Rp ') + Number(Math.abs(detailData.transfers)).toLocaleString('id-ID')"></span>
+                                </div>
                                 <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
                                     <span class="text-xs font-black text-slate-300">Expected Cash</span>
                                     <span class="text-sm font-black text-white" x-text="'Rp '+Number(detailData.expected_cash).toLocaleString('id-ID')"></span>
@@ -539,6 +543,10 @@
                                     <span class="text-xs text-slate-400">- Pengeluaran Cash</span>
                                     <span class="text-sm font-bold text-red-400" x-text="'-Rp '+Number(detailData?.cash_expenses||0).toLocaleString('id-ID')"></span>
                                 </div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2" x-show="(detailData?.transfers||0) !== 0">
+                                    <span class="text-xs text-slate-400">Transfer / Penyesuaian</span>
+                                    <span class="text-sm font-bold" :class="(detailData?.transfers||0) > 0 ? 'text-emerald-400' : 'text-red-400'" x-text="((detailData?.transfers||0) > 0 ? '+Rp ' : '-Rp ') + Number(Math.abs(detailData?.transfers||0)).toLocaleString('id-ID')"></span>
+                                </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-xs font-bold text-slate-300">Expected Cash</span>
                                     <span class="text-sm font-black text-white" x-text="'Rp '+Number(editExpected).toLocaleString('id-ID')"></span>
@@ -636,6 +644,7 @@
                                         $cashSales = $summary->cash_sales;
                                         $cashExpenses = $summary->cash_expense;
                                         $expected = $s->expected_cash;
+                                        $transfers = $expected - $s->opening_cash - $cashSales + $cashExpenses;
                                     @endphp
                                     <tr class="group hover:bg-slate-800/30 transition-colors">
                                         <td class="py-4 px-2">
@@ -647,6 +656,9 @@
                                                 <p>Awal: {{ number_format($s->opening_cash, 0, ',', '.') }}</p>
                                                 <p>+ Jual: {{ number_format($cashSales, 0, ',', '.') }}</p>
                                                 <p>- Keluar: {{ number_format($cashExpenses, 0, ',', '.') }}</p>
+                                                @if(abs($transfers) > 0)
+                                                <p>{{ $transfers > 0 ? '+' : '-' }} Tf/Adj: {{ number_format(abs($transfers), 0, ',', '.') }}</p>
+                                                @endif
                                                 <p class="font-bold border-t border-slate-700 pt-0.5 text-slate-300">= {{ number_format($expected, 0, ',', '.') }}</p>
                                             </div>
                                         </td>
@@ -715,7 +727,7 @@ function shiftDashboardApp() {
 
         get editExpected() {
             if (!this.detailData) return 0;
-            return Number(this.editOpening) + Number(this.detailData.cash_sales) - Number(this.detailData.cash_expenses);
+            return Number(this.editOpening) + Number(this.detailData.cash_sales) - Number(this.detailData.cash_expenses) + Number(this.detailData.transfers || 0);
         },
 
         get editDiscrepancy() {
