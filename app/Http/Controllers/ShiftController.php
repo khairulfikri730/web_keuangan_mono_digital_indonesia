@@ -388,6 +388,7 @@ class ShiftController extends Controller
             'description' => 'required|string|max:255',
             'category'    => 'nullable|string|max:100', // Ini sekarang berisi Main Category (Operasional, etc)
             'source'      => 'nullable|string|in:cash,bank',
+            'date'        => 'nullable|date',
         ]);
 
         $sourceParam = $request->source === 'bank' ? 'bank' : 'cash';
@@ -398,6 +399,7 @@ class ShiftController extends Controller
         
         // Map category to lowercase for expense_type
         $expenseType = strtolower($request->category ?: 'operasional');
+        $expenseDate = $request->date ? \Carbon\Carbon::parse($request->date)->format('Y-m-d') : today()->format('Y-m-d');
 
         // 1. SIMPAN KE BIAYA BULANAN (MonthlyUsage)
         $monthlyUsage = \App\Models\MonthlyUsage::create([
@@ -409,9 +411,9 @@ class ShiftController extends Controller
             'unit'           => 'Pcs',
             'payment_method' => $paymentMethod,
             'usage_amount'   => $request->amount,
-            'expense_date'   => today(),
-            'month'          => now()->month,
-            'year'           => now()->year,
+            'expense_date'   => $expenseDate,
+            'month'          => \Carbon\Carbon::parse($expenseDate)->month,
+            'year'           => \Carbon\Carbon::parse($expenseDate)->year,
             'description'    => $request->description,
             'status'         => 'dibayar',
             'sync_status'    => 'synced',
@@ -429,7 +431,7 @@ class ShiftController extends Controller
             'amount'           => $request->amount,
             'source'           => $sourceType,
             'bank_sync_status' => 'synced',
-            'transaction_date' => today(),
+            'transaction_date' => $expenseDate,
             'reference_id'     => $monthlyUsage->id,
             'reference_type'   => 'MonthlyUsage'
         ]);

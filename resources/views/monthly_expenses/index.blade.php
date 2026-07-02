@@ -82,7 +82,7 @@
             </div>
 
             <!-- SUMMARY CARDS ROW 2: KATEGORI PENGELUARAN -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <!-- OPERASIONAL -->
                 <div class="bg-slate-800/80 p-4 rounded-xl border border-white/5 shadow-md flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
@@ -124,6 +124,17 @@
                     <div>
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Variabel</p>
                         <p class="text-sm font-black text-white">Rp {{ number_format($summary->variabel_total ?? 0, 0, ',', '.') }}</p>
+                    </div>
+                </div>
+
+                <!-- GAJI -->
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-white/5 shadow-md flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Gaji</p>
+                        <p class="text-sm font-black text-white">Rp {{ number_format($summary->gaji_total ?? 0, 0, ',', '.') }}</p>
                     </div>
                 </div>
             </div>
@@ -289,6 +300,7 @@
                     $pctCo = round(($summary->consumable_total / $tot) * 100);
                     $pctBb = round(($summary->bahan_baku_total / $tot) * 100);
                     $pctVa = round(($summary->variabel_total / $tot) * 100);
+                    $pctGa = round(($summary->gaji_total / $tot) * 100);
                 @endphp
                 
                 <div class="relative w-32 h-32 mx-auto mb-8 flex items-center justify-center">
@@ -327,6 +339,13 @@
                             <span class="text-slate-400 font-bold uppercase tracking-wider">Variabel</span>
                         </div>
                         <span class="text-white font-black">{{ $pctVa }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2.5 h-2.5 rounded-sm bg-cyan-500"></div>
+                            <span class="text-slate-400 font-bold uppercase tracking-wider">Gaji</span>
+                        </div>
+                        <span class="text-white font-black">{{ $pctGa }}%</span>
                     </div>
                 </div>
             </div>
@@ -457,6 +476,7 @@
 
 <!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('expenseDashboard', () => ({
@@ -467,6 +487,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         Chart.defaults.color = '#94a3b8';
         Chart.defaults.font.family = "'Inter', 'Nunito', sans-serif";
+        Chart.register(ChartDataLabels);
+        
+        const isDarkMode = document.documentElement.classList.contains('dark');
 
         // Doughnut Chart
         const ctxDoughnut = document.getElementById('expenseDoughnut');
@@ -474,15 +497,21 @@
             new Chart(ctxDoughnut, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Operasional', 'Consumable', 'Bahan Baku', 'Variabel'],
+                    labels: ['Operasional', 'Consumable', 'Bahan Baku', 'Variabel', 'Gaji'],
                     datasets: [{
-                        data: [{{ $summary->operasional_total ?: 0 }}, {{ $summary->consumable_total ?: 0 }}, {{ $summary->bahan_baku_total ?: 0 }}, {{ $summary->variabel_total ?: 0 }}],
-                        backgroundColor: ['#3b82f6', '#10b981', '#a855f7', '#f59e0b'],
+                        data: [{{ $summary->operasional_total ?: 0 }}, {{ $summary->consumable_total ?: 0 }}, {{ $summary->bahan_baku_total ?: 0 }}, {{ $summary->variabel_total ?: 0 }}, {{ $summary->gaji_total ?: 0 }}],
+                        backgroundColor: ['#3b82f6', '#10b981', '#a855f7', '#f59e0b', '#06b6d4'],
                         borderWidth: 0,
                         hoverOffset: 4
                     }]
                 },
-                options: { cutout: '75%', plugins: { legend: { display: false } } }
+                options: { 
+                    cutout: '75%', 
+                    plugins: { 
+                        legend: { display: false },
+                        datalabels: { display: false } // Sembunyikan label di doughnut agar tidak terlalu penuh
+                    } 
+                }
             });
         }
 
@@ -509,8 +538,20 @@
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: { right: 60 } // Kasih ruang untuk label angka
+                    },
                     plugins: {
                         legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'right',
+                            color: isDarkMode ? '#f8fafc' : '#1e293b',
+                            font: { weight: 'bold', size: 9 },
+                            formatter: function(value) {
+                                return 'Rp ' + Number(value).toLocaleString('id-ID');
+                            }
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -554,7 +595,22 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    layout: {
+                        padding: { top: 20 }
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        datalabels: {
+                            display: 'auto', // Auto hide overlapping labels
+                            align: 'top',
+                            color: isDarkMode ? '#f8fafc' : '#1e293b',
+                            font: { weight: 'bold', size: 9 },
+                            formatter: function(value) {
+                                if (Number(value) === 0) return '';
+                                return 'Rp ' + Number(value).toLocaleString('id-ID');
+                            }
+                        }
+                    },
                     scales: {
                         x: { display: false },
                         y: { display: false, min: 0 }

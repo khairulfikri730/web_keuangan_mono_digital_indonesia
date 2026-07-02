@@ -1146,6 +1146,12 @@
                         </select>
                     </div>
 
+                    {{-- Manual Date --}}
+                    <div x-show="cashOutManualDateEnabled" class="mt-4">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Tanggal Transaksi</label>
+                        <input type="date" x-model="cashOutDate" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3 text-sm font-bold text-slate-700 outline-none focus:border-orange-500 transition-all">
+                    </div>
+
                     {{-- Main Category --}}
                     <div>
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Jenis Pengeluaran</label>
@@ -1706,6 +1712,8 @@ function closeCashOut() {
             cashOutSource: 'cash',
             cashOutAccessSetting: '{{ $settings["cashout_source_access"] ?? "cash_only" }}',
             cashOutRoleAccess: '{{ $settings["cashout_role_access"] ?? "all" }}',
+            cashOutManualDateEnabled: {{ ($settings['cashout_manual_date'] ?? '0') == '1' ? 'true' : 'false' }},
+            cashOutDate: '{{ date("Y-m-d") }}',
             cashOutError: '',
             expenseCategories: @json($expenseCategories),
 
@@ -1805,6 +1813,7 @@ function closeCashOut() {
                 this.cashOutAmountDisplay = '';
                 this.cashOutDesc = '';
                 this.cashOutError = '';
+                this.cashOutDate = '{{ date("Y-m-d") }}';
                 
                 if (this.cashOutAccessSetting === 'bank_only') {
                     this.cashOutSource = 'bank';
@@ -1848,7 +1857,8 @@ function closeCashOut() {
                             amount: this.cashOutAmount,
                             description: this.cashOutSubCategory + (this.cashOutDesc ? ' (' + this.cashOutDesc + ')' : ''),
                             category: this.cashOutMainCategory,
-                            source: this.cashOutSource
+                            source: this.cashOutSource,
+                            date: this.cashOutManualDateEnabled ? this.cashOutDate : null
                         })
                     });
                     

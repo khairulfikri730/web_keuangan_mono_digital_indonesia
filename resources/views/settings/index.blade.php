@@ -121,7 +121,7 @@
 
                     <div class="border-t border-slate-700/50 pt-4">
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2"><i class="fas fa-hand-holding-dollar mr-1"></i> Pengaturan Cash Out</label>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Sumber Dana</label>
                                 <select name="cashout_source_access" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 transition-all">
@@ -136,6 +136,13 @@
                                     <option value="all" {{ ($settings['cashout_role_access'] ?? 'all') == 'all' ? 'selected' : '' }}>Semua</option>
                                     <option value="admin_owner" {{ ($settings['cashout_role_access'] ?? '') == 'admin_owner' ? 'selected' : '' }}>Admin & Owner</option>
                                     <option value="owner" {{ ($settings['cashout_role_access'] ?? '') == 'owner' ? 'selected' : '' }}>Hanya Owner</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Input Tanggal Manual</label>
+                                <select name="cashout_manual_date" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 transition-all">
+                                    <option value="0" {{ ($settings['cashout_manual_date'] ?? '0') == '0' ? 'selected' : '' }}>Nonaktif</option>
+                                    <option value="1" {{ ($settings['cashout_manual_date'] ?? '') == '1' ? 'selected' : '' }}>Aktif</option>
                                 </select>
                             </div>
                         </div>

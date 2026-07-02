@@ -270,10 +270,17 @@
                                     <option value="kemarin">Kemarin</option>
                                     <option value="minggu_ini">Minggu Ini</option>
                                     <option value="bulan_ini">Bulan Ini</option>
+                                    <option value="specific_month">Bulan Tertentu</option>
                                     <option value="tahun_ini">Tahun Ini</option>
                                     <option value="custom">Rentang Kustom</option>
                                     @endif
                                 </select>
+                                <div x-show="period === 'specific_month'" x-transition class="mt-4">
+                                    <div class="relative">
+                                        <input type="month" name="specific_month" class="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:border-blue-500">
+                                        <span class="absolute -top-2 left-3 px-2 bg-slate-900 text-[9px] text-slate-500 font-bold">PILIH BULAN</span>
+                                    </div>
+                                </div>
                                 <div x-show="period === 'custom'" x-transition class="grid grid-cols-2 gap-3 mt-4">
                                     <div class="relative">
                                         <input type="date" name="start_date" class="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:border-blue-500">

@@ -18,7 +18,7 @@ class SettingController extends Controller
             'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
-            'cashout_source_access', 'cashout_role_access',
+            'cashout_source_access', 'cashout_role_access', 'cashout_manual_date',
             'target_omzet', 'target_profit', 'target_transaksi',
             'shift_approval_required', 'auto_sync_cashflow'
         ]);
@@ -58,6 +58,7 @@ class SettingController extends Controller
             'delivery_presets' => 'nullable|string',
             'cashout_source_access' => 'nullable|string|in:cash_only,bank_only,both',
             'cashout_role_access' => 'nullable|string|in:all,admin_owner,owner',
+            'cashout_manual_date' => 'nullable|string|in:0,1',
             'target_omzet' => 'nullable|numeric|min:0',
             'target_profit' => 'nullable|numeric|min:0',
             'target_transaksi' => 'nullable|integer|min:0',
@@ -72,7 +73,7 @@ class SettingController extends Controller
             'printer_name', 'printer_connection', 'drawer_auto_open', 'drawer_pulse_pin',
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
-            'cashout_source_access', 'cashout_role_access',
+            'cashout_source_access', 'cashout_role_access', 'cashout_manual_date',
             'target_omzet', 'target_profit', 'target_transaksi', 'shift_approval_required',
             'auto_sync_cashflow'
         ];

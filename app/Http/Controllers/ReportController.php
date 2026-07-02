@@ -813,6 +813,12 @@ class ReportController extends Controller
                 $prevDateFrom = $dateFrom->copy()->subDays($diff);
                 $prevDateTo = $dateTo->copy()->subDays($diff);
                 break;
+            case 'specific_month':
+                $dateFrom = Carbon::parse($request->specific_month)->startOfMonth();
+                $dateTo = Carbon::parse($request->specific_month)->endOfMonth();
+                $prevDateFrom = $dateFrom->copy()->subMonth()->startOfMonth();
+                $prevDateTo = $dateFrom->copy()->subMonth()->endOfMonth();
+                break;
         }
 
         $worksheetId = $request->worksheet_id;

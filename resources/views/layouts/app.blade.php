@@ -139,6 +139,7 @@
         html:not(.dark) h1.text-white, html:not(.dark) h2.text-white, html:not(.dark) h3.text-white, 
         html:not(.dark) h4.text-white, html:not(.dark) p.text-white, html:not(.dark) label.text-white,
         html:not(.dark) span.text-white:not([class*="bg-"]), html:not(.dark) div.text-white:not([class*="bg-"]),
+        html:not(.dark) td.text-white:not([class*="bg-"]), html:not(.dark) th.text-white:not([class*="bg-"]),
         html:not(.dark) i.text-white:not([class*="bg-"]):not(.fas):not(.far), html:not(.dark) a.text-white:not([class*="bg-"]) { color: #1e293b !important; }
         
         /* Force text on slate buttons to be dark in light mode */

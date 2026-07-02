@@ -85,7 +85,8 @@ class MonthlyExpenseController extends Controller
             SUM(CASE WHEN expense_type = "operasional" THEN usage_amount ELSE 0 END) as operasional_total,
             SUM(CASE WHEN expense_type = "consumable" THEN usage_amount ELSE 0 END) as consumable_total,
             SUM(CASE WHEN expense_type = "bahan_baku" THEN usage_amount ELSE 0 END) as bahan_baku_total,
-            SUM(CASE WHEN expense_type = "variabel" THEN usage_amount ELSE 0 END) as variabel_total
+            SUM(CASE WHEN expense_type = "variabel" THEN usage_amount ELSE 0 END) as variabel_total,
+            SUM(CASE WHEN expense_type = "gaji" THEN usage_amount ELSE 0 END) as gaji_total
         ')->first();
 
         // TOP Pengeluaran (Berdasarkan Barang/Sub Kategori)
