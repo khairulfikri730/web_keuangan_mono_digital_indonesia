@@ -25,10 +25,10 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Crew <span class="text-red-400">*</span></label>
-                    <select name="schedule_crew_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500" required>
+                    <select name="user_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500" required>
                         <option value="">-- Pilih Crew --</option>
-                        @foreach($activeCrews as $crew)
-                        <option value="{{ $crew->id }}">{{ $crew->name }}</option>
+                        @foreach($activeUsers as $user)
+                        <option value="{{ $user->id }}">{{ $user->name }}</option>
                         @endforeach
                     </select>
                 </div>

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\ScheduleLocation;
-use App\Models\ScheduleCrew;
+use App\Models\User;
 use App\Models\ScheduleShift;
 use App\Models\ScheduleAssignment;
 use Carbon\Carbon;
@@ -13,7 +13,7 @@ class ScheduleController extends Controller
 {
     public function index(Request $request)
     {
-        $viewMode = $request->input('view', 'daily');
+        $viewMode = $request->input('view', 'weekly');
         $date = $request->input('date');
         $month = $request->input('month');
 
@@ -29,12 +29,23 @@ class ScheduleController extends Controller
         $month = $month ?? now()->format('Y-m');
         $tab = $request->input('tab', 'dashboard');
 
-        $locations = ScheduleLocation::with(['shifts' => function ($q) {
+        $locationsQuery = ScheduleLocation::with(['shifts' => function ($q) {
             $q->orderBy('start_time');
-        }])->get();
+        }]);
 
-        $crews = ScheduleCrew::orderBy('name')->get();
-        $activeCrews = ScheduleCrew::active()->orderBy('name')->get();
+        if (auth()->user()->role === 'crew') {
+            $userLocIds = \App\Models\ScheduleAssignment::where('user_id', auth()->id())
+                ->whereHas('shift')
+                ->join('schedule_shifts', 'schedule_assignments.schedule_shift_id', '=', 'schedule_shifts.id')
+                ->pluck('schedule_shifts.schedule_location_id')
+                ->unique();
+            $locationsQuery->whereIn('id', $userLocIds);
+        }
+
+        $locations = $locationsQuery->get();
+
+        $users = User::orderBy('name')->get();
+        $activeUsers = User::where('is_active', true)->orderBy('name')->get();
 
         // Determine date range based on view mode
         if ($viewMode === 'weekly') {
@@ -48,7 +59,7 @@ class ScheduleController extends Controller
             $endDate = $startDate->copy();
         }
 
-        $assignments = ScheduleAssignment::with(['shift.location', 'crew', 'originalCrew'])
+        $assignments = ScheduleAssignment::with(['shift.location', 'user', 'originalUser'])
             ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->get();
 
@@ -57,6 +68,14 @@ class ScheduleController extends Controller
         for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
             $dates[] = $d->format('Y-m-d');
         }
+
+        // Pending Swaps (for super admin or the targeted user)
+        $pendingSwapsQuery = ScheduleAssignment::with(['shift.location', 'user', 'swapTargetUser'])
+            ->where('swap_status', 'pending');
+        if (auth()->user()->role === 'crew') {
+            $pendingSwapsQuery->where('swap_requested_to', auth()->id());
+        }
+        $pendingSwaps = $pendingSwapsQuery->get();
 
         // Stats
         $todayAssignments = ScheduleAssignment::where('date', now()->format('Y-m-d'))->count();
@@ -101,43 +120,120 @@ class ScheduleController extends Controller
             $statsEnd = $statsStart->copy()->endOfWeek(Carbon::SUNDAY);
         }
 
-        $statsAssignments = ScheduleAssignment::with(['shift.location', 'crew'])
+        $statsAssignments = ScheduleAssignment::with(['shift.location', 'user'])
             ->whereBetween('date', [$statsStart->format('Y-m-d'), $statsEnd->format('Y-m-d')])
             ->get();
 
-        $crewStats = [];
-        foreach ($activeCrews as $crew) {
-            $crewAsgn = $statsAssignments->where('schedule_crew_id', $crew->id);
-            $total = $crewAsgn->count();
-            $open = $crewAsgn->where('status', 'open')->count();
-            $closed = $crewAsgn->where('status', 'close')->count();
-            $replaced = $crewAsgn->whereNotNull('original_crew_id')->count();
-            
-            $indoor = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'indoor')->count();
-            $outdoor = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'outdoor')->count();
-            $pagi = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'pagi')->count();
-            $sore = $crewAsgn->filter(fn($a) => strtolower($a->shift->name) === 'sore')->count();
+        $locationStats = [];
+        foreach ($locations->where('is_active', true) as $loc) {
+            $locUsers = [];
+            foreach ($activeUsers as $user) {
+                // Get all assignments for this user in this location
+                $userAsgn = $statsAssignments->filter(function($a) use ($user, $loc) {
+                    return $a->user_id == $user->id && $a->shift && $a->shift->schedule_location_id == $loc->id;
+                });
+                
+                $total = $userAsgn->count();
 
-            $crewStats[] = [
-                'crew' => $crew,
-                'total_shifts' => $total,
-                'open' => $open,
-                'closed' => $closed,
-                'replaced' => $replaced,
-                'indoor' => $indoor,
-                'outdoor' => $outdoor,
-                'pagi' => $pagi,
-                'sore' => $sore,
-                'pct_active' => $total > 0 ? round(($open / $total) * 100) : 0,
+                // Only include users who have shifts in this location
+                if ($total > 0) {
+                    $open = $userAsgn->where('status', 'open')->count();
+                    $closed = $userAsgn->where('status', 'close')->count();
+                    $replaced = $userAsgn->whereNotNull('original_user_id')->count();
+                    
+                    $shiftCounts = [];
+                    foreach ($loc->shifts as $shift) {
+                        $shiftCounts[$shift->id] = $userAsgn->where('schedule_shift_id', $shift->id)->count();
+                    }
+
+                    $komisi = 0;
+                    if (is_array($user->custom_rates) && isset($user->custom_rates[$loc->id])) {
+                        $komisi = $total * $user->custom_rates[$loc->id];
+                    } else {
+                        $komisi = $total * $loc->shift_rate;
+                    }
+
+                    $locUsers[] = [
+                        'user' => $user,
+                        'total_shifts' => $total,
+                        'open' => $open,
+                        'closed' => $closed,
+                        'replaced' => $replaced,
+                        'shift_counts' => $shiftCounts,
+                        'komisi' => $komisi,
+                        'pct_active' => round(($open / $total) * 100),
+                    ];
+                }
+            }
+            
+            // Sort: users with shifts first, then alphabetically
+            usort($locUsers, function($a, $b) {
+                if ($a['total_shifts'] === $b['total_shifts']) {
+                    return strcmp($a['user']->name, $b['user']->name);
+                }
+                return $b['total_shifts'] <=> $a['total_shifts'];
+            });
+
+            $locationStats[$loc->id] = [
+                'location' => $loc,
+                'users' => $locUsers
+            ];
+        }
+
+        // Data Finansial khusus Crew Biasa
+        $crewFinancial = null;
+        if (auth()->user()->role === 'crew') {
+            // Gunakan $month yang dipilih di filter, bukan Carbon::now()
+            $filterMonth = Carbon::parse($month . '-01');
+            $monthStart = $filterMonth->copy()->startOfMonth()->format('Y-m-d');
+            $monthEnd = $filterMonth->copy()->endOfMonth()->format('Y-m-d');
+            
+            $userAsgn = \App\Models\ScheduleAssignment::with('shift.location')
+                ->where('user_id', auth()->id())
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->get();
+                
+            $komisiShift = 0;
+            foreach ($userAsgn as $asgn) {
+                if ($asgn->shift && $asgn->shift->location) {
+                    $locId = $asgn->shift->schedule_location_id;
+                    if (is_array(auth()->user()->custom_rates) && isset(auth()->user()->custom_rates[$locId])) {
+                        $komisiShift += auth()->user()->custom_rates[$locId];
+                    } else {
+                        $komisiShift += $asgn->shift->location->shift_rate;
+                    }
+                }
+            }
+            $allowance = 0;
+            if (auth()->user()->allowance_type === 'daily') {
+                $allowance = auth()->user()->allowance_amount * $filterMonth->daysInMonth;
+            } elseif (auth()->user()->allowance_type === 'monthly') {
+                $allowance = auth()->user()->allowance_amount;
+            }
+            $payroll = \App\Models\Payroll::where('user_id', auth()->id())->where('period', $filterMonth->format('Y-m'))->first();
+            $motret = $payroll ? $payroll->photographer_fee : 0;
+            $lembur = $payroll ? $payroll->overtime_fee : 0;
+            $bonus = $payroll ? $payroll->bonus : 0;
+            $kasbon = $payroll ? $payroll->deduction : 0;
+            
+            $crewFinancial = [
+                'totalKotor' => $komisiShift + $allowance + $motret + $lembur + $bonus,
+                'totalBersih' => ($komisiShift + $allowance + $motret + $lembur + $bonus) - $kasbon,
+                'kasbon' => $kasbon,
+                'lembur' => $lembur,
+                'bonus' => $bonus,
+                'tambahan' => $lembur + $motret + $bonus,
+                'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
+                'total_shifts' => $userAsgn->count(),
             ];
         }
 
         return view('schedules.index', compact(
-            'locations', 'crews', 'activeCrews', 'assignments',
+            'locations', 'users', 'activeUsers', 'assignments', 'crewFinancial', 'pendingSwaps',
             'viewMode', 'date', 'month', 'startDate', 'endDate',
             'todayAssignments', 'todayOpen', 'todayClosed', 'totalShifts',
             'activeLocations', 'dates', 'tab',
-            'crewStats', 'statsFilter', 'statsDate', 'statsStart', 'statsEnd'
+            'locationStats', 'statsFilter', 'statsDate', 'statsStart', 'statsEnd'
         ));
     }
 
@@ -148,9 +244,10 @@ class ScheduleController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
+            'shift_rate' => 'required|integer|min:0',
         ]);
 
-        ScheduleLocation::create($request->only('name', 'description'));
+        ScheduleLocation::create($request->only('name', 'description', 'shift_rate'));
         return back()->with('success', 'Lokasi berhasil ditambahkan!');
     }
 
@@ -159,9 +256,10 @@ class ScheduleController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
+            'shift_rate' => 'required|integer|min:0',
         ]);
 
-        $location->update($request->only('name', 'description'));
+        $location->update($request->only('name', 'description', 'shift_rate'));
         return back()->with('success', 'Lokasi berhasil diperbarui!');
     }
 
@@ -169,44 +267,6 @@ class ScheduleController extends Controller
     {
         $location->delete();
         return back()->with('success', 'Lokasi berhasil dihapus!');
-    }
-
-    // ── CREWS ──────────────────────────────────────────────────
-
-    public function storeCrew(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'position' => 'nullable|string|max:100',
-        ]);
-
-        ScheduleCrew::create($request->only('name', 'phone', 'position'));
-        return back()->with('success', 'Crew berhasil ditambahkan!');
-    }
-
-    public function updateCrew(Request $request, ScheduleCrew $crew)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'position' => 'nullable|string|max:100',
-        ]);
-
-        $crew->update($request->only('name', 'phone', 'position'));
-        return back()->with('success', 'Crew berhasil diperbarui!');
-    }
-
-    public function toggleCrew(ScheduleCrew $crew)
-    {
-        $crew->update(['is_active' => !$crew->is_active]);
-        return back()->with('success', 'Status crew diperbarui!');
-    }
-
-    public function destroyCrew(ScheduleCrew $crew)
-    {
-        $crew->delete();
-        return back()->with('success', 'Crew berhasil dihapus!');
     }
 
     // ── SHIFTS ─────────────────────────────────────────────────
@@ -252,7 +312,7 @@ class ScheduleController extends Controller
     {
         $request->validate([
             'schedule_shift_id' => 'required|exists:schedule_shifts,id',
-            'schedule_crew_id' => 'required|exists:schedule_crews,id',
+            'user_id' => 'required|exists:users,id',
             'date' => 'required|date',
             'notes' => 'nullable|string|max:255',
         ]);
@@ -270,7 +330,7 @@ class ScheduleController extends Controller
 
         // Check duplicate
         $existing = ScheduleAssignment::where('schedule_shift_id', $request->schedule_shift_id)
-            ->where('schedule_crew_id', $request->schedule_crew_id)
+            ->where('user_id', $request->user_id)
             ->where('date', $request->date)
             ->first();
 
@@ -284,7 +344,7 @@ class ScheduleController extends Controller
             ->where('status', 'close')
             ->first();
 
-        $newAsgn = ScheduleAssignment::create($request->only('schedule_shift_id', 'schedule_crew_id', 'date', 'notes'));
+        $newAsgn = ScheduleAssignment::create($request->only('schedule_shift_id', 'user_id', 'date', 'notes'));
 
         if ($existingClosed) {
             $newAsgn->update([
@@ -349,14 +409,17 @@ class ScheduleController extends Controller
 
     public function changeAssignment(Request $request, ScheduleAssignment $assignment)
     {
+        if (\Carbon\Carbon::parse($assignment->date)->startOfDay()->lt(\Carbon\Carbon::today()) && auth()->user()->role !== 'superadmin') {
+            return back()->with('error', 'Tidak dapat mengubah shift yang sudah berlalu.');
+        }
         $request->validate([
-            'new_crew_id' => 'required|exists:schedule_crews,id',
+            'new_user_id' => 'required|exists:users,id',
             'change_notes' => 'nullable|string|max:255',
         ]);
 
         // Check if new crew already assigned to this shift on this date
         $existing = ScheduleAssignment::where('schedule_shift_id', $assignment->schedule_shift_id)
-            ->where('schedule_crew_id', $request->new_crew_id)
+            ->where('user_id', $request->new_user_id)
             ->where('date', $assignment->date->format('Y-m-d'))
             ->first();
 
@@ -364,11 +427,11 @@ class ScheduleController extends Controller
             return back()->with('error', 'Crew pengganti sudah terjadwal di shift ini pada tanggal tersebut!');
         }
 
-        $oldCrewId = $assignment->schedule_crew_id;
+        $oldCrewId = $assignment->user_id;
 
         $assignment->update([
-            'original_crew_id' => $assignment->original_crew_id ?? $oldCrewId,
-            'schedule_crew_id' => $request->new_crew_id,
+            'original_user_id' => $assignment->original_user_id ?? $oldCrewId,
+            'user_id' => $request->new_user_id,
             'changed_by' => auth()->user()->name,
             'notes' => $request->change_notes ?? $assignment->notes,
         ]);
@@ -376,13 +439,73 @@ class ScheduleController extends Controller
         return back()->with('success', 'Crew berhasil diganti!');
     }
 
-    // ── BULK ASSIGN ────────────────────────────────────────────
+    // ── SWAP REQUEST ───────────────────────────────────────────
+
+    public function swapRequest(Request $request, ScheduleAssignment $assignment)
+    {
+        if (\Carbon\Carbon::parse($assignment->date)->startOfDay()->lt(\Carbon\Carbon::today())) {
+            return back()->with('error', 'Tidak dapat menukar shift yang sudah berlalu.');
+        }
+
+        if ($assignment->user_id !== auth()->id()) {
+            return back()->with('error', 'Anda hanya dapat menukar shift milik Anda sendiri.');
+        }
+
+        $request->validate([
+            'swap_requested_to' => 'required|exists:users,id'
+        ]);
+
+        $assignment->update([
+            'swap_requested_to' => $request->swap_requested_to,
+            'swap_status' => 'pending'
+        ]);
+
+        return back()->with('success', 'Permintaan tukar shift berhasil dikirim dan menunggu persetujuan.');
+    }
+
+    public function swapApprove(ScheduleAssignment $assignment)
+    {
+        // Only target user or owner/admin can approve
+        if ($assignment->swap_requested_to !== auth()->id() && auth()->user()->role === 'crew') {
+            return back()->with('error', 'Anda tidak berhak menyetujui permintaan ini.');
+        }
+
+        $oldUserId = $assignment->user_id;
+
+        $assignment->update([
+            'original_user_id' => $assignment->original_user_id ?? $oldUserId,
+            'user_id' => $assignment->swap_requested_to,
+            'changed_by' => auth()->user()->name,
+            'swap_requested_to' => null,
+            'swap_status' => null,
+            'notes' => 'Tukar shift disetujui',
+        ]);
+
+        return back()->with('success', 'Tukar shift berhasil disetujui!');
+    }
+
+    public function swapReject(ScheduleAssignment $assignment)
+    {
+        // Only target user or owner/admin can reject
+        if ($assignment->swap_requested_to !== auth()->id() && auth()->user()->role === 'crew') {
+            return back()->with('error', 'Anda tidak berhak menolak permintaan ini.');
+        }
+
+        $assignment->update([
+            'swap_requested_to' => null,
+            'swap_status' => null,
+        ]);
+
+        return back()->with('success', 'Permintaan tukar shift ditolak.');
+    }
+
+
 
     public function bulkAssign(Request $request)
     {
         $request->validate([
             'schedule_shift_id' => 'required|exists:schedule_shifts,id',
-            'schedule_crew_id' => 'required|exists:schedule_crews,id',
+            'user_id' => 'required|exists:users,id',
             'date_from' => 'required|date',
             'date_to' => 'required|date|after_or_equal:date_from',
         ]);
@@ -408,7 +531,7 @@ class ScheduleController extends Controller
 
             // Check duplicate
             $existing = ScheduleAssignment::where('schedule_shift_id', $request->schedule_shift_id)
-                ->where('schedule_crew_id', $request->schedule_crew_id)
+                ->where('user_id', $request->user_id)
                 ->where('date', $dateStr)
                 ->first();
 
@@ -419,7 +542,7 @@ class ScheduleController extends Controller
 
             ScheduleAssignment::create([
                 'schedule_shift_id' => $request->schedule_shift_id,
-                'schedule_crew_id' => $request->schedule_crew_id,
+                'user_id' => $request->user_id,
                 'date' => $dateStr,
             ]);
             $created++;
@@ -434,7 +557,7 @@ class ScheduleController extends Controller
     {
         $request->validate([
             'schedule_shift_id' => 'required|exists:schedule_shifts,id',
-            'schedule_crew_id' => 'required|exists:schedule_crews,id',
+            'user_id' => 'required|exists:users,id',
             'week_start' => 'required|date',
             'days' => 'required|array|min:1',
             'days.*' => 'integer|between:0,6',
@@ -461,7 +584,7 @@ class ScheduleController extends Controller
 
             // Check duplicate
             $existing = ScheduleAssignment::where('schedule_shift_id', $request->schedule_shift_id)
-                ->where('schedule_crew_id', $request->schedule_crew_id)
+                ->where('user_id', $request->user_id)
                 ->where('date', $dateStr)
                 ->first();
 
@@ -472,13 +595,29 @@ class ScheduleController extends Controller
 
             ScheduleAssignment::create([
                 'schedule_shift_id' => $request->schedule_shift_id,
-                'schedule_crew_id' => $request->schedule_crew_id,
+                'user_id' => $request->user_id,
                 'date' => $dateStr,
             ]);
             $created++;
         }
 
         return back()->with('success', "{$created} jadwal berhasil ditambahkan!" . ($skipped > 0 ? " ({$skipped} dilewati)" : ''));
+    }
+
+    public function updateCustomRates(Request $request, User $user)
+    {
+        $request->validate([
+            'custom_rates' => 'nullable|array',
+            'custom_rates.*' => 'nullable|numeric|min:0',
+        ]);
+
+        $rates = array_filter($request->custom_rates ?? [], function($val) {
+            return !is_null($val) && $val !== '';
+        });
+
+        $user->update(['custom_rates' => empty($rates) ? null : $rates]);
+
+        return back()->with('success', 'Harga custom berhasil disimpan untuk ' . $user->name);
     }
 
     // ── POSTER (WEEKLY) ────────────────────────────────────────
@@ -511,7 +650,7 @@ class ScheduleController extends Controller
             $q->orderBy('start_time')
               ->with(['assignments' => function ($q2) use ($startDate, $endDate) {
                 $q2->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-                   ->with('crew');
+                   ->with('user');
             }]);
         }]);
 

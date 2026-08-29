@@ -21,8 +21,8 @@
         <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-2xl flex items-center justify-between">
             <div>
                 <p class="text-xs text-slate-400 font-bold mb-1">Total Crew</p>
-                <h3 class="text-2xl font-black text-white">{{ $crews->count() }}</h3>
-                <p class="text-[10px] text-emerald-400">{{ $activeCrews->count() }} Aktif</p>
+                <h3 class="text-2xl font-black text-white">{{ $users->count() }}</h3>
+                <p class="text-[10px] text-emerald-400">{{ $activeUsers->count() }} Aktif</p>
             </div>
             <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl border border-blue-500/30"><i class="fas fa-users"></i></div>
         </div>
@@ -92,7 +92,7 @@
                                         ? 'bg-red-500/10 text-red-400 border border-red-500/20 line-through' 
                                         : 'bg-blue-500/10 text-blue-400 border border-blue-500/20' }}">
                                     @if($p->isClosed())<i class="fas fa-times text-[8px]"></i>@else<i class="fas fa-check text-[8px]"></i>@endif
-                                    {{ $p->crew->name ?? '?' }}
+                                    {{ $p->user->name ?? '?' }}
                                 </span>
                                 @endforeach
                                 @if($people->count() == 0)
@@ -138,62 +138,87 @@
             @endif
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm text-slate-300">
-                <thead class="text-[10px] font-bold text-slate-400 uppercase bg-slate-900/50 border-b border-slate-700">
-                    <tr>
-                        <th class="px-4 py-3 text-left">Crew</th>
-                        <th class="px-4 py-3 text-center">Total Shift</th>
-                        <th class="px-4 py-3 text-center">Indoor</th>
-                        <th class="px-4 py-3 text-center">Outdoor</th>
-                        <th class="px-4 py-3 text-center">Pagi</th>
-                        <th class="px-4 py-3 text-center">Sore</th>
-                        <th class="px-4 py-3 text-center"><span class="text-emerald-400"><i class="fas fa-check-circle"></i></span> Open</th>
-                        <th class="px-4 py-3 text-center"><span class="text-red-400"><i class="fas fa-times-circle"></i></span> Close</th>
-                        <th class="px-4 py-3 text-center"><span class="text-orange-400"><i class="fas fa-exchange-alt"></i></span> Ganti</th>
-                        <th class="px-4 py-3 text-center">% Aktif</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-700/50">
-                    @forelse($crewStats as $cs)
-                    <tr class="hover:bg-slate-700/20 transition-colors">
-                        <td class="px-4 py-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">{{ substr($cs['crew']->name, 0, 1) }}</div>
-                                <div>
-                                    <span class="font-bold text-slate-800 dark:text-white text-xs">{{ $cs['crew']->name }}</span>
-                                    @if($cs['crew']->position)
-                                    <span class="text-[9px] text-slate-500 block">{{ $cs['crew']->position }}</span>
-                                    @endif
+        <div class="space-y-8">
+            @forelse($locationStats as $locId => $locStat)
+            <div class="overflow-x-auto bg-slate-900/30 rounded-xl border border-slate-700/50">
+                <div class="px-4 py-3 bg-slate-800/80 border-b border-slate-700 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-black"><i class="fas fa-map-marker-alt"></i></div>
+                    <div>
+                        <h4 class="font-bold text-white">{{ $locStat['location']->name }}</h4>
+                        <p class="text-[10px] text-slate-400">Total Shift: {{ $locStat['location']->shifts->count() }}</p>
+                    </div>
+                </div>
+                <table class="w-full text-sm text-slate-300">
+                    <thead class="text-[10px] font-bold text-slate-400 uppercase bg-slate-900/50 border-b border-slate-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Crew</th>
+                            <th class="px-4 py-3 text-center">Total</th>
+                            @foreach($locStat['location']->shifts as $shift)
+                            <th class="px-4 py-3 text-center">{{ $shift->name }}</th>
+                            @endforeach
+                            <th class="px-4 py-3 text-center"><span class="text-emerald-400"><i class="fas fa-check-circle"></i></span> Open</th>
+                            <th class="px-4 py-3 text-center"><span class="text-red-400"><i class="fas fa-times-circle"></i></span> Close</th>
+                            <th class="px-4 py-3 text-center"><span class="text-orange-400"><i class="fas fa-exchange-alt"></i></span> Ganti</th>
+                            <th class="px-4 py-3 text-center">% Aktif</th>
+                            <th class="px-4 py-3 text-right text-emerald-400"><i class="fas fa-money-bill-wave"></i> Estimasi Komisi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50">
+                        @forelse($locStat['users'] as $cs)
+                        <tr class="hover:bg-slate-700/20 transition-colors">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">{{ substr($cs['user']->name, 0, 1) }}</div>
+                                    <div>
+                                        <span class="font-bold text-slate-800 dark:text-white text-xs">{{ $cs['user']->name }}</span>
+                                        @if($cs['user']->role)
+                                        <span class="text-[9px] text-slate-500 block">{{ $cs['user']->role }}</span>
+                                        @endif
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-4 py-3 text-center font-bold text-slate-800 dark:text-white">{{ $cs['total_shifts'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ $cs['indoor'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-blue-400">{{ $cs['outdoor'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-yellow-400">{{ $cs['pagi'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-purple-400">{{ $cs['sore'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ $cs['open'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold {{ $cs['closed'] > 0 ? 'text-red-400' : 'text-slate-600' }}">{{ $cs['closed'] }}</td>
-                        <td class="px-4 py-3 text-center font-bold {{ $cs['replaced'] > 0 ? 'text-orange-400' : 'text-slate-600' }}">{{ $cs['replaced'] }}</td>
-                        <td class="px-4 py-3 text-center">
-                            @if($cs['total_shifts'] > 0)
-                            <div class="flex items-center justify-center gap-2">
-                                <div class="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
-                                    <div class="h-full rounded-full transition-all {{ $cs['pct_active'] >= 80 ? 'bg-emerald-500' : ($cs['pct_active'] >= 50 ? 'bg-yellow-500' : 'bg-red-500') }}" style="width: {{ $cs['pct_active'] }}%"></div>
+                            </td>
+                            <td class="px-4 py-3 text-center font-bold text-slate-800 dark:text-white">{{ $cs['total_shifts'] }}</td>
+                            
+                            @foreach($locStat['location']->shifts as $shift)
+                            <td class="px-4 py-3 text-center font-bold text-blue-400">{{ $cs['shift_counts'][$shift->id] ?? 0 }}</td>
+                            @endforeach
+                            
+                            <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ $cs['open'] }}</td>
+                            <td class="px-4 py-3 text-center font-bold {{ $cs['closed'] > 0 ? 'text-red-400' : 'text-slate-600' }}">{{ $cs['closed'] }}</td>
+                            <td class="px-4 py-3 text-center font-bold {{ $cs['replaced'] > 0 ? 'text-orange-400' : 'text-slate-600' }}">{{ $cs['replaced'] }}</td>
+                            <td class="px-4 py-3 text-center">
+                                @if($cs['total_shifts'] > 0)
+                                <div class="flex items-center justify-center gap-2">
+                                    <div class="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full transition-all {{ $cs['pct_active'] >= 80 ? 'bg-emerald-500' : ($cs['pct_active'] >= 50 ? 'bg-yellow-500' : 'bg-red-500') }}" style="width: {{ $cs['pct_active'] }}%"></div>
+                                    </div>
+                                    <span class="text-[10px] font-bold {{ $cs['pct_active'] >= 80 ? 'text-emerald-400' : ($cs['pct_active'] >= 50 ? 'text-yellow-400' : 'text-red-400') }}">{{ $cs['pct_active'] }}%</span>
                                 </div>
-                                <span class="text-[10px] font-bold {{ $cs['pct_active'] >= 80 ? 'text-emerald-400' : ($cs['pct_active'] >= 50 ? 'text-yellow-400' : 'text-red-400') }}">{{ $cs['pct_active'] }}%</span>
-                            </div>
-                            @else
-                            <span class="text-[10px] text-slate-600">—</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Belum ada data crew aktif</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                                @else
+                                <span class="text-[10px] text-slate-600">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex justify-end items-center gap-2">
+                                    <span class="font-black text-emerald-400">Rp {{ number_format($cs['komisi'], 0, ',', '.') }}</span>
+                                    <button type="button" @click="$dispatch('open-modal', 'custom-rate-{{ $cs['user']->id }}')" class="text-slate-500 hover:text-blue-400 p-1" title="Atur Harga Custom">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="{{ 7 + $locStat['location']->shifts->count() }}" class="px-4 py-8 text-center text-slate-500">Belum ada data crew aktif</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @empty
+            <div class="text-center p-8 text-slate-500 border border-slate-700/50 rounded-2xl bg-slate-800/50">
+                <i class="fas fa-map-marker-alt text-3xl mb-3 block"></i>
+                Belum ada lokasi aktif.
+            </div>
+            @endforelse
         </div>
     </div>
 </div>

@@ -121,8 +121,8 @@ class User extends Authenticatable
 
 
     protected $fillable = [
-        'name', 'username', 'email', 'phone', 'avatar', 'role', 'permissions', 'is_active', 'password',
-        'last_login_at', 'last_login_device', 'last_login_ip',
+        'name', 'username', 'email', 'phone', 'avatar', 'role', 'permissions', 'custom_rates', 'is_active', 'password',
+        'allowance_type', 'allowance_amount', 'last_login_at', 'last_login_device', 'last_login_ip',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -133,6 +133,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'is_active' => 'boolean',
         'permissions' => 'array',
+        'custom_rates' => 'array',
     ];
 
     public function isOwner(): bool
@@ -158,6 +159,10 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         if ($this->isOwner()) {
+            return true;
+        }
+
+        if ($this->role === 'crew' && $permission === 'schedules.view') {
             return true;
         }
 
@@ -188,6 +193,11 @@ class User extends Authenticatable
     public function worksheets()
     {
         return $this->belongsToMany(Worksheet::class, 'worksheet_user');
+    }
+
+    public function payrolls()
+    {
+        return $this->hasMany(Payroll::class);
     }
 
     public function avatarUrl(): string

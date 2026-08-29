@@ -273,18 +273,26 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [\App\Http\Controllers\ScheduleController::class, 'index'])->middleware('permission:schedules.view,schedules.manage')->name('index');
         Route::get('/poster', [\App\Http\Controllers\ScheduleController::class, 'poster'])->middleware('permission:schedules.view,schedules.manage')->name('poster');
         
+        // Penggajian / Payroll (Can be viewed by crew and kasir)
+        Route::get('/payrolls', [\App\Http\Controllers\PayrollController::class, 'index'])->middleware('permission:schedules.view,schedules.manage')->name('payrolls.index');
+        Route::get('/payrolls/export-pdf', [\App\Http\Controllers\PayrollController::class, 'exportPdf'])->middleware('permission:schedules.view,schedules.manage')->name('payrolls.export-pdf');
+        Route::get('/payrolls/export-excel', [\App\Http\Controllers\PayrollController::class, 'exportExcel'])->middleware('permission:schedules.view,schedules.manage')->name('payrolls.export-excel');
+        Route::post('/payrolls', [\App\Http\Controllers\PayrollController::class, 'store'])->middleware('permission:schedules.manage')->name('payrolls.store');
+        Route::post('/assignments/{assignment}/swap-request', [\App\Http\Controllers\ScheduleController::class, 'swapRequest'])->name('assignments.swap_request');
+        Route::post('/assignments/{assignment}/swap-approve', [\App\Http\Controllers\ScheduleController::class, 'swapApprove'])->name('assignments.swap_approve');
+        Route::post('/assignments/{assignment}/swap-reject', [\App\Http\Controllers\ScheduleController::class, 'swapReject'])->name('assignments.swap_reject');
+        
         Route::middleware('permission:schedules.manage')->group(function () {
             // Locations
             Route::post('/locations', [\App\Http\Controllers\ScheduleController::class, 'storeLocation'])->name('locations.store');
             Route::put('/locations/{location}', [\App\Http\Controllers\ScheduleController::class, 'updateLocation'])->name('locations.update');
             Route::delete('/locations/{location}', [\App\Http\Controllers\ScheduleController::class, 'destroyLocation'])->name('locations.destroy');
             
-            // Crews
-            Route::post('/crews', [\App\Http\Controllers\ScheduleController::class, 'storeCrew'])->name('crews.store');
-            Route::put('/crews/{crew}', [\App\Http\Controllers\ScheduleController::class, 'updateCrew'])->name('crews.update');
-            Route::post('/crews/{crew}/toggle', [\App\Http\Controllers\ScheduleController::class, 'toggleCrew'])->name('crews.toggle');
-            Route::delete('/crews/{crew}', [\App\Http\Controllers\ScheduleController::class, 'destroyCrew'])->name('crews.destroy');
+            // Custom Rates
+            Route::put('/users/{user}/custom-rates', [\App\Http\Controllers\ScheduleController::class, 'updateCustomRates'])->name('users.custom_rates');
             
+
+
             // Shifts
             Route::post('/shifts', [\App\Http\Controllers\ScheduleController::class, 'storeShift'])->name('shifts.store');
             Route::put('/shifts/{shift}', [\App\Http\Controllers\ScheduleController::class, 'updateShift'])->name('shifts.update');

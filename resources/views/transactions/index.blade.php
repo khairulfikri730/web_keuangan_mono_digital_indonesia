@@ -722,12 +722,12 @@
                     this.printerName = settings.printerName || '';
                     
                     if (this.connectionMethod === 'usb_direct' && this.printerName && navigator.usb) {
+                        this.printerStatus = 'connected';
                         try {
                             const devices = await navigator.usb.getDevices();
                             const matching = devices.find(d => d.productName === this.printerName);
                             if (matching) {
                                 this.printerHandle = matching;
-                                this.printerStatus = 'connected';
                             }
                         } catch (e) { console.error("Auto-reconnect failed:", e); }
                     } else if (this.printerName) {
@@ -737,6 +737,14 @@
             },
 
             async printRaw(commands) {
+                if (this.connectionMethod === 'usb_direct' && this.printerName && navigator.usb) {
+                    try {
+                        const devices = await navigator.usb.getDevices();
+                        const match = devices.find(d => d.productName === this.printerName);
+                        if (match) this.printerHandle = match;
+                    } catch (e) {}
+                }
+
                 if (!this.printerHandle) return false;
                 const device = this.printerHandle;
                 try {

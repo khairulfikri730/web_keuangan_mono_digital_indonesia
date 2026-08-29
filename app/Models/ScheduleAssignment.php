@@ -10,9 +10,9 @@ class ScheduleAssignment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'schedule_shift_id', 'schedule_crew_id', 'date', 'notes',
+        'schedule_shift_id', 'user_id', 'date', 'notes',
         'status', 'closed_by', 'closed_reason', 'closed_at_time',
-        'original_crew_id', 'changed_by',
+        'original_user_id', 'changed_by',
     ];
 
     protected $casts = [
@@ -24,14 +24,19 @@ class ScheduleAssignment extends Model
         return $this->belongsTo(ScheduleShift::class, 'schedule_shift_id');
     }
 
-    public function crew()
+    public function user()
     {
-        return $this->belongsTo(ScheduleCrew::class, 'schedule_crew_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function originalCrew()
+    public function originalUser()
     {
-        return $this->belongsTo(ScheduleCrew::class, 'original_crew_id');
+        return $this->belongsTo(User::class, 'original_user_id');
+    }
+
+    public function swapTargetUser()
+    {
+        return $this->belongsTo(User::class, 'swap_requested_to');
     }
 
     public function isOpen()

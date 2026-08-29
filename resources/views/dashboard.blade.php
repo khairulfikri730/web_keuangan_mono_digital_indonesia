@@ -469,7 +469,110 @@
             </div>
         </div>
 
-    @else
+        {{-- ========================================================= --}}
+        {{-- ESTIMASI GAJI CREW BULAN INI --}}
+        {{-- ========================================================= --}}
+        <div id="salary-section" class="bg-slate-900/60 border border-white/5 rounded-2xl p-6 backdrop-blur-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                <div>
+                    <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2">
+                        <i class="fas fa-money-check-alt text-emerald-400"></i>
+                        Estimasi Penggajian Bulan {{ $salaryMonth->translatedFormat('F Y') }}
+                    </h3>
+                    <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-widest">Estimasi berdasarkan jumlah shift & data payroll yang tercatat</p>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    {{-- Total grand --}}
+                    <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2 text-right">
+                        <p class="text-[9px] text-emerald-400 font-bold uppercase tracking-widest">Total Estimasi</p>
+                        <p class="text-lg font-black text-white">Rp {{ number_format($salaryGrandTotal, 0, ',', '.') }}</p>
+                    </div>
+                    {{-- Filter user --}}
+                    <form id="salary-filter-form" method="GET" action="{{ route('dashboard') }}#salary-section" class="flex items-center gap-2">
+                        <input type="hidden" name="filter" value="{{ $filter }}">
+                        <select name="salary_user_id" onchange="document.getElementById('salary-filter-form').submit()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 min-w-[160px]">
+                            <option value="">-- Semua Crew --</option>
+                            @foreach($allCrewUsers as $cu)
+                            <option value="{{ $cu->id }}" {{ $salaryFilterUserId == $cu->id ? 'selected' : '' }}>
+                                {{ $cu->name }} ({{ $cu->role }})
+                            </option>
+                            @endforeach
+                        </select>
+                        @if($salaryFilterUserId)
+                        <a href="{{ route('dashboard', ['filter' => $filter]) }}#salary-section" class="text-slate-400 hover:text-white text-xs px-2 py-2 rounded-lg hover:bg-slate-800 transition-colors" title="Reset filter">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        @endif
+                    </form>
+                </div>
+            </div>
+
+            @if($crewSalaryEstimations->isEmpty())
+            <div class="py-10 text-center border border-dashed border-white/5 rounded-xl">
+                <i class="fas fa-users-slash text-2xl text-slate-600 mb-2"></i>
+                <p class="text-sm text-slate-500">Tidak ada data crew aktif untuk ditampilkan.</p>
+            </div>
+            @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-slate-300">
+                    <thead>
+                        <tr class="border-b border-white/5">
+                            <th class="text-left px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nama</th>
+                            <th class="text-left px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Role</th>
+                            <th class="text-center px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Shift</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Komisi Shift</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tunjangan</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lembur+Bonus</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Potongan</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gaji Kotor</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Take-Home</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        @foreach($crewSalaryEstimations as $est)
+                        <tr class="hover:bg-slate-800/40 transition-colors group">
+                            <td class="px-3 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-black text-slate-300 flex-shrink-0">
+                                        {{ strtoupper(substr($est['user']->name, 0, 2)) }}
+                                    </div>
+                                    <span class="font-bold text-white">{{ $est['user']->name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-3 py-3">
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest {{ $est['user']->role === 'kasir' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400' }}">
+                                    {{ $est['user']->role }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-3 text-center">
+                                <span class="font-black text-white">{{ $est['shifts'] }}</span>
+                                <span class="text-slate-500 text-[9px]"> shift</span>
+                            </td>
+                            <td class="px-3 py-3 text-right text-slate-300">Rp {{ number_format($est['komisi'], 0, ',', '.') }}</td>
+                            <td class="px-3 py-3 text-right text-slate-300">Rp {{ number_format($est['allowance'], 0, ',', '.') }}</td>
+                            <td class="px-3 py-3 text-right text-blue-400">Rp {{ number_format($est['lembur'] + $est['bonus'], 0, ',', '.') }}</td>
+                            <td class="px-3 py-3 text-right text-red-400">
+                                {{ $est['kasbon'] > 0 ? '- Rp ' . number_format($est['kasbon'], 0, ',', '.') : '-' }}
+                            </td>
+                            <td class="px-3 py-3 text-right text-slate-300 font-bold">Rp {{ number_format($est['gross'], 0, ',', '.') }}</td>
+                            <td class="px-3 py-3 text-right">
+                                <span class="font-black text-emerald-400 text-sm">Rp {{ number_format($est['net'], 0, ',', '.') }}</span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-t-2 border-emerald-500/30 bg-emerald-500/5">
+                            <td colspan="8" class="px-3 py-3 text-right text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Total Estimasi Bayar</td>
+                            <td class="px-3 py-3 text-right font-black text-emerald-400 text-base">Rp {{ number_format($salaryGrandTotal, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @endif
+        </div>
+
+    @elseif(auth()->user()->isKasir())
         {{-- ========================================================= --}}
         {{-- CASHIER WORKSTATION DASHBOARD --}}
         {{-- ========================================================= --}}
@@ -759,8 +862,360 @@
             </div>
         </div>
 
+    @else
+        {{-- ========================================================= --}}
+        {{-- CREW BIASA DASHBOARD --}}
+        {{-- ========================================================= --}}
+        <div class="space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {{-- Profile & Status --}}
+                <div class="md:col-span-2 bg-slate-900/60 border border-white/5 rounded-2xl p-6 backdrop-blur-xl relative overflow-hidden flex flex-col justify-center">
+                    <div class="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/10 rounded-full blur-[50px] pointer-events-none"></div>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+                        <div>
+                            <h2 class="text-2xl font-black text-white mb-1">Halo, {{ auth()->user()->name }}</h2>
+                            <p class="text-sm text-slate-400 font-medium">Selamat datang di dashboard personal Anda.</p>
+                        </div>
+                        
+                        <div class="flex gap-4">
+                            <div class="bg-slate-950/50 rounded-xl p-3 border border-white/5 min-w-[120px] text-center">
+                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Target Kehadiran</p>
+                                <p class="text-xl font-black {{ $performanceScore >= 80 ? 'text-emerald-400' : ($performanceScore >= 50 ? 'text-amber-400' : 'text-red-400') }}">{{ $performanceScore }}%</p>
+                            </div>
+                            <div class="bg-slate-950/50 rounded-xl p-3 border border-white/5 min-w-[120px] text-center">
+                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Shift Selesai</p>
+                                <p class="text-xl font-black text-blue-400">{{ $completedShiftsCount }} <span class="text-xs text-slate-500">/ {{ $totalShiftsThisMonth }}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Shortcut Jadwal --}}
+                <div class="bg-gradient-to-br from-emerald-600 to-teal-500 border border-emerald-400/50 shadow-[0_0_30px_rgba(16,185,129,0.4)] rounded-2xl p-6 flex flex-col justify-center items-center text-center cursor-pointer hover:from-emerald-500 hover:to-teal-400 hover:scale-[1.02] transition-all relative overflow-hidden group" onclick="window.location.href='{{ route('schedules.index') }}'">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+                    <i class="fas fa-calendar-alt text-4xl text-white mb-3 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] relative z-10 group-hover:scale-110 transition-transform"></i>
+                    <h3 class="font-black text-white uppercase tracking-widest text-sm relative z-10">Lihat Jadwal</h3>
+                    <p class="text-[10px] text-emerald-100 font-bold uppercase tracking-widest mt-1 relative z-10 opacity-80">Atur penukaran shift</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-slate-900/60 border border-white/5 rounded-xl p-4 backdrop-blur-xl">
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Total Pendapatan</p>
+                    <p class="text-lg font-black text-emerald-400">Rp {{ number_format($totalKotor, 0, ',', '.') }}</p>
+                    <p class="text-[9px] text-slate-400 mt-1">Gaji & Komisi Shift</p>
+                </div>
+                <div class="bg-slate-900/60 border border-white/5 rounded-xl p-4 backdrop-blur-xl">
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Tambahan</p>
+                    <p class="text-lg font-black text-blue-400">Rp {{ number_format($lembur + $motret + $bonus, 0, ',', '.') }}</p>
+                    <p class="text-[9px] text-slate-400 mt-1">Lembur, Motret, Bonus</p>
+                </div>
+                <div class="bg-slate-900/60 border border-white/5 rounded-xl p-4 backdrop-blur-xl">
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Kasbon / Potongan</p>
+                    <p class="text-lg font-black text-red-400">Rp {{ number_format($kasbon, 0, ',', '.') }}</p>
+                    <p class="text-[9px] text-slate-400 mt-1">Dari sistem payroll</p>
+                </div>
+                <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900/60 border border-emerald-500/30 rounded-xl p-4 backdrop-blur-xl">
+                    <p class="text-[10px] text-emerald-500 uppercase tracking-widest font-bold mb-1">Estimasi Bersih</p>
+                    <p class="text-xl font-black text-white">Rp {{ number_format($totalBersih, 0, ',', '.') }}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {{-- Jadwal Mendatang (Semua Crew di Lokasi) --}}
+                <div class="lg:col-span-2 bg-slate-900/60 border border-white/5 rounded-2xl p-6 backdrop-blur-xl">
+                    <h3 class="font-black text-white uppercase tracking-wider text-sm mb-4">Jadwal Shift Lokasi Anda (7 Hari)</h3>
+                    @if($locationSchedules->count() > 0)
+                        <div class="space-y-4">
+                            @foreach($locationSchedules as $date => $assignments)
+                            <div class="bg-slate-950/50 p-4 rounded-xl border {{ $date == Carbon\Carbon::today()->format('Y-m-d') ? 'border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'border-white/5' }}">
+                                <div class="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
+                                    <h4 class="text-xs font-bold {{ $date == Carbon\Carbon::today()->format('Y-m-d') ? 'text-cyan-400' : 'text-white' }} flex items-center gap-2">
+                                        <i class="fas fa-calendar-day"></i> {{ Carbon\Carbon::parse($date)->translatedFormat('l, d M Y') }}
+                                        @if($date == Carbon\Carbon::today()->format('Y-m-d'))
+                                            <span class="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[9px] rounded uppercase tracking-widest">Hari Ini</span>
+                                        @endif
+                                    </h4>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    @foreach($assignments as $asgn)
+                                    <div class="flex items-center gap-3 p-2 rounded-lg {{ $asgn->user_id == auth()->id() ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-slate-900/50' }}">
+                                        <div class="w-8 h-8 rounded-full {{ $asgn->user_id == auth()->id() ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400' }} flex flex-shrink-0 items-center justify-center font-black text-[10px]">
+                                            {{ substr($asgn->user->name, 0, 2) }}
+                                        </div>
+                                        <div class="flex-1 overflow-hidden">
+                                            <p class="text-xs font-bold text-white truncate">{{ $asgn->user->name }} {!! $asgn->user_id == auth()->id() ? '<span class="text-emerald-400">(Anda)</span>' : '' !!}</p>
+                                            <p class="text-[9px] text-slate-500 tracking-widest uppercase mt-0.5">{{ $asgn->shift->name }} • {{ $asgn->shift->start_time }} - {{ $asgn->shift->end_time }}</p>
+                                        </div>
+                                        <div class="text-[9px] font-bold text-slate-500 uppercase px-2 py-1 bg-slate-950 rounded">
+                                            {{ $asgn->shift->location->name ?? '-' }}
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="py-8 text-center border border-dashed border-white/5 rounded-xl">
+                            <i class="fas fa-bed text-2xl text-slate-600 mb-2"></i>
+                            <p class="text-sm font-bold text-slate-400">Tidak ada jadwal 7 hari kedepan</p>
+                        </div>
+                    @endif
+                </div>
+                
+                {{-- Info / Pengumuman --}}
+                <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-6 backdrop-blur-xl">
+                    <h3 class="font-black text-white uppercase tracking-wider text-sm mb-4">Informasi Penting</h3>
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3 mb-4">
+                        <i class="fas fa-info-circle text-blue-400 mt-1"></i>
+                        <div>
+                            <p class="text-sm font-bold text-white">Panduan Penukaran Shift</p>
+                            <p class="text-xs text-slate-400 mt-1">Untuk menukar shift, silakan masuk ke menu <strong class="text-slate-300">Jadwal Kerja</strong> lalu klik shift Anda dan pilih opsi penukaran. Pastikan penukaran disetujui minimal 1 hari sebelum shift dimulai.</p>
+                        </div>
+                    </div>
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3">
+                        <i class="fas fa-exclamation-triangle text-amber-400 mt-1"></i>
+                        <div>
+                            <p class="text-sm font-bold text-white">Performa Kehadiran</p>
+                            <p class="text-xs text-slate-400 mt-1">Gaji dan komisi Anda sangat bergantung pada tingkat kehadiran. Pastikan untuk selalu hadir pada shift yang telah ditentukan atau ajukan tukar shift jika berhalangan.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+    
+    {{-- INSERT CREW FINANCIAL (KASIR ROLE) --}}
+    @if(isset($crewFinancial))
+    <div class="mt-6 border-t border-white/5 pt-6">
+        <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2 mb-4">
+            <i class="fas fa-user-circle text-orange-400"></i> Performa Pribadi Saya Bulan Ini
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <!-- Pendapatan Kotor -->
+            <div class="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border border-emerald-700/50 rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Gaji Kotor</p>
+                        <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['totalKotor'], 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 text-emerald-400">
+                        <i class="fas fa-money-bill-wave text-xs"></i>
+                    </div>
+                </div>
+                <p class="text-[10px] text-emerald-400/80">Termasuk gaji pokok & tambahan</p>
+            </div>
+
+            <!-- Potongan Kasbon -->
+            <div class="bg-gradient-to-br from-red-900/40 to-red-800/20 border border-red-700/50 rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-1">Potongan</p>
+                        <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['kasbon'], 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/30 text-red-400">
+                        <i class="fas fa-hand-holding-usd text-xs"></i>
+                    </div>
+                </div>
+                <p class="text-[10px] text-red-400/80">Total kasbon ditarik</p>
+            </div>
+
+            <!-- Lembur -->
+            <div class="bg-gradient-to-br from-orange-900/40 to-orange-800/20 border border-orange-700/50 rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-[10px] text-orange-400 font-bold uppercase tracking-wider mb-1">Lembur</p>
+                        <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['lembur'], 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center border border-orange-500/30 text-orange-400">
+                        <i class="fas fa-clock text-xs"></i>
+                    </div>
+                </div>
+                <p class="text-[10px] text-orange-400/80">Tambahan lembur</p>
+            </div>
+
+            <!-- Bonus -->
+            <div class="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/50 rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-[10px] text-purple-400 font-bold uppercase tracking-wider mb-1">Bonus</p>
+                        <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['bonus'], 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/30 text-purple-400">
+                        <i class="fas fa-gift text-xs"></i>
+                    </div>
+                </div>
+                <p class="text-[10px] text-purple-400/80">Bonus/reward ekstra</p>
+            </div>
+
+            <!-- Pendapatan Bersih -->
+            <div class="bg-gradient-to-br from-blue-900/40 to-blue-800/20 border border-blue-700/50 rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-1">Total Diterima</p>
+                        <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['totalBersih'], 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30 text-blue-400">
+                        <i class="fas fa-wallet text-xs"></i>
+                    </div>
+                </div>
+                <p class="text-[10px] text-blue-400/80">Take-home pay bulan ini</p>
+            </div>
+
+            <!-- Kehadiran -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2 relative z-10">
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Shift Selesai</p>
+                        <h3 class="text-lg font-black text-white">
+                            {{ $crewFinancial['completed_shifts'] }}<span class="text-sm text-slate-500 font-medium">/{{ $crewFinancial['total_shifts'] }}</span>
+                        </h3>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center border border-slate-600 text-slate-300">
+                        <i class="fas fa-user-check text-xs"></i>
+                    </div>
+                </div>
+                @php $pct = $crewFinancial['total_shifts'] > 0 ? ($crewFinancial['completed_shifts'] / $crewFinancial['total_shifts'] * 100) : 0; @endphp
+                <div class="h-1.5 w-full bg-slate-900 rounded-full mt-2 relative z-10 overflow-hidden border border-slate-700">
+                    <div class="h-full bg-slate-400 rounded-full" style="width: {{ $pct }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-8 border-t border-white/5 pt-6">
+        <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2 mb-4">
+            <i class="fas fa-calendar-week text-blue-400"></i> Jadwal Shift Pribadi
+        </h3>
+
+        {{-- Filter Mode --}}
+        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 mb-4">
+            <form action="{{ route('dashboard') }}" method="GET" class="flex flex-wrap items-end gap-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mode Tampilan</label>
+                    <div class="flex rounded-xl overflow-hidden border border-slate-700">
+                        <button type="submit" name="view" value="daily" class="px-4 py-2 text-xs font-bold transition-colors {{ $scheduleViewMode === 'daily' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white' }}">
+                            <i class="fas fa-calendar-day mr-1"></i>Harian
+                        </button>
+                        <button type="submit" name="view" value="weekly" class="px-4 py-2 text-xs font-bold transition-colors border-x border-slate-700 {{ $scheduleViewMode === 'weekly' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white' }}">
+                            <i class="fas fa-calendar-week mr-1"></i>Mingguan
+                        </button>
+                        <button type="submit" name="view" value="monthly" class="px-4 py-2 text-xs font-bold transition-colors {{ $scheduleViewMode === 'monthly' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white' }}">
+                            <i class="fas fa-calendar-alt mr-1"></i>Bulanan
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tanggal</label>
+                    <input type="date" name="date" value="{{ $scheduleDate }}" class="bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-[160px]">
+                </div>
+                <div>
+                    <button type="submit" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-xl transition-colors h-[38px] flex items-center gap-2">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
+            <div class="overflow-x-auto pb-8 min-h-[300px]">
+                <table class="w-full text-xs text-slate-300 border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/50">
+                            <th class="px-3 py-2 text-left font-bold text-slate-400 border border-slate-700 sticky left-0 bg-slate-900 z-10 min-w-[120px]">Shift</th>
+                            @foreach($scheduleDates as $dt)
+                            @php $dtCarbon = \Carbon\Carbon::parse($dt); @endphp
+                            <th class="px-2 py-2 text-center font-bold border border-slate-700 min-w-[110px] {{ $dt === now()->format('Y-m-d') ? 'bg-blue-500/10 text-blue-400' : 'text-slate-400' }}">
+                                <div>{{ $dtCarbon->translatedFormat('D') }}</div>
+                                <div class="text-[10px]">{{ $dtCarbon->format('d/m') }}</div>
+                            </th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($scheduleLocations as $loc)
+                        @foreach($loc->shifts as $shift)
+                        <tr class="hover:bg-slate-700/20">
+                            <td class="px-3 py-2 border border-slate-700 sticky left-0 bg-slate-800 z-10">
+                                <div class="flex items-center gap-1.5">
+                                    <div class="w-2 h-2 rounded-full" style="background:{{ $shift->color }}"></div>
+                                    <div>
+                                        <div class="font-bold text-white text-[11px]">{{ $shift->name }}</div>
+                                        <div class="text-[9px] text-slate-500">{{ $loc->name }} · {{ substr($shift->start_time,0,5) }}-{{ substr($shift->end_time,0,5) }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            @foreach($scheduleDates as $dt)
+                            @php $cellAsgn = $scheduleAssignments->where('schedule_shift_id', $shift->id)->filter(fn($a) => $a->date->format('Y-m-d') === $dt); @endphp
+                            <td class="px-1 py-1 border border-slate-700/50 align-top {{ $dt === now()->format('Y-m-d') ? 'bg-blue-500/5' : '' }}">
+                                @foreach($cellAsgn as $ca)
+                                <div x-data="{ pop: false }" class="relative mb-0.5 group">
+                                    <div @click="pop = !pop" class="px-1.5 py-1 rounded cursor-pointer text-[9px] font-bold flex items-center gap-0.5 transition-all hover:ring-1 hover:ring-slate-500
+                                        {{ $ca->isClosed() 
+                                            ? ($ca->closed_at_time ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20')
+                                            : 'text-white' }}"
+                                        style="{{ $ca->isOpen() ? 'background:' . $shift->color . '33; border-left: 2px solid ' . $shift->color : '' }}"
+                                        title="{{ $ca->isClosed() ? 'CLOSE - ' . $ca->closed_by . ': ' . $ca->closed_reason : 'OPEN' }}">
+                                        @if($ca->isClosed())
+                                            <div class="flex flex-col items-center leading-tight">
+                                                <span>{{ Str::limit($ca->user->name ?? '?', 8) }}</span>
+                                                <span class="text-[7px] font-normal opacity-80 mt-0.5"><i class="fas fa-{{ $ca->closed_at_time ? 'clock' : 'ban' }} mr-0.5"></i>{{ $ca->closed_at_time ? 'Selesai ' . substr($ca->closed_at_time, 0, 5) : 'Close' }}</span>
+                                            </div>
+                                        @else
+                                            {{ Str::limit($ca->user->name ?? '?', 8) }}
+                                        @endif
+                                    </div>
+                                    {{-- Action Popover --}}
+                                    <div x-show="pop" x-transition.scale.origin.top @click.outside="pop = false" class="absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl p-2 min-w-[140px]" style="display:none;">
+                                        <div class="text-[9px] text-slate-400 px-2 py-1 border-b border-slate-700 mb-1 truncate"><b class="text-white">{{ $ca->user->name ?? '?' }}</b> · {{ \Carbon\Carbon::parse($dt)->translatedFormat('D d/m') }}</div>
+                                        @if($ca->isClosed())
+                                        <div class="text-[8px] text-red-400 px-2 py-0.5 mb-1"><i class="fas fa-lock mr-0.5"></i>{{ $ca->closed_by }} · {{ $ca->closed_reason }}</div>
+                                        @endif
+                                        <div class="flex flex-col gap-1">
+                                            @if($ca->user_id == auth()->id() && $ca->isOpen())
+                                                @if($ca->swap_status === 'pending')
+                                                    <span class="text-[9px] text-orange-400 px-2 italic"><i class="fas fa-hourglass-half mr-1"></i>Menunggu Persetujuan</span>
+                                                @elseif(\Carbon\Carbon::parse($dt)->startOfDay()->gte(\Carbon\Carbon::today()))
+                                                    <button type="button" @click="pop=false; $dispatch('open-modal', 'swap-request-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-orange-400 hover:bg-orange-500/10 transition-colors w-full text-left">
+                                                        <i class="fas fa-exchange-alt w-3 text-center"></i> Ajukan Tukar Shift
+                                                    </button>
+                                                @endif
+                                            @else
+                                                <span class="text-[9px] text-slate-500 px-2 italic">Aksi tidak tersedia</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </td>
+                            @endforeach
+                        </tr>
+                        @endforeach
+                        @endforeach
+                        @if($scheduleLocations->isEmpty())
+                        <tr>
+                            <td colspan="{{ count($scheduleDates) + 1 }}" class="px-3 py-8 text-center text-slate-500 italic">
+                                Belum ada jadwal shift untuk minggu ini.
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     @endif
 </div>
+
+@if(auth()->user()->role === 'kasir')
+    @php
+        $assignments = $scheduleAssignments;
+        $locations = $scheduleLocations;
+        $users = $activeUsers ?? collect();
+    @endphp
+    @include('schedules._modals_actions')
+@endif
 @endsection
 
 @push('styles')

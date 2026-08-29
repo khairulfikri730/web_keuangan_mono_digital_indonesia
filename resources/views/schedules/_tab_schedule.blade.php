@@ -2,9 +2,14 @@
 <div x-show="activeTab === 'jadwal'" x-cloak x-transition.opacity class="space-y-6">
     <div class="flex flex-col sm:flex-row gap-4 justify-between sm:items-center">
         <div>
-            <h2 class="text-xl font-black text-white">Jadwal Tim</h2>
-            <p class="text-sm text-slate-400">Atur penugasan shift untuk crew. Bisa close, reopen, atau ganti crew.</p>
+            <h2 class="text-xl font-black text-white">
+                {{ auth()->user()->role === 'crew' ? 'Overview Kinerja & Jadwal' : 'Jadwal Tim' }}
+            </h2>
+            <p class="text-sm text-slate-400">
+                {{ auth()->user()->role === 'crew' ? 'Pantau performa dan jadwal shift kamu bulan ini.' : 'Atur penugasan shift untuk crew. Bisa close, reopen, atau ganti crew.' }}
+            </p>
         </div>
+        @if(auth()->user()->role !== 'crew')
         <div class="flex flex-wrap gap-2">
             <button @click="$dispatch('open-modal', 'poster-modal')" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2">
                 <i class="fas fa-image"></i> Poster
@@ -16,7 +21,130 @@
                 <i class="fas fa-layer-group"></i> Bulk Assign
             </button>
         </div>
+        @endif
     </div>
+
+    @if(isset($crewFinancial))
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <!-- Pendapatan Kotor -->
+        <div class="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border border-emerald-700/50 rounded-2xl p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Gaji Kotor</p>
+                    <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['totalKotor'], 0, ',', '.') }}</h3>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 text-emerald-400">
+                    <i class="fas fa-money-bill-wave text-xs"></i>
+                </div>
+            </div>
+            <p class="text-[10px] text-emerald-400/80">Termasuk gaji pokok & tambahan</p>
+        </div>
+
+        <!-- Potongan Kasbon -->
+        <div class="bg-gradient-to-br from-red-900/40 to-red-800/20 border border-red-700/50 rounded-2xl p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <p class="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-1">Potongan</p>
+                    <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['kasbon'], 0, ',', '.') }}</h3>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/30 text-red-400">
+                    <i class="fas fa-hand-holding-usd text-xs"></i>
+                </div>
+            </div>
+            <p class="text-[10px] text-red-400/80">Total kasbon ditarik</p>
+        </div>
+
+        <!-- Lembur -->
+        <div class="bg-gradient-to-br from-orange-900/40 to-orange-800/20 border border-orange-700/50 rounded-2xl p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <p class="text-[10px] text-orange-400 font-bold uppercase tracking-wider mb-1">Lembur</p>
+                    <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['lembur'], 0, ',', '.') }}</h3>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center border border-orange-500/30 text-orange-400">
+                    <i class="fas fa-clock text-xs"></i>
+                </div>
+            </div>
+            <p class="text-[10px] text-orange-400/80">Tambahan lembur</p>
+        </div>
+
+        <!-- Bonus -->
+        <div class="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-700/50 rounded-2xl p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <p class="text-[10px] text-purple-400 font-bold uppercase tracking-wider mb-1">Bonus</p>
+                    <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['bonus'], 0, ',', '.') }}</h3>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/30 text-purple-400">
+                    <i class="fas fa-gift text-xs"></i>
+                </div>
+            </div>
+            <p class="text-[10px] text-purple-400/80">Bonus/reward ekstra</p>
+        </div>
+
+        <!-- Pendapatan Bersih -->
+        <div class="bg-gradient-to-br from-blue-900/40 to-blue-800/20 border border-blue-700/50 rounded-2xl p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-1">Total Diterima</p>
+                    <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['totalBersih'], 0, ',', '.') }}</h3>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30 text-blue-400">
+                    <i class="fas fa-wallet text-xs"></i>
+                </div>
+            </div>
+            <p class="text-[10px] text-blue-400/80">Take-home pay bulan ini</p>
+        </div>
+
+        <!-- Kehadiran -->
+        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 relative overflow-hidden group">
+            <div class="flex justify-between items-start mb-2 relative z-10">
+                <div>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Shift Selesai</p>
+                    <h3 class="text-lg font-black text-white">
+                        {{ $crewFinancial['completed_shifts'] }}<span class="text-sm text-slate-500 font-medium">/{{ $crewFinancial['total_shifts'] }}</span>
+                    </h3>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center border border-slate-600 text-slate-300">
+                    <i class="fas fa-user-check text-xs"></i>
+                </div>
+            </div>
+            <div class="w-full bg-slate-900 rounded-full h-1.5 mt-3">
+                <div class="bg-blue-500 h-1.5 rounded-full" style="width: {{ $crewFinancial['total_shifts'] > 0 ? ($crewFinancial['completed_shifts'] / $crewFinancial['total_shifts']) * 100 : 0 }}%"></div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if($pendingSwaps->count() > 0)
+    <div class="bg-orange-900/20 border border-orange-700/50 rounded-2xl p-4 mb-6">
+        <h3 class="text-sm font-bold text-orange-400 mb-3"><i class="fas fa-bell mr-2"></i>Permintaan Tukar Shift Menunggu Persetujuan</h3>
+        <div class="space-y-2">
+            @foreach($pendingSwaps as $swap)
+            <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="text-xs text-slate-300">
+                        <b class="text-white">{{ $swap->user->name }}</b> mengajukan tukar shift ke <b class="text-white">{{ $swap->swapTargetUser->name ?? '?' }}</b>
+                    </div>
+                    <div class="text-[10px] text-slate-500 mt-1">
+                        {{ $swap->shift->name }} ({{ $swap->shift->location->name }}) - {{ $swap->date->translatedFormat('l, d M Y') }}
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <form action="{{ route('schedules.assignments.swap_approve', $swap) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg transition-colors"><i class="fas fa-check mr-1"></i> Setujui</button>
+                    </form>
+                    <form action="{{ route('schedules.assignments.swap_reject', $swap) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold rounded-lg transition-colors"><i class="fas fa-times mr-1"></i> Tolak</button>
+                    </form>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     {{-- Filter Mode --}}
     <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
@@ -54,6 +182,7 @@
         </form>
     </div>
 
+    @if(auth()->user()->role !== 'crew')
     {{-- Quick Add Assignment --}}
     <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
         <h3 class="text-sm font-bold text-white mb-3"><i class="fas fa-plus-circle text-emerald-400 mr-2"></i>Tambah Jadwal Cepat</h3>
@@ -74,10 +203,10 @@
             </div>
             <div class="flex-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Crew</label>
-                <select name="schedule_crew_id" id="quick_crew_id" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                <select name="user_id" id="quick_user_id" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
                     <option value="">-- Pilih Crew --</option>
-                    @foreach($activeCrews as $crew)
-                    <option value="{{ $crew->id }}">{{ $crew->name }}{{ $crew->position ? " ($crew->position)" : '' }}</option>
+                    @foreach($activeUsers as $user)
+                    <option value="{{ $user->id }}">{{ $user->name }}{{ $user->role ? " ($user->role)" : '' }}</option>
                     @endforeach
                 </select>
             </div>
@@ -94,6 +223,7 @@
             </button>
         </form>
     </div>
+    @endif
 
     {{-- Schedule Grid --}}
     <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 w-full max-w-full overflow-hidden">
@@ -174,14 +304,14 @@
                                         <div class="flex items-center gap-1.5">
                                             @if($asgn->isClosed())
                                                 <span class="text-xs font-bold {{ $asgn->closed_at_time ? 'text-blue-300' : 'text-red-300' }}">
-                                                    {{ $asgn->crew->name ?? '?' }} <span class="text-[9px] opacity-80 font-normal ml-1">({{ $asgn->closed_at_time ? 'Selesai ' . substr($asgn->closed_at_time, 0, 5) : 'Close' }})</span>
+                                                    {{ $asgn->user->name ?? '?' }} <span class="text-[9px] opacity-80 font-normal ml-1">({{ $asgn->closed_at_time ? 'Selesai ' . substr($asgn->closed_at_time, 0, 5) : 'Close' }})</span>
                                                 </span>
                                             @else
-                                                <span class="text-xs font-bold text-white">{{ $asgn->crew->name ?? '?' }}</span>
+                                                <span class="text-xs font-bold text-white">{{ $asgn->user->name ?? '?' }}</span>
                                             @endif
                                             @if($asgn->wasReplaced())
                                                 <span class="text-[9px] text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">
-                                                    <i class="fas fa-exchange-alt mr-0.5"></i>ganti dari {{ $asgn->originalCrew->name ?? '?' }}
+                                                    <i class="fas fa-exchange-alt mr-0.5"></i>ganti dari {{ $asgn->originalUser->name ?? '?' }}
                                                 </span>
                                             @endif
                                             @if($asgn->notes)<span class="text-[9px] text-slate-500">({{ $asgn->notes }})</span>@endif
@@ -201,31 +331,48 @@
 
                                     {{-- Action Buttons --}}
                                     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                                        @if($asgn->isOpen())
-                                            {{-- Close Button --}}
-                                            <button type="button" @click="$dispatch('open-modal', 'close-assignment-{{ $asgn->id }}')" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center border border-red-500/20 transition-colors" title="Close Shift">
-                                                <i class="fas fa-ban text-[10px]"></i>
-                                            </button>
-                                            {{-- Change Button --}}
-                                            <button type="button" @click="$dispatch('open-modal', 'change-assignment-{{ $asgn->id }}')" class="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 flex items-center justify-center border border-orange-500/20 transition-colors" title="Ganti Crew">
-                                                <i class="fas fa-exchange-alt text-[10px]"></i>
-                                            </button>
-                                        @else
-                                            {{-- Reopen Button --}}
-                                            <form action="{{ route('schedules.assignments.reopen', $asgn) }}" method="POST" class="m-0">
-                                                @csrf
-                                                <button type="submit" class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 transition-colors" title="Buka Kembali">
-                                                    <i class="fas fa-undo text-[10px]"></i>
+                                        @if(auth()->user()->role !== 'crew')
+                                            @if($asgn->isOpen())
+                                                {{-- Close Button --}}
+                                                <button type="button" @click="$dispatch('open-modal', 'close-assignment-{{ $asgn->id }}')" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center border border-red-500/20 transition-colors" title="Close Shift">
+                                                    <i class="fas fa-ban text-[10px]"></i>
+                                                </button>
+                                                {{-- Change Button --}}
+                                                @if(auth()->user()->role === 'superadmin' || \Carbon\Carbon::parse($asgn->date)->startOfDay()->gte(\Carbon\Carbon::today()))
+                                                <button type="button" @click="$dispatch('open-modal', 'change-assignment-{{ $asgn->id }}')" class="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 flex items-center justify-center border border-orange-500/20 transition-colors" title="Ganti Crew">
+                                                    <i class="fas fa-exchange-alt text-[10px]"></i>
+                                                </button>
+                                                @endif
+                                            @else
+                                                {{-- Reopen Button --}}
+                                                <form action="{{ route('schedules.assignments.reopen', $asgn) }}" method="POST" class="m-0">
+                                                    @csrf
+                                                    <button type="submit" class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 transition-colors" title="Buka Kembali">
+                                                        <i class="fas fa-undo text-[10px]"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            {{-- Delete Button --}}
+                                            <form action="{{ route('schedules.assignments.destroy', $asgn) }}" method="POST" class="m-0">
+                                                @csrf @method('DELETE')
+                                                <button type="button" onclick="confirmDelete(this.form, 'Hapus penugasan ini?')" class="w-7 h-7 rounded-lg bg-slate-700/50 text-slate-400 hover:bg-red-500/20 hover:text-red-400 flex items-center justify-center border border-slate-600 transition-colors" title="Hapus">
+                                                    <i class="fas fa-trash text-[10px]"></i>
                                                 </button>
                                             </form>
+                                        @else
+                                            @if($asgn->user_id == auth()->id() && $asgn->isOpen())
+                                                @if($asgn->swap_status === 'pending')
+                                                    <span class="px-2 py-1 bg-orange-500/10 text-orange-400 rounded-lg text-[9px] font-bold border border-orange-500/20" title="Menunggu persetujuan tukar shift">
+                                                        <i class="fas fa-hourglass-half mr-1"></i> Pending
+                                                    </span>
+                                                @elseif(\Carbon\Carbon::parse($asgn->date)->startOfDay()->gte(\Carbon\Carbon::today()))
+                                                    {{-- Tukar Shift Request Button (For Crew) --}}
+                                                    <button type="button" @click="$dispatch('open-modal', 'swap-request-{{ $asgn->id }}')" class="px-2 h-7 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 flex items-center justify-center border border-orange-500/20 transition-colors text-[10px] font-bold" title="Ajukan Tukar Shift">
+                                                        <i class="fas fa-exchange-alt mr-1"></i> Tukar
+                                                    </button>
+                                                @endif
+                                            @endif
                                         @endif
-                                        {{-- Delete Button --}}
-                                        <form action="{{ route('schedules.assignments.destroy', $asgn) }}" method="POST" class="m-0">
-                                            @csrf @method('DELETE')
-                                            <button type="button" onclick="confirmDelete(this.form, 'Hapus penugasan ini?')" class="w-7 h-7 rounded-lg bg-slate-700/50 text-slate-400 hover:bg-red-500/20 hover:text-red-400 flex items-center justify-center border border-slate-600 transition-colors" title="Hapus">
-                                                <i class="fas fa-trash text-[10px]"></i>
-                                            </button>
-                                        </form>
                                     </div>
                                 </div>
                                 @empty
@@ -282,47 +429,63 @@
                                         title="{{ $ca->isClosed() ? 'CLOSE - ' . $ca->closed_by . ': ' . $ca->closed_reason : 'OPEN' }}">
                                         @if($ca->isClosed())
                                             <div class="flex flex-col items-center leading-tight">
-                                                <span>{{ Str::limit($ca->crew->name ?? '?', 8) }}</span>
+                                                <span>{{ Str::limit($ca->user->name ?? '?', 8) }}</span>
                                                 <span class="text-[7px] font-normal opacity-80 mt-0.5"><i class="fas fa-{{ $ca->closed_at_time ? 'clock' : 'ban' }} mr-0.5"></i>{{ $ca->closed_at_time ? 'Selesai ' . substr($ca->closed_at_time, 0, 5) : 'Close' }}</span>
                                             </div>
                                         @else
-                                            {{ Str::limit($ca->crew->name ?? '?', 8) }}
+                                            {{ Str::limit($ca->user->name ?? '?', 8) }}
                                         @endif
                                     </div>
                                     {{-- Action Popover --}}
                                     <div x-show="pop" x-transition.scale.origin.top @click.outside="pop = false" class="absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl p-2 min-w-[140px]" style="display:none;">
-                                        <div class="text-[9px] text-slate-400 px-2 py-1 border-b border-slate-700 mb-1 truncate"><b class="text-white">{{ $ca->crew->name ?? '?' }}</b> · {{ \Carbon\Carbon::parse($dt)->translatedFormat('D d/m') }}</div>
+                                        <div class="text-[9px] text-slate-400 px-2 py-1 border-b border-slate-700 mb-1 truncate"><b class="text-white">{{ $ca->user->name ?? '?' }}</b> · {{ \Carbon\Carbon::parse($dt)->translatedFormat('D d/m') }}</div>
                                         @if($ca->isClosed())
                                         <div class="text-[8px] text-red-400 px-2 py-0.5 mb-1"><i class="fas fa-lock mr-0.5"></i>{{ $ca->closed_by }} · {{ $ca->closed_reason }}</div>
                                         @endif
                                         <div class="flex flex-col gap-1">
-                                            @if($ca->isOpen())
-                                            <button type="button" @click="pop=false; $dispatch('open-modal', 'close-assignment-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-red-400 hover:bg-red-500/10 transition-colors w-full text-left">
-                                                <i class="fas fa-ban w-3 text-center"></i> Close Shift
-                                            </button>
-                                            <button type="button" @click="pop=false; $dispatch('open-modal', 'change-assignment-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-orange-400 hover:bg-orange-500/10 transition-colors w-full text-left">
-                                                <i class="fas fa-exchange-alt w-3 text-center"></i> Ganti Crew
-                                            </button>
+                                            @if(auth()->user()->role !== 'crew')
+                                                @if($ca->isOpen())
+                                                <button type="button" @click="pop=false; $dispatch('open-modal', 'close-assignment-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-red-400 hover:bg-red-500/10 transition-colors w-full text-left">
+                                                    <i class="fas fa-ban w-3 text-center"></i> Close Shift
+                                                </button>
+                                                @if(auth()->user()->role === 'superadmin' || \Carbon\Carbon::parse($dt)->startOfDay()->gte(\Carbon\Carbon::today()))
+                                                <button type="button" @click="pop=false; $dispatch('open-modal', 'change-assignment-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-orange-400 hover:bg-orange-500/10 transition-colors w-full text-left">
+                                                    <i class="fas fa-exchange-alt w-3 text-center"></i> Ganti Crew
+                                                </button>
+                                                @endif
+                                                @else
+                                                <form action="{{ route('schedules.assignments.reopen', $ca) }}" method="POST" class="m-0">
+                                                    @csrf
+                                                    <button type="submit" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/10 transition-colors w-full text-left">
+                                                        <i class="fas fa-undo w-3 text-center"></i> Buka Kembali
+                                                    </button>
+                                                </form>
+                                                @endif
+                                                <form action="{{ route('schedules.assignments.destroy', $ca) }}" method="POST" class="m-0">
+                                                    @csrf @method('DELETE')
+                                                    <button type="button" onclick="confirmDelete(this.form, 'Hapus penugasan ini?')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors w-full text-left">
+                                                        <i class="fas fa-trash w-3 text-center"></i> Hapus
+                                                    </button>
+                                                </form>
                                             @else
-                                            <form action="{{ route('schedules.assignments.reopen', $ca) }}" method="POST" class="m-0">
-                                                @csrf
-                                                <button type="submit" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/10 transition-colors w-full text-left">
-                                                    <i class="fas fa-undo w-3 text-center"></i> Buka Kembali
-                                                </button>
-                                            </form>
+                                                @if($ca->user_id == auth()->id() && $ca->isOpen())
+                                                    @if($ca->swap_status === 'pending')
+                                                        <span class="text-[9px] text-orange-400 px-2 italic"><i class="fas fa-hourglass-half mr-1"></i>Menunggu Persetujuan</span>
+                                                    @elseif(\Carbon\Carbon::parse($dt)->startOfDay()->gte(\Carbon\Carbon::today()))
+                                                        <button type="button" @click="pop=false; $dispatch('open-modal', 'swap-request-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-orange-400 hover:bg-orange-500/10 transition-colors w-full text-left">
+                                                            <i class="fas fa-exchange-alt w-3 text-center"></i> Ajukan Tukar Shift
+                                                        </button>
+                                                    @endif
+                                                @else
+                                                    <span class="text-[9px] text-slate-500 px-2 italic">Aksi tidak tersedia</span>
+                                                @endif
                                             @endif
-                                            <form action="{{ route('schedules.assignments.destroy', $ca) }}" method="POST" class="m-0">
-                                                @csrf @method('DELETE')
-                                                <button type="button" onclick="confirmDelete(this.form, 'Hapus penugasan ini?')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors w-full text-left">
-                                                    <i class="fas fa-trash w-3 text-center"></i> Hapus
-                                                </button>
-                                            </form>
                                         </div>
                                     </div>
                                 </div>
                                 @endforeach
                                 @for($i = $cellAsgn->count(); $i < $shift->max_crew; $i++)
-                                <div class="px-1.5 py-1 mt-0.5 rounded cursor-pointer text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all hover:bg-slate-700/50 bg-slate-800/50 text-slate-500 border border-dashed border-slate-600" @click="openQuickAssign('{{ $dt }}', {{ $shift->id }})" title="Klik untuk tugaskan crew (Slot kosong)">
+                                <div class="px-1.5 py-1 mt-0.5 rounded {{ auth()->user()->role !== 'crew' ? 'cursor-pointer hover:bg-slate-700/50' : 'cursor-default' }} text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all bg-slate-800/50 text-slate-500 border border-dashed border-slate-600" {!! auth()->user()->role !== 'crew' ? '@click="openQuickAssign(\''.$dt.'\', '.$shift->id.')" title="Klik untuk tugaskan crew (Slot kosong)"' : 'title="Slot kosong"' !!}>
                                     <i class="fas fa-plus text-[7px]"></i> Kosong
                                 </div>
                                 @endfor

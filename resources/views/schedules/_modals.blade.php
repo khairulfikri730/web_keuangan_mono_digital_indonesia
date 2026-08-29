@@ -19,6 +19,10 @@
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Deskripsi</label>
                     <input type="text" name="description" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="Alamat atau keterangan">
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Harga / Komisi per Shift <span class="text-red-400">*</span></label>
+                    <input type="number" name="shift_rate" value="0" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required placeholder="Contoh: 45000">
+                </div>
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
                 <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
@@ -48,73 +52,9 @@
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Deskripsi</label>
                     <input type="text" name="description" value="{{ $loc->description }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500">
                 </div>
-            </div>
-            <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
-                <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/30">Simpan</button>
-            </div>
-        </form>
-    </div>
-</div>
-@endforeach
-
-{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
-{{-- MODAL: ADD CREW --}}
-{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'add-crew') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
-    <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
-    <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
-        <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
-            <h3 class="text-lg font-black text-white"><i class="fas fa-user-plus text-emerald-400 mr-2"></i>Tambah Crew</h3>
-            <button @click="show = false" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
-        </div>
-        <form action="{{ route('schedules.crews.store') }}" method="POST">
-            @csrf
-            <div class="p-6 space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nama <span class="text-red-400">*</span></label>
-                    <input type="text" name="name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required placeholder="Contoh: Fahri">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Telepon</label>
-                    <input type="text" name="phone" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="08xxxxxxxxxx">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Posisi / Jabatan</label>
-                    <input type="text" name="position" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="Operator / Crew">
-                </div>
-            </div>
-            <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
-                <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/30">Simpan</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-{{-- EDIT CREW MODALS --}}
-@foreach($crews as $crew)
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'edit-crew-{{ $crew->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
-    <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
-    <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
-        <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
-            <h3 class="text-lg font-black text-white"><i class="fas fa-pen text-blue-400 mr-2"></i>Edit Crew</h3>
-            <button @click="show = false" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
-        </div>
-        <form action="{{ route('schedules.crews.update', $crew) }}" method="POST">
-            @csrf @method('PUT')
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nama <span class="text-red-400">*</span></label>
-                    <input type="text" name="name" value="{{ $crew->name }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Telepon</label>
-                    <input type="text" name="phone" value="{{ $crew->phone }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Posisi</label>
-                    <input type="text" name="position" value="{{ $crew->position }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Harga / Komisi per Shift <span class="text-red-400">*</span></label>
+                    <input type="number" name="shift_rate" value="{{ $loc->shift_rate }}" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required>
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
@@ -125,6 +65,8 @@
     </div>
 </div>
 @endforeach
+
+
 
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 {{-- MODAL: ADD SHIFT --}}
@@ -257,10 +199,10 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Crew <span class="text-red-400">*</span></label>
-                    <select name="schedule_crew_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                    <select name="user_id" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required>
                         <option value="">-- Pilih Crew --</option>
-                        @foreach($activeCrews as $crew)
-                        <option value="{{ $crew->id }}">{{ $crew->name }}</option>
+                        @foreach($activeUsers as $user)
+                        <option value="{{ $user->id }}">{{ $user->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -283,4 +225,43 @@
     </div>
 </div>
 
+{{-- CUSTOM RATE MODALS --}}
+@foreach($activeUsers as $user)
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'custom-rate-{{ $user->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+    <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
+    <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
+        <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
+            <h3 class="text-lg font-black text-white"><i class="fas fa-money-bill-wave text-emerald-400 mr-2"></i>Custom Gaji: {{ $user->name }}</h3>
+            <button @click="show = false" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <form action="{{ route('schedules.users.custom_rates', $user) }}" method="POST">
+            @csrf @method('PUT')
+            <div class="p-6 space-y-4">
+                <div class="text-xs text-slate-400 mb-4 bg-slate-900 p-3 rounded-xl border border-slate-700">
+                    <i class="fas fa-info-circle text-blue-400 mr-1"></i> Biarkan kosong untuk menggunakan harga default lokasi.
+                </div>
+                
+                @foreach($locations->where('is_active', true) as $loc)
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-bold text-slate-200">{{ $loc->name }}</label>
+                        <span class="text-xs text-slate-500">Default: Rp {{ number_format($loc->shift_rate, 0, ',', '.') }}</span>
+                    </div>
+                    <div class="w-1/2">
+                        <input type="number" name="custom_rates[{{ $loc->id }}]" 
+                               value="{{ is_array($user->custom_rates) && isset($user->custom_rates[$loc->id]) ? $user->custom_rates[$loc->id] : '' }}" 
+                               class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" 
+                               placeholder="Harga khusus...">
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
+                <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/30">Simpan Harga</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endforeach
 

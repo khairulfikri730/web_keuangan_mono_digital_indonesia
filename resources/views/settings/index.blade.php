@@ -513,12 +513,12 @@
                     try {
                         const settings = JSON.parse(saved);
                         if (settings.connectionMethod === 'usb_direct' && settings.printerName) {
+                            this.printerName = settings.printerName;
+                            this.printerStatus = 'connected';
                             navigator.usb.getDevices().then(devices => {
                                 const match = devices.find(d => d.productName === settings.printerName);
                                 if (match) {
                                     this.printerHandle = match;
-                                    this.printerName = settings.printerName;
-                                    this.printerStatus = 'connected';
                                 }
                             }).catch(() => {});
                         }
@@ -558,8 +558,15 @@
                 },
 
                 async testDrawer() {
+                    if (this.printerName && navigator.usb) {
+                        try {
+                            const devices = await navigator.usb.getDevices();
+                            const match = devices.find(d => d.productName === this.printerName);
+                            if (match) this.printerHandle = match;
+                        } catch (e) {}
+                    }
                     if (!this.printerHandle) {
-                        Swal.fire({ icon: 'warning', title: 'Belum Terhubung', text: 'Hubungkan printer USB terlebih dahulu.', background: '#1e293b', color: '#f8fafc' });
+                        Swal.fire({ icon: 'warning', title: 'Belum Terhubung', text: 'Printer tidak ditemukan. Pastikan kabel USB terpasang dengan baik.', background: '#1e293b', color: '#f8fafc' });
                         return;
                     }
 

@@ -25,7 +25,7 @@ class DashboardController extends Controller
         $activeShift = Shift::activeShiftForUser($user->id);
         
         // Define date range based on filter
-        $filter = $request->get('filter', 'today');
+        $filter = $request->input('filter', 'today');
         
         if (!$isOwner) {
             $filter = 'today'; // Cashiers are forced to today only
@@ -357,6 +357,74 @@ class DashboardController extends Controller
                 (object)['name' => 'Server', 'status' => 'online', 'color' => 'bg-emerald-500', 'text' => 'text-emerald-400'],
             ];
 
+            // ── SALARY ESTIMATION (For Super Admin overview) ────────────────
+            $salaryMonth = Carbon::now();
+            $salaryMonthStart = $salaryMonth->copy()->startOfMonth()->format('Y-m-d');
+            $salaryMonthEnd   = $salaryMonth->copy()->endOfMonth()->format('Y-m-d');
+            
+            $salaryFilterUserId = $request->input('salary_user_id');
+            
+            $allCrewUsers = \App\Models\User::where('is_active', true)
+                ->whereIn('role', ['crew', 'kasir'])
+                ->orderBy('name')
+                ->get();
+
+            $crewSalaryEstimations = \App\Models\User::where('is_active', true)
+                ->whereIn('role', ['crew', 'kasir'])
+                ->when($salaryFilterUserId, fn($q) => $q->where('id', $salaryFilterUserId))
+                ->orderBy('name')
+                ->get()
+                ->map(function ($crew) use ($salaryMonthStart, $salaryMonthEnd, $salaryMonth) {
+                    $asgns = \App\Models\ScheduleAssignment::with('shift.location')
+                        ->where('user_id', $crew->id)
+                        ->whereBetween('date', [$salaryMonthStart, $salaryMonthEnd])
+                        ->get();
+
+                    $komisi = 0;
+                    foreach ($asgns as $a) {
+                        if ($a->shift && $a->shift->location) {
+                            $locId = $a->shift->schedule_location_id;
+                            if (is_array($crew->custom_rates) && isset($crew->custom_rates[$locId])) {
+                                $komisi += $crew->custom_rates[$locId];
+                            } else {
+                                $komisi += $a->shift->location->shift_rate ?? 0;
+                            }
+                        }
+                    }
+
+                    $allowance = 0;
+                    if ($crew->allowance_type === 'daily') {
+                        $allowance = ($crew->allowance_amount ?? 0) * $salaryMonth->daysInMonth;
+                    } elseif ($crew->allowance_type === 'monthly') {
+                        $allowance = $crew->allowance_amount ?? 0;
+                    }
+
+                    $payroll = \App\Models\Payroll::where('user_id', $crew->id)
+                        ->where('period', $salaryMonth->format('Y-m'))
+                        ->first();
+                    $lembur  = $payroll ? $payroll->overtime_fee : 0;
+                    $bonus   = $payroll ? $payroll->bonus       : 0;
+                    $kasbon  = $payroll ? $payroll->deduction   : 0;
+                    $motret  = $payroll ? $payroll->photographer_fee : 0;
+
+                    $gross = $komisi + $allowance + $lembur + $bonus + $motret;
+                    $net   = $gross - $kasbon;
+
+                    return [
+                        'user'       => $crew,
+                        'shifts'     => $asgns->count(),
+                        'komisi'     => $komisi,
+                        'allowance'  => $allowance,
+                        'lembur'     => $lembur,
+                        'bonus'      => $bonus,
+                        'kasbon'     => $kasbon,
+                        'gross'      => $gross,
+                        'net'        => $net,
+                    ];
+                });
+
+            $salaryGrandTotal = $crewSalaryEstimations->sum('net');
+
             return view('dashboard', compact(
                 'activeShift', 'totalSales', 'totalExpenses', 'netProfit', 'totalTransactions',
                 'salesGrowth', 'expenseGrowth', 'netProfitGrowth', 'trxGrowth', 
@@ -364,14 +432,15 @@ class DashboardController extends Controller
                 'topProducts', 'lowStockCount', 'productCount',
                 'targetData', 'filter', 'startDate', 'endDate',
                 'activeShiftsList', 'statusOperasional', 'alerts', 'branchPerformance', 'cashflowBreakdown',
-                'kpiData', 'liveActivity', 'financialInsight', 'aiForecast', 'systemHealth'
+                'kpiData', 'liveActivity', 'financialInsight', 'aiForecast', 'systemHealth',
+                'crewSalaryEstimations', 'salaryGrandTotal', 'allCrewUsers', 'salaryFilterUserId', 'salaryMonth'
             ));
         }
 
         // ==========================================
-        // CASHIER / CREW DASHBOARD LOGIC
+        // CASHIER WORKSTATION DASHBOARD
         // ==========================================
-        else {
+        elseif ($user->isKasir()) {
             // Target Harian (User specifies 3.000.000)
             $targetDaily = 3000000;
 
@@ -507,11 +576,113 @@ class DashboardController extends Controller
             $pemasukanTunai = (clone $storeTransactions)->where('payment_method', 'cash')->sum('total');
             $pemasukanTransfer = (clone $storeTransactions)->where('payment_method', 'transfer')->sum('total');
 
+            // Data Finansial khusus untuk role kasir yang ingin melihat performa pribadi
+            $crewFinancial = null;
+            if (auth()->user()->role === 'kasir') {
+                $filterMonth = Carbon::now();
+                $monthStart = $filterMonth->copy()->startOfMonth()->format('Y-m-d');
+                $monthEnd = $filterMonth->copy()->endOfMonth()->format('Y-m-d');
+                
+                $userAsgn = \App\Models\ScheduleAssignment::with('shift.location')
+                    ->where('user_id', auth()->id())
+                    ->whereBetween('date', [$monthStart, $monthEnd])
+                    ->get();
+                    
+                $komisiShift = 0;
+                foreach ($userAsgn as $asgn) {
+                    if ($asgn->shift && $asgn->shift->location) {
+                        $locId = $asgn->shift->schedule_location_id;
+                        if (is_array(auth()->user()->custom_rates) && isset(auth()->user()->custom_rates[$locId])) {
+                            $komisiShift += auth()->user()->custom_rates[$locId];
+                        } else {
+                            $komisiShift += $asgn->shift->location->shift_rate;
+                        }
+                    }
+                }
+                $allowance = 0;
+                if (auth()->user()->allowance_type === 'daily') {
+                    $allowance = auth()->user()->allowance_amount * $filterMonth->daysInMonth;
+                } elseif (auth()->user()->allowance_type === 'monthly') {
+                    $allowance = auth()->user()->allowance_amount;
+                }
+                $payroll = \App\Models\Payroll::where('user_id', auth()->id())->where('period', $filterMonth->format('Y-m'))->first();
+                $motret = $payroll ? $payroll->photographer_fee : 0;
+                $lembur = $payroll ? $payroll->overtime_fee : 0;
+                $bonus = $payroll ? $payroll->bonus : 0;
+                $kasbon = $payroll ? $payroll->deduction : 0;
+                
+                $crewFinancial = [
+                    'totalKotor' => $komisiShift + $allowance + $motret + $lembur + $bonus,
+                    'totalBersih' => ($komisiShift + $allowance + $motret + $lembur + $bonus) - $kasbon,
+                    'kasbon' => $kasbon,
+                    'lembur' => $lembur,
+                    'bonus' => $bonus,
+                    'tambahan' => $lembur + $motret + $bonus,
+                    'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
+                    'total_shifts' => $userAsgn->count(),
+                ];
+            }
+
+            // Data Jadwal Pribadi khusus untuk Kasir
+            $scheduleStartDate = null;
+            $scheduleEndDate = null;
+            $scheduleDates = [];
+            $scheduleLocations = collect();
+            $scheduleAssignments = collect();
+            $scheduleViewMode = $request->input('view', 'weekly');
+            $scheduleDate = $request->input('date', now()->format('Y-m-d'));
+            
+            if (auth()->user()->role === 'kasir') {
+                if ($scheduleViewMode === 'weekly') {
+                    $scheduleStartDate = Carbon::parse($scheduleDate)->startOfWeek(1);
+                    $scheduleEndDate = $scheduleStartDate->copy()->endOfWeek(0);
+                } elseif ($scheduleViewMode === 'monthly') {
+                    $scheduleStartDate = Carbon::parse($scheduleDate)->startOfMonth();
+                    $scheduleEndDate = $scheduleStartDate->copy()->endOfMonth();
+                } else {
+                    $scheduleStartDate = Carbon::parse($scheduleDate);
+                    $scheduleEndDate = $scheduleStartDate->copy();
+                }
+
+                for ($d = $scheduleStartDate->copy(); $d->lte($scheduleEndDate); $d->addDay()) {
+                    $scheduleDates[] = $d->format('Y-m-d');
+                }
+                
+                $userLocIds = \App\Models\ScheduleAssignment::where('user_id', auth()->id())
+                    ->whereHas('shift')
+                    ->whereBetween('date', [$scheduleStartDate->format('Y-m-d'), $scheduleEndDate->format('Y-m-d')])
+                    ->join('schedule_shifts', 'schedule_assignments.schedule_shift_id', '=', 'schedule_shifts.id')
+                    ->pluck('schedule_shifts.schedule_location_id')
+                    ->unique();
+                    
+                $scheduleLocations = \App\Models\ScheduleLocation::with(['shifts' => function ($q) {
+                    $q->orderBy('start_time');
+                }])->whereIn('id', $userLocIds)->get();
+                
+                $scheduleAssignments = \App\Models\ScheduleAssignment::with(['user', 'shift.location', 'originalUser'])
+                    ->whereHas('shift', function($q) use ($userLocIds) {
+                        $q->whereIn('schedule_location_id', $userLocIds);
+                    })
+                    ->whereBetween('date', [$scheduleStartDate->format('Y-m-d'), $scheduleEndDate->format('Y-m-d')])
+                    ->get();
+                    
+                $activeUsers = \App\Models\User::where('is_active', true)->orderBy('name')->get();
+            }
+
             return view('dashboard', compact(
                 'activeShift', 'todaySales', 'todayTransactions', 'targetDaily', 'targetPercentage',
                 'recentTransactions', 'topPayment', 'topProduct', 'activities', 'lowStockCount', 'gamification',
-                'totalBiaya', 'totalBiayaTunai', 'totalBiayaBank', 'pendapatanBersih', 'saldoLaci', 'awalShift', 'totalPiutang', 'pemasukanQris', 'pemasukanTunai', 'pemasukanTransfer'
+                'totalBiaya', 'totalBiayaTunai', 'totalBiayaBank', 'pendapatanBersih', 'saldoLaci', 'awalShift', 'totalPiutang', 'pemasukanQris', 'pemasukanTunai', 'pemasukanTransfer', 'crewFinancial',
+                'scheduleStartDate', 'scheduleEndDate', 'scheduleDates', 'scheduleLocations', 'scheduleAssignments', 'scheduleViewMode', 'scheduleDate', 'activeUsers'
             ));
+        }
+
+        // ==========================================
+        // CREW BIASA DASHBOARD LOGIC
+        // ==========================================
+        else {
+            // Gabungkan Dashboard ke Jadwal Kerja (Schedules)
+            return redirect()->route('schedules.index');
         }
     }
 }

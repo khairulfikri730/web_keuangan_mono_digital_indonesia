@@ -100,7 +100,18 @@
                 <h3 class="text-lg font-black text-slate-800">Tambah Anggota Baru</h3>
                 <button onclick="document.getElementById('modal-add').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <form action="{{ route('team.store') }}" method="POST" autocomplete="off" class="p-5 space-y-5" x-data="{ role: 'kasir', perms: {{ json_encode(\App\Models\User::DEFAULT_KASIR_PERMISSIONS) }}, wsheets: [] }">
+            <form action="{{ route('team.store') }}" method="POST" autocomplete="off" class="p-5 space-y-5" x-data="{ 
+                role: 'kasir', 
+                perms: {{ json_encode(\App\Models\User::DEFAULT_KASIR_PERMISSIONS) }}, 
+                wsheets: [],
+                allowance_amount: 0,
+                formatted_allowance: '0',
+                updateAllowance(value) {
+                    let raw = value.toString().replace(/\D/g, '');
+                    this.allowance_amount = raw ? parseInt(raw) : 0;
+                    this.formatted_allowance = raw ? new Intl.NumberFormat('id-ID').format(raw) : '';
+                }
+            }">
                 @csrf
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -121,10 +132,28 @@
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Role <span class="text-red-400">*</span></label>
                         <select name="role" x-model="role" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-blue-500 outline-none transition">
                             <option value="kasir">Kasir</option>
+                            <option value="crew">Crew Biasa</option>
                             <option value="owner">Super Admin (Akses Penuh)</option>
                         </select>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Tunjangan / Gaji Pokok</label>
+                        <select name="allowance_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-blue-500 outline-none transition">
+                            <option value="none">Tidak Ada</option>
+                            <option value="daily">Harian</option>
+                            <option value="monthly">Bulanan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Nominal Tunjangan (Rp)</label>
+                        <input type="text" x-model="formatted_allowance" @input="updateAllowance($event.target.value)" @focus="if(formatted_allowance === '0') formatted_allowance = ''" @blur="if(formatted_allowance === '') formatted_allowance = '0'" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-blue-500 outline-none transition">
+                        <input type="hidden" name="allowance_amount" x-model="allowance_amount">
+                    </div>
+                </div>
+
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Password <span class="text-red-400">*</span></label>
                     <div class="grid grid-cols-2 gap-4">
@@ -194,7 +223,18 @@
                 <h3 class="text-lg font-black text-slate-800">Edit: {{ $user->name }}</h3>
                 <button onclick="document.getElementById('modal-edit-{{ $user->id }}').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <form action="{{ route('team.update', $user) }}" method="POST" autocomplete="off" class="p-5 space-y-5" x-data="{ editRole: '{{ $user->role }}', editPerms: {{ json_encode($user->isKasir() ? ($user->permissions ?? []) : []) }}, editWsheets: {{ json_encode($user->worksheets->pluck('id')->toArray()) }} }">
+            <form action="{{ route('team.update', $user) }}" method="POST" autocomplete="off" class="p-5 space-y-5" x-data="{ 
+                editRole: '{{ $user->role }}', 
+                editPerms: {{ json_encode($user->isKasir() ? (!empty($user->permissions) ? $user->permissions : \App\Models\User::DEFAULT_KASIR_PERMISSIONS) : []) }}, 
+                editWsheets: {{ json_encode($user->worksheets->pluck('id')->toArray()) }},
+                allowance_amount: {{ $user->allowance_amount ?: 0 }},
+                formatted_allowance: '{{ number_format($user->allowance_amount ?: 0, 0, ',', '.') }}',
+                updateAllowance(value) {
+                    let raw = value.toString().replace(/\D/g, '');
+                    this.allowance_amount = raw ? parseInt(raw) : 0;
+                    this.formatted_allowance = raw ? new Intl.NumberFormat('id-ID').format(raw) : '';
+                }
+            }" x-init="$watch('editRole', value => { if (value === 'kasir' && editPerms.length === 0) editPerms = {{ json_encode(\App\Models\User::DEFAULT_KASIR_PERMISSIONS) }} })">
                 @csrf @method('PUT')
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -215,10 +255,28 @@
                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Role <span class="text-red-400">*</span></label>
                         <select name="role" x-model="editRole" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-blue-500 outline-none transition">
                             <option value="kasir">Kasir</option>
+                            <option value="crew">Crew Biasa</option>
                             <option value="owner">Super Admin (Akses Penuh)</option>
                         </select>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Tunjangan / Gaji Pokok</label>
+                        <select name="allowance_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-blue-500 outline-none transition">
+                            <option value="none" {{ $user->allowance_type == 'none' ? 'selected' : '' }}>Tidak Ada</option>
+                            <option value="daily" {{ $user->allowance_type == 'daily' ? 'selected' : '' }}>Harian</option>
+                            <option value="monthly" {{ $user->allowance_type == 'monthly' ? 'selected' : '' }}>Bulanan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Nominal Tunjangan (Rp)</label>
+                        <input type="text" x-model="formatted_allowance" @input="updateAllowance($event.target.value)" @focus="if(formatted_allowance === '0') formatted_allowance = ''" @blur="if(formatted_allowance === '') formatted_allowance = '0'" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-blue-500 outline-none transition">
+                        <input type="hidden" name="allowance_amount" x-model="allowance_amount">
+                    </div>
+                </div>
+
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 block">Password Baru (opsional)</label>
                     <div class="grid grid-cols-2 gap-4">

@@ -2560,21 +2560,20 @@ function closeCashOut() {
                 }
                 
                 if (this.connectionMethod === 'usb_direct' && this.printerName && navigator.usb) {
-                        try {
-                            const devices = await navigator.usb.getDevices();
-                            const matching = devices.find(d => d.productName === this.printerName);
-                            if (matching) {
-                                this.printerHandle = matching;
-                                this.printerStatus = 'connected';
-                                console.log("Auto-reconnected USB printer:", this.printerName);
-                            } else {
-                                console.warn("USB printer authorized but not found in current session.");
-                                this.printerStatus = 'disconnected';
-                            }
-                        } catch (e) { console.error("Auto-reconnect failed:", e); }
-                    } else if (this.printerName) {
-                        this.printerStatus = 'connected';
-                    }
+                    this.printerStatus = 'connected';
+                    try {
+                        const devices = await navigator.usb.getDevices();
+                        const matching = devices.find(d => d.productName === this.printerName);
+                        if (matching) {
+                            this.printerHandle = matching;
+                            console.log("Auto-reconnected USB printer:", this.printerName);
+                        } else {
+                            console.warn("USB printer authorized but not found in current session.");
+                        }
+                    } catch (e) { console.error("Auto-reconnect failed:", e); }
+                } else if (this.printerName) {
+                    this.printerStatus = 'connected';
+                }
             },
 
             savePrinterSettings() {
@@ -2667,6 +2666,14 @@ function closeCashOut() {
             },
 
             async printRaw(commands) {
+                if (this.connectionMethod === 'usb_direct' && this.printerName && navigator.usb) {
+                    try {
+                        const devices = await navigator.usb.getDevices();
+                        const match = devices.find(d => d.productName === this.printerName);
+                        if (match) this.printerHandle = match;
+                    } catch (e) {}
+                }
+
                 if (!this.printerHandle) {
                     console.warn("No printer handle found");
                     return false;

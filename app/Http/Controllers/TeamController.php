@@ -31,14 +31,21 @@ class TeamController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:owner,kasir',
+            'role' => 'required|in:owner,kasir,crew',
             'password' => 'required|string|min:6|confirmed',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:' . implode(',', array_keys(User::AVAILABLE_PERMISSIONS)),
+            'allowance_type' => 'nullable|in:none,daily,monthly',
+            'allowance_amount' => 'nullable|numeric|min:0',
         ]);
 
-        // Owner always gets all permissions
-        $permissions = $request->role === 'owner' ? array_keys(User::AVAILABLE_PERMISSIONS) : ($request->permissions ?? []);
+        // Permissions logic
+        $permissions = [];
+        if ($request->role === 'owner') {
+            $permissions = array_keys(User::AVAILABLE_PERMISSIONS);
+        } elseif ($request->role === 'kasir') {
+            $permissions = $request->permissions ?? [];
+        }
 
         $user = User::create([
             'name' => $request->name,
@@ -46,6 +53,8 @@ class TeamController extends Controller
             'phone' => $request->phone,
             'role' => $request->role,
             'permissions' => $permissions,
+            'allowance_type' => $request->allowance_type ?? 'none',
+            'allowance_amount' => $request->allowance_amount ?? 0,
             'password' => Hash::make($request->password),
             'is_active' => true,
         ]);
@@ -63,13 +72,20 @@ class TeamController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:owner,kasir',
+            'role' => 'required|in:owner,kasir,crew',
             'password' => 'nullable|string|min:6|confirmed',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:' . implode(',', array_keys(User::AVAILABLE_PERMISSIONS)),
+            'allowance_type' => 'nullable|in:none,daily,monthly',
+            'allowance_amount' => 'nullable|numeric|min:0',
         ]);
 
-        $permissions = $request->role === 'owner' ? array_keys(User::AVAILABLE_PERMISSIONS) : ($request->permissions ?? []);
+        $permissions = [];
+        if ($request->role === 'owner') {
+            $permissions = array_keys(User::AVAILABLE_PERMISSIONS);
+        } elseif ($request->role === 'kasir') {
+            $permissions = $request->permissions ?? [];
+        }
 
         $data = [
             'name' => $request->name,
@@ -77,6 +93,8 @@ class TeamController extends Controller
             'phone' => $request->phone,
             'role' => $request->role,
             'permissions' => $permissions,
+            'allowance_type' => $request->allowance_type ?? 'none',
+            'allowance_amount' => $request->allowance_amount ?? 0,
         ];
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
@@ -111,7 +129,16 @@ class TeamController extends Controller
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Tidak bisa menghapus akun sendiri!');
         }
-        $user->delete();
-        return back()->with('success', 'Anggota tim berhasil dihapus!');
+        
+        try {
+            $user->delete();
+            return back()->with('success', 'Anggota tim berhasil dihapus!');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Error code 23000 is for integrity constraint violations
+            if ($e->getCode() == 23000) {
+                return back()->with('error', 'Akun ini tidak dapat dihapus karena sudah memiliki riwayat data (transaksi, jadwal, atau kasir). Silakan nonaktifkan akun ini saja.');
+            }
+            return back()->with('error', 'Terjadi kesalahan saat menghapus data.');
+        }
     }
 }

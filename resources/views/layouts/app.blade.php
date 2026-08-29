@@ -306,6 +306,7 @@
             </div>
 
             <!-- TRANSAKSI -->
+            @if(auth()->user()->hasPermission('pos') || auth()->user()->hasPermission('transactions.view'))
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Transaksi</p>
                 <div class="space-y-1">
@@ -321,6 +322,7 @@
                     @endif
                 </div>
             </div>
+            @endif
 
             <!-- MANAJEMEN -->
             @if(auth()->user()->hasPermission('shifts.view') || auth()->user()->hasPermission('products.view') || auth()->user()->hasPermission('categories.view') || auth()->user()->hasPermission('stock.view'))
@@ -425,8 +427,7 @@
             </div>
             @endif
 
-            <!-- LAINNYA (Owner only) -->
-            @if(auth()->user()->hasPermission('team.view') || auth()->user()->hasPermission('settings') || auth()->user()->hasPermission('schedules.view'))
+            @if(auth()->user()->hasPermission('team.view') || auth()->user()->hasPermission('settings') || (auth()->user()->hasPermission('schedules.view') && auth()->user()->role !== 'crew'))
             <div class="mb-6">
                 <p class="text-[11px] text-gray-500 uppercase font-black tracking-widest mb-2 px-3">Lainnya</p>
 
@@ -436,7 +437,7 @@
                         <i class="fas fa-users-gear w-6 mr-1 text-sm"></i> Manajemen Tim
                     </a>
                     @endif
-                    @if(auth()->user()->hasPermission('schedules.view'))
+                    @if(auth()->user()->hasPermission('schedules.view') && auth()->user()->role !== 'crew')
                     <a href="{{ route('schedules.index') }}" @click="sidebarOpen = false" class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-800 rounded-lg transition-colors {{ request()->routeIs('schedules.*') ? 'active-link' : '' }}">
                         <span class="flex items-center"><i class="fas fa-calendar-alt w-6 mr-1 text-sm text-yellow-400"></i> Jadwal Kerja</span>
                         <span class="px-1.5 py-0.5 bg-yellow-500 text-black text-[9px] font-black rounded-sm tracking-wider uppercase">Baru</span>

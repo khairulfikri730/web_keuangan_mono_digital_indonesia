@@ -159,11 +159,11 @@
                                     style="{{ $da->isOpen() ? 'background:' . $shift->color . '22; border-color:' . $shift->color . '55' : '' }}">
                                     @if($da->isClosed())
                                         <div class="flex flex-col items-center justify-center w-full">
-                                            <span>{{ $da->crew->name ?? '-' }}</span>
+                                            <span>{{ $da->user->name ?? '-' }}</span>
                                             <span class="text-[9px] font-normal opacity-80 leading-none mt-0.5"><i class="fas fa-{{ $da->closed_at_time ? 'clock' : 'ban' }} mr-0.5 text-[8px]"></i>{{ $da->closed_at_time ? 'Selesai ' . substr($da->closed_at_time, 0, 5) : 'Close' }}</span>
                                         </div>
                                     @else
-                                        <span>{{ $da->crew->name ?? '-' }}</span>
+                                        <span>{{ $da->user->name ?? '-' }}</span>
                                     @endif
                                 </div>
                                 @endforeach
