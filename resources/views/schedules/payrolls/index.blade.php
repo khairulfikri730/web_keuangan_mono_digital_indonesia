@@ -7,7 +7,7 @@
 <div class="space-y-6 text-slate-200" x-data="{ 
     editModal: false, 
     currentUser: null,
-    form: { user_id: '', period: '{{ $month }}', photographer_fee: 0, overtime_fee: 0, bonus: 0, deduction: 0, notes: '' },
+    form: { user_id: '', period: '{{ $month }}', photographer_fee: 0, overtime_fee: 0, bonus: 0, deduction: 0, photographer_fee_note: '', overtime_fee_note: '', bonus_note: '', deduction_note: '', notes: '' },
     formatted: { photographer_fee: '0', overtime_fee: '0', bonus: '0', deduction: '0' },
     formatRupiah(value) {
         let val = value.toString().replace(/\D/g, '');
@@ -27,15 +27,19 @@
         
         this.form.photographer_fee = p ? p.photographer_fee : 0;
         this.formatted.photographer_fee = p && p.photographer_fee != 0 ? this.formatRupiah(p.photographer_fee) : '0';
+        this.form.photographer_fee_note = p ? p.photographer_fee_note : '';
         
         this.form.overtime_fee = p ? p.overtime_fee : 0;
         this.formatted.overtime_fee = p && p.overtime_fee != 0 ? this.formatRupiah(p.overtime_fee) : '0';
+        this.form.overtime_fee_note = p ? p.overtime_fee_note : '';
         
         this.form.bonus = p ? p.bonus : 0;
         this.formatted.bonus = p && p.bonus != 0 ? this.formatRupiah(p.bonus) : '0';
+        this.form.bonus_note = p ? p.bonus_note : '';
         
         this.form.deduction = p ? p.deduction : 0;
         this.formatted.deduction = p && p.deduction != 0 ? this.formatRupiah(p.deduction) : '0';
+        this.form.deduction_note = p ? p.deduction_note : '';
         
         this.form.notes = p ? p.notes : '';
         this.editModal = true;
@@ -130,18 +134,38 @@
                             Rp {{ number_format($data['komisi_shift'], 0, ',', '.') }}
                             <div class="text-[9px] font-normal text-slate-500">{{ $data['total_shifts'] }} shift</div>
                         </td>
-                        <td class="px-4 py-3 text-right font-bold text-yellow-400">Rp {{ number_format($data['motret'], 0, ',', '.') }}</td>
-                        <td class="px-4 py-3 text-right font-bold text-orange-400">Rp {{ number_format($data['lembur'], 0, ',', '.') }}</td>
-                        <td class="px-4 py-3 text-right font-bold text-emerald-400">Rp {{ number_format($data['bonus'], 0, ',', '.') }}</td>
-                        <td class="px-4 py-3 text-right font-bold text-red-400">- Rp {{ number_format($data['kasbon'], 0, ',', '.') }}</td>
-                        <td class="px-4 py-3 text-right font-black text-emerald-400 text-base bg-emerald-500/5">
+                        <td class="px-4 py-3 text-right font-bold text-yellow-400 align-top">
+                            Rp {{ number_format($data['motret'], 0, ',', '.') }}
+                            @if($data['payroll'] && $data['payroll']->photographer_fee_note)
+                            <div class="text-[9px] font-normal text-slate-400 mt-1 ml-auto max-w-[120px] leading-tight break-words italic">{{ $data['payroll']->photographer_fee_note }}</div>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-right font-bold text-orange-400 align-top">
+                            Rp {{ number_format($data['lembur'], 0, ',', '.') }}
+                            @if($data['payroll'] && $data['payroll']->overtime_fee_note)
+                            <div class="text-[9px] font-normal text-slate-400 mt-1 ml-auto max-w-[120px] leading-tight break-words italic">{{ $data['payroll']->overtime_fee_note }}</div>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-right font-bold text-emerald-400 align-top">
+                            Rp {{ number_format($data['bonus'], 0, ',', '.') }}
+                            @if($data['payroll'] && $data['payroll']->bonus_note)
+                            <div class="text-[9px] font-normal text-slate-400 mt-1 ml-auto max-w-[120px] leading-tight break-words italic">{{ $data['payroll']->bonus_note }}</div>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-right font-bold text-red-400 align-top">
+                            - Rp {{ number_format($data['kasbon'], 0, ',', '.') }}
+                            @if($data['payroll'] && $data['payroll']->deduction_note)
+                            <div class="text-[9px] font-normal text-slate-400 mt-1 ml-auto max-w-[120px] leading-tight break-words italic">{{ $data['payroll']->deduction_note }}</div>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-right font-black text-emerald-400 text-base bg-emerald-500/5 align-top">
                             Rp {{ number_format($data['total_bersih'], 0, ',', '.') }}
                         </td>
-                        <td class="px-4 py-3 text-xs text-slate-400">
+                        <td class="px-4 py-3 text-xs text-slate-400 align-top">
                             {{ $data['payroll'] && $data['payroll']->notes ? $data['payroll']->notes : '-' }}
                         </td>
-                        <td class="px-4 py-3 text-center">
-                            <button @click="openEdit('{{ $data['user']->toJson() }}', '{{ $data['payroll'] ? $data['payroll']->toJson() : '' }}')" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-emerald-500 hover:text-white transition-colors text-slate-400 flex items-center justify-center">
+                        <td class="px-4 py-3 text-center align-top">
+                            <button @click="openEdit('{{ $data['user']->toJson() }}', '{{ $data['payroll'] ? $data['payroll']->toJson() : '' }}')" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-emerald-500 hover:text-white transition-colors text-slate-400 flex items-center justify-center inline-flex">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>
@@ -178,26 +202,30 @@
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Total Motret/Project</label>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-400 uppercase">Total Motret/Project</label>
                             <input type="text" x-model="formatted.photographer_fee" @input="updateRaw('photographer_fee', $event.target.value)" @focus="if(formatted.photographer_fee === '0') formatted.photographer_fee = ''" @blur="if(formatted.photographer_fee === '') formatted.photographer_fee = '0'" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500">
+                            <input type="text" name="photographer_fee_note" x-model="form.photographer_fee_note" placeholder="Catatan (Opsional)" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2 text-slate-300 text-xs focus:outline-none focus:border-emerald-500 italic">
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Total Lembur</label>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-400 uppercase">Total Lembur</label>
                             <input type="text" x-model="formatted.overtime_fee" @input="updateRaw('overtime_fee', $event.target.value)" @focus="if(formatted.overtime_fee === '0') formatted.overtime_fee = ''" @blur="if(formatted.overtime_fee === '') formatted.overtime_fee = '0'" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500">
+                            <input type="text" name="overtime_fee_note" x-model="form.overtime_fee_note" placeholder="Catatan (Opsional)" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2 text-slate-300 text-xs focus:outline-none focus:border-emerald-500 italic">
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Bonus Tambahan</label>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-400 uppercase">Bonus Tambahan</label>
                             <input type="text" x-model="formatted.bonus" @input="updateRaw('bonus', $event.target.value)" @focus="if(formatted.bonus === '0') formatted.bonus = ''" @blur="if(formatted.bonus === '') formatted.bonus = '0'" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500">
+                            <input type="text" name="bonus_note" x-model="form.bonus_note" placeholder="Catatan (Opsional)" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2 text-slate-300 text-xs focus:outline-none focus:border-emerald-500 italic">
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 text-red-400">Potongan / Kasbon</label>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-400 uppercase text-red-400">Potongan / Kasbon</label>
                             <input type="text" x-model="formatted.deduction" @input="updateRaw('deduction', $event.target.value)" @focus="if(formatted.deduction === '0') formatted.deduction = ''" @blur="if(formatted.deduction === '') formatted.deduction = '0'" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500">
+                            <input type="text" name="deduction_note" x-model="form.deduction_note" placeholder="Catatan (Opsional)" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2 text-slate-300 text-xs focus:outline-none focus:border-red-500 italic">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Catatan Tambahan (Opsional)</label>
-                        <textarea name="notes" x-model="form.notes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500"></textarea>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Catatan Keseluruhan (Opsional)</label>
+                        <textarea name="notes" x-model="form.notes" rows="2" placeholder="Catatan umum yang akan tampil di bawah Total Bersih..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500"></textarea>
                     </div>
                 </div>
                 <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">

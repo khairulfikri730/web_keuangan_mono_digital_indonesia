@@ -62,7 +62,22 @@ class PosController extends Controller
             ->whereNotIn('parent_category', $hiddenParents)
             ->get()
             ->unique('name')
-            ->groupBy('parent_category');
+            ->groupBy('parent_category')
+            ->toArray();
+
+        // Inject active users into the 'gaji' category for payroll
+        $gajiKey = 'gaji';
+        if (!in_array($gajiKey, $hiddenParents)) {
+            $users = \App\Models\User::whereNotNull('email')->get();
+            $gajiSubCategories = $users->map(function($user) {
+                return [
+                    'id' => 'user_' . $user->id,
+                    'name' => $user->name,
+                    'parent_category' => 'gaji',
+                ];
+            })->toArray();
+            $expenseCategories[$gajiKey] = $gajiSubCategories;
+        }
 
         $editTransaction = null;
         if (request()->has('edit')) {

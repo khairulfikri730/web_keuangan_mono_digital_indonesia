@@ -75,8 +75,29 @@ class MonthlyExpenseController extends Controller
             $query->where('expense_type', $request->expense_type);
         }
 
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('expense_name', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%')
+                  ->orWhere('sub_category', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $sort = $request->sort ?? 'date_desc';
+        $expensesQuery = clone $query;
+        
+        if ($sort === 'amount_desc') {
+            $expensesQuery->orderBy('usage_amount', 'desc');
+        } elseif ($sort === 'amount_asc') {
+            $expensesQuery->orderBy('usage_amount', 'asc');
+        } elseif ($sort === 'date_asc') {
+            $expensesQuery->orderBy('expense_date', 'asc');
+        } else {
+            $expensesQuery->orderBy('expense_date', 'desc');
+        }
+
         $perPage = $request->input('per_page', 20);
-        $expenses = (clone $query)->orderBy('expense_date', 'desc')->paginate($perPage)->withQueryString();
+        $expenses = $expensesQuery->paginate($perPage)->withQueryString();
 
         // Module-specific Summary Statistics
         $summary = (clone $query)->where('expense_name', 'not like', '%Transfer%')
@@ -146,7 +167,9 @@ class MonthlyExpenseController extends Controller
     {
         $worksheetId = session('worksheet_id') ?: Worksheet::first()->id;
         $categories = \App\Models\ExpenseCategory::where('worksheet_id', $worksheetId)->where('is_active', true)->get();
-        return view('monthly_expenses.create', compact('categories'));
+        $masterCategories = \App\Models\MasterExpenseCategory::where('worksheet_id', $worksheetId)->get();
+        $users = \App\Models\User::where('is_active', true)->get(['id', 'name']);
+        return view('monthly_expenses.create', compact('categories', 'masterCategories', 'users'));
     }
 
 
@@ -206,9 +229,13 @@ class MonthlyExpenseController extends Controller
     {
         $worksheetId = session('worksheet_id') ?: Worksheet::first()->id;
         $categories = \App\Models\ExpenseCategory::where('worksheet_id', $worksheetId)->where('is_active', true)->get();
+        $masterCategories = \App\Models\MasterExpenseCategory::where('worksheet_id', $worksheetId)->get();
+        $users = \App\Models\User::where('is_active', true)->get(['id', 'name']);
         return view('monthly_expenses.create', [
             'expense' => $monthly_expense,
             'categories' => $categories,
+            'masterCategories' => $masterCategories,
+            'users' => $users,
             'isEdit' => true
         ]);
     }

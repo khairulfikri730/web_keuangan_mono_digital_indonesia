@@ -20,12 +20,25 @@
         <div class="bg-slate-800/40 rounded-3xl border border-white/5 p-8 shadow-xl backdrop-blur-xl">
             <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-6 text-center">1. Pilih Kategori Pengeluaran</label>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                @foreach(['operasional' => 'fa-bolt', 'consumable' => 'fa-box-open', 'bahan_baku' => 'fa-cube', 'variabel' => 'fa-car'] as $cat => $icon)
-                <button type="button" @click="setCategory('{{ $cat }}')" 
-                        :class="category === '{{ $cat }}' ? 'bg-blue-600 border-blue-400 shadow-blue-900/40 scale-105' : 'bg-slate-900/60 border-white/5 hover:bg-slate-800'"
+                @php
+                    $iconMap = [
+                        'operasional' => 'fa-bolt',
+                        'consumable' => 'fa-box-open',
+                        'bahan_baku' => 'fa-cube',
+                        'variabel' => 'fa-car',
+                        'gaji' => 'fa-users'
+                    ];
+                @endphp
+                @foreach($masterCategories as $mc)
+                @php
+                    $catKey = str_replace(' ', '_', strtolower($mc->name));
+                    $icon = $iconMap[$catKey] ?? 'fa-folder-open';
+                @endphp
+                <button type="button" @click="setCategory('{{ $catKey }}')" 
+                        :class="category === '{{ $catKey }}' ? 'bg-blue-600 border-blue-400 shadow-blue-900/40 scale-105' : 'bg-slate-900/60 border-white/5 hover:bg-slate-800'"
                         class="flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all group relative overflow-hidden">
-                    <i class="fas {{ $icon }} text-2xl mb-3" :class="category === '{{ $cat }}' ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'"></i>
-                    <span class="text-[10px] font-black uppercase tracking-widest" :class="category === '{{ $cat }}' ? 'text-white' : 'text-slate-400'">{{ str_replace('_', ' ', $cat) }}</span>
+                    <i class="fas {{ $icon }} text-2xl mb-3" :class="category === '{{ $catKey }}' ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest" :class="category === '{{ $catKey }}' ? 'text-white' : 'text-slate-400'">{{ $mc->name }}</span>
                 </button>
                 @endforeach
             </div>
@@ -121,8 +134,12 @@
             amountFormatted: '{{ isset($expense) ? number_format($expense->usage_amount, 0, ',', '.') : '' }}',
             amountReal: '{{ $expense->usage_amount ?? 0 }}',
             allCategories: @json($categories),
+            users: @json($users),
             
             get filteredCategories() {
+                if (this.category.includes('gaji')) {
+                    return this.users.map(u => ({ id: u.id, name: u.name }));
+                }
                 return this.allCategories.filter(c => c.parent_category === this.category);
             },
             

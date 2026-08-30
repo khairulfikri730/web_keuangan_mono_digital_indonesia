@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Payroll extends Model
 {
     protected $fillable = [
-        'user_id', 'period', 'photographer_fee', 'overtime_fee', 'bonus', 'deduction', 'notes'
+        'user_id', 'period', 'photographer_fee', 'overtime_fee', 'bonus', 'deduction', 'notes',
+        'photographer_fee_note', 'overtime_fee_note', 'bonus_note', 'deduction_note'
     ];
 
     public function user()

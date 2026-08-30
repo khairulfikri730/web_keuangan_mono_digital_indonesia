@@ -105,6 +105,10 @@ class PayrollController extends Controller
             'overtime_fee' => 'nullable|numeric|min:0',
             'bonus' => 'nullable|numeric|min:0',
             'deduction' => 'nullable|numeric|min:0',
+            'photographer_fee_note' => 'nullable|string',
+            'overtime_fee_note' => 'nullable|string',
+            'bonus_note' => 'nullable|string',
+            'deduction_note' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
 
@@ -115,6 +119,10 @@ class PayrollController extends Controller
                 'overtime_fee' => $request->overtime_fee ?? 0,
                 'bonus' => $request->bonus ?? 0,
                 'deduction' => $request->deduction ?? 0,
+                'photographer_fee_note' => $request->photographer_fee_note,
+                'overtime_fee_note' => $request->overtime_fee_note,
+                'bonus_note' => $request->bonus_note,
+                'deduction_note' => $request->deduction_note,
                 'notes' => $request->notes,
             ]
         );

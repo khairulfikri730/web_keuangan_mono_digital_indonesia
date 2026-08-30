@@ -42,7 +42,9 @@ class ExpenseCategoryController extends Controller
             ->orderBy('name')
             ->get();
             
-        return view('expense_categories.index', compact('categories', 'masterCategories'));
+        $users = \App\Models\User::whereNotNull('email')->get();
+
+        return view('expense_categories.index', compact('categories', 'masterCategories', 'users'));
     }
 
     public function store(Request $request)

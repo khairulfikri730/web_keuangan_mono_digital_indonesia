@@ -141,13 +141,16 @@
 
             <!-- TABLE CONTAINER -->
             <div class="bg-slate-800/40 rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden backdrop-blur-xl">
-                <div class="px-8 py-6 flex justify-between items-center border-b border-white/5">
-                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                        <span class="w-2 h-6 bg-blue-500 rounded-full"></span>
-                        Riwayat Pengeluaran
-                    </h4>
-                    <form action="" method="GET" class="flex items-center" onchange="this.submit()">
-                        @foreach(request()->except(['per_page', 'page']) as $key => $val)
+                <div class="px-8 py-6 border-b border-white/5">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3 shrink-0">
+                            <span class="w-2 h-6 bg-blue-500 rounded-full"></span>
+                            Riwayat Pengeluaran
+                        </h4>
+                    </div>
+                    
+                    <form action="" method="GET" class="flex flex-wrap items-end gap-3 w-full" id="filterForm">
+                        @foreach(request()->except(['per_page', 'page', 'search', 'expense_type', 'sort']) as $key => $val)
                             @if(is_array($val))
                                 @foreach($val as $v)
                                     <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
@@ -156,14 +159,48 @@
                                 <input type="hidden" name="{{ $key }}" value="{{ $val }}">
                             @endif
                         @endforeach
-                        <select name="per_page" class="bg-slate-800 border border-white/5 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 hover:bg-slate-700 transition-all focus:outline-none focus:border-blue-500/50 cursor-pointer">
-                            <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
-                            <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
-                            <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15 Baris</option>
-                            <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 Baris</option>
-                            <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
-                            <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
-                        </select>
+
+                        <div class="flex-1 min-w-[200px]">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-slate-500 text-xs"></i>
+                                </div>
+                                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama, detail, kategori..." class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:border-blue-500 transition-colors placeholder:font-normal">
+                            </div>
+                        </div>
+
+                        <div class="w-full md:w-auto">
+                            <select name="expense_type" class="w-full md:w-auto bg-slate-900 border border-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wide rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer" onchange="document.getElementById('filterForm').submit()">
+                                <option value="all">Semua Kategori</option>
+                                <option value="operasional" {{ request('expense_type') == 'operasional' ? 'selected' : '' }}>Operasional</option>
+                                <option value="consumable" {{ request('expense_type') == 'consumable' ? 'selected' : '' }}>Consumable</option>
+                                <option value="bahan_baku" {{ request('expense_type') == 'bahan_baku' ? 'selected' : '' }}>Bahan Baku</option>
+                                <option value="variabel" {{ request('expense_type') == 'variabel' ? 'selected' : '' }}>Variabel</option>
+                                <option value="gaji" {{ request('expense_type') == 'gaji' ? 'selected' : '' }}>Gaji</option>
+                            </select>
+                        </div>
+
+                        <div class="w-full md:w-auto">
+                            <select name="sort" class="w-full md:w-auto bg-slate-900 border border-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wide rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer" onchange="document.getElementById('filterForm').submit()">
+                                <option value="date_desc" {{ request('sort') == 'date_desc' ? 'selected' : '' }}>Terbaru</option>
+                                <option value="date_asc" {{ request('sort') == 'date_asc' ? 'selected' : '' }}>Terlama</option>
+                                <option value="amount_desc" {{ request('sort') == 'amount_desc' ? 'selected' : '' }}>Nominal Terbesar</option>
+                                <option value="amount_asc" {{ request('sort') == 'amount_asc' ? 'selected' : '' }}>Nominal Terkecil</option>
+                            </select>
+                        </div>
+
+                        <div class="w-full md:w-auto">
+                            <select name="per_page" class="w-full md:w-auto bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer" onchange="document.getElementById('filterForm').submit()">
+                                <option value="5" {{ request('per_page') == 5 ? 'selected' : '' }}>5 Baris</option>
+                                <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 Baris</option>
+                                <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15 Baris</option>
+                                <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 Baris</option>
+                                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                                <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="hidden">Filter</button>
                     </form>
                 </div>
                 <div class="overflow-x-auto">

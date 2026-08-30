@@ -40,7 +40,9 @@
             <div class="px-6 py-4 bg-{{ $color }}-500/10 border-b border-{{ $color }}-500/20 flex justify-between items-center group">
                 <div>
                     <h4 class="text-[10px] font-black text-{{ $color }}-400 uppercase tracking-widest">{{ $master->name }}</h4>
-                    <span class="text-[10px] font-black text-slate-500">{{ $categories->where('parent_category', $catKey)->count() }} Items</span>
+                    <span class="text-[10px] font-black text-slate-500">
+                        {{ $catKey === 'gaji' ? $users->count() . ' Akun Pegawai' : $categories->where('parent_category', $catKey)->count() . ' Items' }}
+                    </span>
                 </div>
                 @if(auth()->user()->hasPermission('expense_categories.manage'))
                 <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
@@ -64,27 +66,45 @@
                 @endif
             </div>
             <div class="p-4 space-y-2 max-h-[400px] overflow-y-auto hide-scrollbar">
-                @forelse($categories->where('parent_category', $catKey) as $item)
-                <div class="group flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-{{ $color }}-500/30 transition-all">
-                    <span class="text-sm font-bold text-slate-300 group-hover:text-white">{{ $item->name }}</span>
-                    @if(auth()->user()->hasPermission('expense_categories.manage'))
-                    <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
-                        <button @click="editData = { id: '{{ $item->id }}', name: '{{ $item->name }}', parent_category: '{{ $item->parent_category }}' }; showEditModal = true" 
-                                class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-blue-400 flex items-center justify-center transition-all">
-                            <i class="fas fa-edit text-[10px]"></i>
-                        </button>
-                        <form action="{{ route('expense_categories.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Hapus jenis biaya ini?')">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-red-400 flex items-center justify-center transition-all">
-                                <i class="fas fa-trash text-[10px]"></i>
-                            </button>
-                        </form>
+                @if($catKey === 'gaji')
+                    @forelse($users as $user)
+                    <div class="group flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-{{ $color }}-500/30 transition-all">
+                        <div class="flex items-center gap-3">
+                            <div class="w-6 h-6 rounded-full bg-{{ $color }}-500/20 flex items-center justify-center">
+                                <i class="fas fa-user text-{{ $color }}-400 text-[10px]"></i>
+                            </div>
+                            <span class="text-sm font-bold text-slate-300 group-hover:text-white">{{ $user->name }}</span>
+                        </div>
+                        <div class="text-[9px] font-black tracking-widest uppercase text-slate-500 bg-slate-800 px-2 py-1 rounded-md">
+                            Akun Sistem
+                        </div>
                     </div>
-                    @endif
-                </div>
-                @empty
-                <p class="text-[10px] text-slate-600 italic text-center py-4">Belum ada data</p>
-                @endforelse
+                    @empty
+                    <p class="text-[10px] text-slate-600 italic text-center py-4">Belum ada akun pegawai</p>
+                    @endforelse
+                @else
+                    @forelse($categories->where('parent_category', $catKey) as $item)
+                    <div class="group flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-white/5 hover:border-{{ $color }}-500/30 transition-all">
+                        <span class="text-sm font-bold text-slate-300 group-hover:text-white">{{ $item->name }}</span>
+                        @if(auth()->user()->hasPermission('expense_categories.manage'))
+                        <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
+                            <button @click="editData = { id: '{{ $item->id }}', name: '{{ $item->name }}', parent_category: '{{ $item->parent_category }}' }; showEditModal = true" 
+                                    class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-blue-400 flex items-center justify-center transition-all">
+                                <i class="fas fa-edit text-[10px]"></i>
+                            </button>
+                            <form action="{{ route('expense_categories.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Hapus jenis biaya ini?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-red-400 flex items-center justify-center transition-all">
+                                    <i class="fas fa-trash text-[10px]"></i>
+                                </button>
+                            </form>
+                        </div>
+                        @endif
+                    </div>
+                    @empty
+                    <p class="text-[10px] text-slate-600 italic text-center py-4">Belum ada data</p>
+                    @endforelse
+                @endif
             </div>
         </div>
         @endforeach
