@@ -44,7 +44,7 @@
                     </div>
                 </template>
 
-                <video x-ref="videoElement" class="w-full h-full object-cover" autoplay playsinline x-show="cameraActive && !photoData"></video>
+                <video x-ref="videoElement" class="w-full h-full object-cover scale-x-[-1]" autoplay playsinline x-show="cameraActive && !photoData"></video>
                 
                 <!-- Preview Captured Image -->
                 <img :src="photoData" class="w-full h-full object-cover" x-show="photoData">
@@ -153,6 +153,10 @@ document.addEventListener('alpine:init', () => {
             // Set canvas dimensions to match video stream
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+
+            // Flip horizontally (Mirror)
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
 
             // Draw video frame to canvas
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
