@@ -359,18 +359,29 @@
                                                     <i class="fas fa-trash text-[10px]"></i>
                                                 </button>
                                             </form>
-                                        @else
-                                            @if($asgn->user_id == auth()->id() && $asgn->isOpen())
-                                                @if($asgn->swap_status === 'pending')
-                                                    <span class="px-2 py-1 bg-orange-500/10 text-orange-400 rounded-lg text-[9px] font-bold border border-orange-500/20" title="Menunggu persetujuan tukar shift">
-                                                        <i class="fas fa-hourglass-half mr-1"></i> Pending
+                                        @endif
+
+                                        @if($asgn->isOpen())
+                                            @if($asgn->swap_status === 'pending')
+                                                <span class="px-2 py-1 bg-orange-500/10 text-orange-400 rounded-lg text-[9px] font-bold border border-orange-500/20" title="Menunggu persetujuan tukar shift">
+                                                    <i class="fas fa-hourglass-half mr-1"></i> Pending
+                                                </span>
+                                            @elseif($asgn->swap_status === 'rejected' && $asgn->user_id == auth()->id())
+                                                <div class="flex items-center gap-1">
+                                                    <span class="px-2 py-1 bg-red-500/10 text-red-400 rounded-lg text-[9px] font-bold border border-red-500/20" title="Permintaan ditolak">
+                                                        <i class="fas fa-times mr-1"></i> Ditolak
                                                     </span>
-                                                @elseif(\Carbon\Carbon::parse($asgn->date)->startOfDay()->gte(\Carbon\Carbon::today()))
-                                                    {{-- Tukar Shift Request Button (For Crew) --}}
-                                                    <button type="button" @click="$dispatch('open-modal', 'swap-request-{{ $asgn->id }}')" class="px-2 h-7 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 flex items-center justify-center border border-orange-500/20 transition-colors text-[10px] font-bold" title="Ajukan Tukar Shift">
-                                                        <i class="fas fa-exchange-alt mr-1"></i> Tukar
-                                                    </button>
-                                                @endif
+                                                    <form action="{{ route('schedules.assignments.swap_dismiss', $asgn) }}" method="POST" class="m-0">
+                                                        @csrf
+                                                        <button type="submit" class="w-7 h-7 rounded-lg bg-slate-700/50 text-slate-400 hover:bg-slate-600 hover:text-white flex items-center justify-center border border-slate-600 transition-colors" title="Tutup Notifikasi">
+                                                            <i class="fas fa-check text-[10px]"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            @elseif(\Carbon\Carbon::parse($asgn->date)->startOfDay()->gte(\Carbon\Carbon::today()) && ($asgn->user_id == auth()->id() || in_array(auth()->user()->role, ['superadmin', 'owner'])))
+                                                <button type="button" @click="$dispatch('open-modal', 'swap-request-{{ $asgn->id }}')" class="px-2 h-7 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 flex items-center justify-center border border-orange-500/20 transition-colors text-[10px] font-bold" title="Ajukan Tukar Shift">
+                                                    <i class="fas fa-exchange-alt mr-1"></i> Tukar
+                                                </button>
                                             @endif
                                         @endif
                                     </div>
@@ -467,16 +478,24 @@
                                                         <i class="fas fa-trash w-3 text-center"></i> Hapus
                                                     </button>
                                                 </form>
-                                            @else
-                                                @if($ca->user_id == auth()->id() && $ca->isOpen())
-                                                    @if($ca->swap_status === 'pending')
-                                                        <span class="text-[9px] text-orange-400 px-2 italic"><i class="fas fa-hourglass-half mr-1"></i>Menunggu Persetujuan</span>
-                                                    @elseif(\Carbon\Carbon::parse($dt)->startOfDay()->gte(\Carbon\Carbon::today()))
-                                                        <button type="button" @click="pop=false; $dispatch('open-modal', 'swap-request-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-orange-400 hover:bg-orange-500/10 transition-colors w-full text-left">
-                                                            <i class="fas fa-exchange-alt w-3 text-center"></i> Ajukan Tukar Shift
-                                                        </button>
-                                                    @endif
-                                                @else
+                                            @endif
+
+                                            @if($ca->isOpen())
+                                                @if($ca->swap_status === 'pending')
+                                                    <span class="text-[9px] text-orange-400 px-2 italic"><i class="fas fa-hourglass-half mr-1"></i>Menunggu Persetujuan</span>
+                                                @elseif($ca->swap_status === 'rejected' && $ca->user_id == auth()->id())
+                                                    <div class="flex items-center justify-between px-2 w-full">
+                                                        <span class="text-[9px] text-red-400 italic"><i class="fas fa-times mr-1"></i>Ditolak</span>
+                                                        <form action="{{ route('schedules.assignments.swap_dismiss', $ca) }}" method="POST" class="m-0">
+                                                            @csrf
+                                                            <button type="submit" class="text-[9px] text-slate-400 hover:text-white underline" title="Tutup Notifikasi">Dismiss</button>
+                                                        </form>
+                                                    </div>
+                                                @elseif(\Carbon\Carbon::parse($dt)->startOfDay()->gte(\Carbon\Carbon::today()) && ($ca->user_id == auth()->id() || in_array(auth()->user()->role, ['superadmin', 'owner'])))
+                                                    <button type="button" @click="pop=false; $dispatch('open-modal', 'swap-request-{{ $ca->id }}')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-bold text-orange-400 hover:bg-orange-500/10 transition-colors w-full text-left">
+                                                        <i class="fas fa-random w-3 text-center"></i> Ajukan Tukar Shift
+                                                    </button>
+                                                @elseif($ca->user_id != auth()->id() && auth()->user()->role === 'crew')
                                                     <span class="text-[9px] text-slate-500 px-2 italic">Aksi tidak tersedia</span>
                                                 @endif
                                             @endif

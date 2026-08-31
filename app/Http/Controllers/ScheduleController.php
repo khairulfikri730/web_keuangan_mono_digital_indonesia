@@ -72,7 +72,7 @@ class ScheduleController extends Controller
         // Pending Swaps (for super admin or the targeted user)
         $pendingSwapsQuery = ScheduleAssignment::with(['shift.location', 'user', 'swapTargetUser'])
             ->where('swap_status', 'pending');
-        if (auth()->user()->role === 'crew') {
+        if (!in_array(auth()->user()->role, ['superadmin', 'owner'])) {
             $pendingSwapsQuery->where('swap_requested_to', auth()->id());
         }
         $pendingSwaps = $pendingSwapsQuery->get();
@@ -147,10 +147,13 @@ class ScheduleController extends Controller
                     }
 
                     $komisi = 0;
+                    $todayStr = \Carbon\Carbon::today()->format('Y-m-d');
+                    $completedCount = $userAsgn->where('date', '<', $todayStr)->count();
+                    
                     if (is_array($user->custom_rates) && isset($user->custom_rates[$loc->id])) {
-                        $komisi = $total * $user->custom_rates[$loc->id];
+                        $komisi = $completedCount * $user->custom_rates[$loc->id];
                     } else {
-                        $komisi = $total * $loc->shift_rate;
+                        $komisi = $completedCount * $loc->shift_rate;
                     }
 
                     $locUsers[] = [
@@ -194,13 +197,16 @@ class ScheduleController extends Controller
                 ->get();
                 
             $komisiShift = 0;
+            $todayStr = \Carbon\Carbon::today()->format('Y-m-d');
             foreach ($userAsgn as $asgn) {
-                if ($asgn->shift && $asgn->shift->location) {
-                    $locId = $asgn->shift->schedule_location_id;
-                    if (is_array(auth()->user()->custom_rates) && isset(auth()->user()->custom_rates[$locId])) {
-                        $komisiShift += auth()->user()->custom_rates[$locId];
-                    } else {
-                        $komisiShift += $asgn->shift->location->shift_rate;
+                if ($asgn->date < $todayStr) {
+                    if ($asgn->shift && $asgn->shift->location) {
+                        $locId = $asgn->shift->schedule_location_id;
+                        if (is_array(auth()->user()->custom_rates) && isset(auth()->user()->custom_rates[$locId])) {
+                            $komisiShift += auth()->user()->custom_rates[$locId];
+                        } else {
+                            $komisiShift += $asgn->shift->location->shift_rate;
+                        }
                     }
                 }
             }
@@ -239,15 +245,61 @@ class ScheduleController extends Controller
 
     // ── LOCATIONS ──────────────────────────────────────────────
 
+    private function parseMapsUrl($url, &$latitude, &$longitude)
+    {
+        if (empty($url)) return;
+        
+        // Handle short URLs (maps.app.goo.gl)
+        if (str_contains($url, 'maps.app.goo.gl')) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::withoutRedirecting()->get($url);
+                $redirectUrl = $response->header('Location');
+                if ($redirectUrl) {
+                    $url = $redirectUrl;
+                }
+            } catch (\Exception $e) {}
+        }
+        
+        // Try to extract exact pin first (!3d and !4d for Place URLs)
+        if (preg_match('/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/', $url, $matches)) {
+            $latitude = $matches[1];
+            $longitude = $matches[2];
+        } 
+        // Try to extract destination pin from Direction URLs (!1d (lon) !2d (lat))
+        elseif (preg_match('/!1d(-?\d+\.\d+)!2d(-?\d+\.\d+)/', $url, $matches)) {
+            $longitude = $matches[1];
+            $latitude = $matches[2];
+        }
+        // Fallback to viewport center (@lat,lng)
+        elseif (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $url, $matches)) {
+            $latitude = $matches[1];
+            $longitude = $matches[2];
+        }
+    }
+
     public function storeLocation(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
             'shift_rate' => 'required|integer|min:0',
+            'maps_url' => 'nullable|url',
+            'radius' => 'nullable|integer|min:10',
         ]);
 
-        ScheduleLocation::create($request->only('name', 'description', 'shift_rate'));
+        $data = $request->only('name', 'description', 'shift_rate', 'radius');
+        
+        $lat = $request->input('latitude');
+        $lng = $request->input('longitude');
+        
+        if ($request->filled('maps_url')) {
+            $this->parseMapsUrl($request->maps_url, $lat, $lng);
+        }
+        
+        $data['latitude'] = $lat;
+        $data['longitude'] = $lng;
+
+        ScheduleLocation::create($data);
         return back()->with('success', 'Lokasi berhasil ditambahkan!');
     }
 
@@ -257,9 +309,25 @@ class ScheduleController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
             'shift_rate' => 'required|integer|min:0',
+            'maps_url' => 'nullable|url',
+            'radius' => 'nullable|integer|min:10',
         ]);
 
-        $location->update($request->only('name', 'description', 'shift_rate'));
+        $data = $request->only('name', 'description', 'shift_rate', 'radius');
+        
+        $lat = $request->input('latitude');
+        $lng = $request->input('longitude');
+        
+        if ($request->filled('maps_url')) {
+            $this->parseMapsUrl($request->maps_url, $lat, $lng);
+        }
+        
+        if ($lat && $lng) {
+            $data['latitude'] = $lat;
+            $data['longitude'] = $lng;
+        }
+
+        $location->update($data);
         return back()->with('success', 'Lokasi berhasil diperbarui!');
     }
 
@@ -447,7 +515,7 @@ class ScheduleController extends Controller
             return back()->with('error', 'Tidak dapat menukar shift yang sudah berlalu.');
         }
 
-        if ($assignment->user_id !== auth()->id()) {
+        if ($assignment->user_id !== auth()->id() && !in_array(auth()->user()->role, ['superadmin', 'owner'])) {
             return back()->with('error', 'Anda hanya dapat menukar shift milik Anda sendiri.');
         }
 
@@ -466,7 +534,7 @@ class ScheduleController extends Controller
     public function swapApprove(ScheduleAssignment $assignment)
     {
         // Only target user or owner/admin can approve
-        if ($assignment->swap_requested_to !== auth()->id() && auth()->user()->role === 'crew') {
+        if ($assignment->swap_requested_to !== auth()->id() && !in_array(auth()->user()->role, ['superadmin', 'owner'])) {
             return back()->with('error', 'Anda tidak berhak menyetujui permintaan ini.');
         }
 
@@ -477,7 +545,7 @@ class ScheduleController extends Controller
             'user_id' => $assignment->swap_requested_to,
             'changed_by' => auth()->user()->name,
             'swap_requested_to' => null,
-            'swap_status' => null,
+            'swap_status' => 'approved',
             'notes' => 'Tukar shift disetujui',
         ]);
 
@@ -487,8 +555,21 @@ class ScheduleController extends Controller
     public function swapReject(ScheduleAssignment $assignment)
     {
         // Only target user or owner/admin can reject
-        if ($assignment->swap_requested_to !== auth()->id() && auth()->user()->role === 'crew') {
+        if ($assignment->swap_requested_to !== auth()->id() && !in_array(auth()->user()->role, ['superadmin', 'owner'])) {
             return back()->with('error', 'Anda tidak berhak menolak permintaan ini.');
+        }
+
+        $assignment->update([
+            'swap_status' => 'rejected'
+        ]);
+
+        return back()->with('success', 'Permintaan tukar shift telah ditolak.');
+    }
+
+    public function swapDismiss(ScheduleAssignment $assignment)
+    {
+        if ($assignment->user_id !== auth()->id() && $assignment->original_user_id !== auth()->id()) {
+            return back()->with('error', 'Anda tidak berhak melakukan ini.');
         }
 
         $assignment->update([
@@ -496,7 +577,7 @@ class ScheduleController extends Controller
             'swap_status' => null,
         ]);
 
-        return back()->with('success', 'Permintaan tukar shift ditolak.');
+        return back()->with('success', 'Notifikasi telah ditutup.');
     }
 
 

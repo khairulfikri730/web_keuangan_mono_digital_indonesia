@@ -123,9 +123,9 @@
     </div>
 </div>
 
-{{-- SWAP REQUEST MODAL (For Crew) --}}
+{{-- SWAP REQUEST MODAL (For Crew and Superadmin) --}}
 @foreach($assignments as $asgn)
-@if($asgn->isOpen() && $asgn->user_id == auth()->id())
+@if($asgn->isOpen() && ($asgn->user_id == auth()->id() || in_array(auth()->user()->role, ['superadmin', 'owner'])))
 <div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'swap-request-{{ $asgn->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
@@ -145,8 +145,8 @@
                     <select name="swap_requested_to" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500" required>
                         <option value="">-- Pilih Crew --</option>
                         @foreach($activeUsers as $c)
-                        @if($c->id !== $asgn->user_id && $c->role === 'crew')
-                        <option value="{{ $c->id }}">{{ $c->name }}</option>
+                        @if($c->id !== $asgn->user_id)
+                        <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->role }})</option>
                         @endif
                         @endforeach
                     </select>

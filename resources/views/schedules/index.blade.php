@@ -6,23 +6,35 @@
 @section('content')
 <div x-data="scheduleApp()" x-init="init()" class="space-y-6 text-slate-200">
 
-    @if(auth()->user()->role !== 'crew')
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-700/50 pb-2">
         <div class="flex gap-2 overflow-x-auto custom-scrollbar">
-            <template x-for="t in tabs" :key="t.id">
-                <button @click="activeTab = t.id"
-                    :class="activeTab === t.id ? 'text-yellow-400 border-b-2 border-yellow-400 font-bold' : 'text-slate-400 hover:text-white'"
-                    class="px-4 py-2 text-sm whitespace-nowrap transition-colors">
-                    <i :class="t.icon" class="mr-1"></i><span x-text="t.name"></span>
+            @if(auth()->user()->role !== 'crew')
+                <template x-for="t in tabs" :key="t.id">
+                    <button @click="activeTab = t.id"
+                        :class="activeTab === t.id ? 'text-yellow-400 border-b-2 border-yellow-400 font-bold' : 'text-slate-400 hover:text-white'"
+                        class="px-4 py-2 text-sm whitespace-nowrap transition-colors">
+                        <i :class="t.icon" class="mr-1"></i><span x-text="t.name"></span>
+                    </button>
+                </template>
+            @else
+                <button class="text-yellow-400 border-b-2 border-yellow-400 font-bold px-4 py-2 text-sm whitespace-nowrap">
+                    <i class="fas fa-calendar-alt mr-1"></i> Jadwal Tim
                 </button>
-            </template>
+            @endif
         </div>
-        <div>
+        <div class="flex gap-2">
+            <a href="{{ route('schedules.attendances.index') }}" class="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/50 rounded-xl text-sm font-bold hover:bg-blue-600 hover:text-white transition-colors">
+                <i class="fas fa-camera mr-2"></i> Rekap Absensi
+            </a>
+            @if(auth()->user()->role !== 'crew')
             <a href="{{ route('schedules.payrolls.index') }}" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 rounded-xl text-sm font-bold hover:bg-emerald-600 hover:text-white transition-colors">
                 <i class="fas fa-money-check-alt mr-2"></i> Penggajian (Payroll)
             </a>
+            @endif
         </div>
     </div>
+
+    @if(auth()->user()->role !== 'crew')
 
     @include('schedules._tab_dashboard')
     @include('schedules._tab_locations')

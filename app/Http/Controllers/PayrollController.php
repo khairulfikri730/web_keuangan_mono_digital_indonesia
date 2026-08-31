@@ -49,13 +49,19 @@ class PayrollController extends Controller
 
             // 1. Hitung Komisi Shift
             $komisiShift = 0;
+            $completedShiftsCount = 0;
+            $todayStr = \Carbon\Carbon::today()->format('Y-m-d');
+            
             foreach ($userAsgn as $asgn) {
-                if ($asgn->shift && $asgn->shift->location) {
-                    $locId = $asgn->shift->schedule_location_id;
-                    if (is_array($user->custom_rates) && isset($user->custom_rates[$locId])) {
-                        $komisiShift += $user->custom_rates[$locId];
-                    } else {
-                        $komisiShift += $asgn->shift->location->shift_rate;
+                if ($asgn->date < $todayStr) {
+                    $completedShiftsCount++;
+                    if ($asgn->shift && $asgn->shift->location) {
+                        $locId = $asgn->shift->schedule_location_id;
+                        if (is_array($user->custom_rates) && isset($user->custom_rates[$locId])) {
+                            $komisiShift += $user->custom_rates[$locId];
+                        } else {
+                            $komisiShift += $asgn->shift->location->shift_rate;
+                        }
                     }
                 }
             }

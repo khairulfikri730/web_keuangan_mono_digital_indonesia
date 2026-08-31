@@ -281,6 +281,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/assignments/{assignment}/swap-request', [\App\Http\Controllers\ScheduleController::class, 'swapRequest'])->name('assignments.swap_request');
         Route::post('/assignments/{assignment}/swap-approve', [\App\Http\Controllers\ScheduleController::class, 'swapApprove'])->name('assignments.swap_approve');
         Route::post('/assignments/{assignment}/swap-reject', [\App\Http\Controllers\ScheduleController::class, 'swapReject'])->name('assignments.swap_reject');
+        Route::post('/assignments/{assignment}/swap-dismiss', [\App\Http\Controllers\ScheduleController::class, 'swapDismiss'])->name('assignments.swap_dismiss');
+        
+        // Absensi (Attendance)
+        Route::get('/attendances', [\App\Http\Controllers\AttendanceController::class, 'index'])->name('attendances.index');
+        Route::get('/attendances/create', [\App\Http\Controllers\AttendanceController::class, 'create'])->name('attendances.create');
+        Route::post('/attendances', [\App\Http\Controllers\AttendanceController::class, 'store'])->name('attendances.store');
+        Route::delete('/attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'destroy'])->name('attendances.destroy');
         
         Route::middleware('permission:schedules.manage')->group(function () {
             // Locations

@@ -12,7 +12,7 @@ class ScheduleAssignment extends Model
     protected $fillable = [
         'schedule_shift_id', 'user_id', 'date', 'notes',
         'status', 'closed_by', 'closed_reason', 'closed_at_time',
-        'original_user_id', 'changed_by',
+        'original_user_id', 'changed_by', 'swap_requested_to', 'swap_status'
     ];
 
     protected $casts = [
@@ -51,7 +51,7 @@ class ScheduleAssignment extends Model
 
     public function wasReplaced()
     {
-        return !is_null($this->original_crew_id);
+        return !is_null($this->original_user_id);
     }
 
     public function scopeOpen($query)

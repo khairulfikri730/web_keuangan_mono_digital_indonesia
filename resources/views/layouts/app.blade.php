@@ -519,7 +519,28 @@
                         ->get();
                         
                     $pendingShifts = auth()->user()->hasPermission('shifts.manage') ? \App\Models\Shift::where('status', 'pending_approval')->get() : collect();
-                    $totalAlerts = $lowStockAlert->count() + $outOfStockAlert->count() + $pendingShifts->count();
+                    
+                    // Pending Swap Requests
+                    $pendingSwapsNavQuery = \App\Models\ScheduleAssignment::with(['user', 'shift'])
+                        ->where('swap_status', 'pending');
+                    if (!in_array(auth()->user()->role, ['superadmin', 'owner'])) {
+                        $pendingSwapsNavQuery->where('swap_requested_to', auth()->id());
+                    }
+                    $pendingSwapsNav = $pendingSwapsNavQuery->get();
+                    
+                    // Rejected Swap Requests
+                    $rejectedSwapsNav = \App\Models\ScheduleAssignment::with(['swapTargetUser', 'shift'])
+                        ->where('user_id', auth()->id())
+                        ->where('swap_status', 'rejected')
+                        ->get();
+
+                    // Approved Swap Requests
+                    $approvedSwapsNav = \App\Models\ScheduleAssignment::with(['user', 'shift'])
+                        ->where('original_user_id', auth()->id())
+                        ->where('swap_status', 'approved')
+                        ->get();
+
+                    $totalAlerts = $lowStockAlert->count() + $outOfStockAlert->count() + $pendingShifts->count() + $pendingSwapsNav->count() + $rejectedSwapsNav->count() + $approvedSwapsNav->count();
                 @endphp
                 <div class="relative" x-data="{ notifOpen: false }" @click.outside="notifOpen = false">
                     <button @click="notifOpen = !notifOpen" class="relative w-9 h-9 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700 text-slate-400 hover:text-white inline-flex items-center justify-center transition-all">
@@ -586,6 +607,72 @@
                                         </p>
                                     </div>
                                 </a>
+                                @endforeach
+                            @endif
+                            
+                            @if($pendingSwapsNav->count() > 0)
+                                <div class="px-4 py-2 bg-slate-900 border-y border-slate-700/50 flex justify-between items-center sticky top-0 z-10">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><i class="fas fa-exchange-alt text-blue-400 mr-1.5"></i>Tukar Shift</span>
+                                    <span class="text-[9px] font-bold bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full">{{ $pendingSwapsNav->count() }} menunggu</span>
+                                </div>
+                                @foreach($pendingSwapsNav as $ps)
+                                <a href="{{ route('schedules.index') }}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors border-b border-slate-700/50">
+                                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                                        <i class="fas fa-random text-blue-400 text-xs"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-bold text-white truncate">{{ $ps->user->name ?? 'User' }}</p>
+                                        <p class="text-[10px] text-blue-400 font-bold">
+                                            {{ auth()->id() == $ps->swap_requested_to ? 'Meminta tukar shift dengan Anda' : 'Mengajukan tukar shift' }}
+                                        </p>
+                                    </div>
+                                </a>
+                                @endforeach
+                            @endif
+                            
+                            @if($rejectedSwapsNav->count() > 0)
+                                <div class="px-4 py-2 bg-slate-900 border-y border-slate-700/50 flex justify-between items-center sticky top-0 z-10">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><i class="fas fa-times-circle text-red-400 mr-1.5"></i>Tukar Shift Ditolak</span>
+                                    <span class="text-[9px] font-bold bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full">{{ $rejectedSwapsNav->count() }} ditolak</span>
+                                </div>
+                                @foreach($rejectedSwapsNav as $ps)
+                                <form action="{{ route('schedules.assignments.swap_dismiss', $ps) }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors border-b border-slate-700/50 text-left">
+                                        <div class="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                                            <i class="fas fa-times text-red-400 text-xs"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-bold text-white truncate">{{ $ps->swapTargetUser->name ?? 'Admin/Owner' }} menolak pengajuan Anda</p>
+                                            <p class="text-[10px] text-red-400 font-bold">
+                                                Shift {{ $ps->shift->name ?? '' }} - {{ $ps->date->translatedFormat('d M') }}
+                                            </p>
+                                        </div>
+                                    </button>
+                                </form>
+                                @endforeach
+                            @endif
+
+                            @if($approvedSwapsNav->count() > 0)
+                                <div class="px-4 py-2 bg-slate-900 border-y border-slate-700/50 flex justify-between items-center sticky top-0 z-10">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><i class="fas fa-check-circle text-emerald-400 mr-1.5"></i>Tukar Shift Disetujui</span>
+                                    <span class="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full">{{ $approvedSwapsNav->count() }} disetujui</span>
+                                </div>
+                                @foreach($approvedSwapsNav as $ps)
+                                <form action="{{ route('schedules.assignments.swap_dismiss', $ps) }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors border-b border-slate-700/50 text-left">
+                                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                                            <i class="fas fa-check text-emerald-400 text-xs"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-bold text-white truncate">{{ $ps->user->name ?? 'Admin/Owner' }} menyetujui pengajuan Anda</p>
+                                            <p class="text-[10px] text-emerald-400 font-bold">
+                                                Shift {{ $ps->shift->name ?? '' }} - {{ $ps->date->translatedFormat('d M') }}
+                                            </p>
+                                        </div>
+                                    </button>
+                                </form>
                                 @endforeach
                             @endif
                         </div>

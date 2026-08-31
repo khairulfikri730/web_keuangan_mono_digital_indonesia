@@ -9,7 +9,7 @@ class ScheduleLocation extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'shift_rate', 'is_active'];
+    protected $fillable = ['name', 'description', 'shift_rate', 'is_active', 'latitude', 'longitude', 'radius'];
 
     protected $casts = [
         'is_active' => 'boolean',

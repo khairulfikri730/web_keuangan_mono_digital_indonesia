@@ -23,6 +23,24 @@
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Harga / Komisi per Shift <span class="text-red-400">*</span></label>
                     <input type="number" name="shift_rate" value="0" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required placeholder="Contoh: 45000">
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Paste Link Google Maps <span class="text-slate-500 font-normal ml-1">Otomatis Ekstrak Kordinat</span></label>
+                    <input type="url" name="maps_url" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="https://maps.app.goo.gl/...">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Latitude (GPS) <span class="text-slate-500 font-normal ml-1">Opsional</span></label>
+                        <input type="text" name="latitude" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="0.5055042">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Longitude (GPS) <span class="text-slate-500 font-normal ml-1">Opsional</span></label>
+                        <input type="text" name="longitude" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="101.4428787">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Radius Absen (Meter)</label>
+                    <input type="number" name="radius" value="100" min="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="Contoh: 100">
+                </div>
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
                 <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
@@ -55,6 +73,24 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Harga / Komisi per Shift <span class="text-red-400">*</span></label>
                     <input type="number" name="shift_rate" value="{{ $loc->shift_rate }}" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Paste Link Google Maps <span class="text-slate-500 font-normal ml-1">Otomatis Ekstrak Kordinat</span></label>
+                    <input type="url" name="maps_url" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="https://maps.app.goo.gl/...">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Latitude (GPS) <span class="text-slate-500 font-normal ml-1">Tersimpan</span></label>
+                        <input type="text" name="latitude" value="{{ $loc->latitude }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="0.5055042">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Longitude (GPS) <span class="text-slate-500 font-normal ml-1">Tersimpan</span></label>
+                        <input type="text" name="longitude" value="{{ $loc->longitude }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="101.4428787">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Radius Absen (Meter)</label>
+                    <input type="number" name="radius" value="{{ $loc->radius ?? 100 }}" min="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="Contoh: 100">
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">

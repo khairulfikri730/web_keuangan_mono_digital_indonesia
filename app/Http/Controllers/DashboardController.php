@@ -381,13 +381,16 @@ class DashboardController extends Controller
                         ->get();
 
                     $komisi = 0;
+                    $todayStr = \Carbon\Carbon::today()->format('Y-m-d');
                     foreach ($asgns as $a) {
-                        if ($a->shift && $a->shift->location) {
-                            $locId = $a->shift->schedule_location_id;
-                            if (is_array($crew->custom_rates) && isset($crew->custom_rates[$locId])) {
-                                $komisi += $crew->custom_rates[$locId];
-                            } else {
-                                $komisi += $a->shift->location->shift_rate ?? 0;
+                        if ($a->date < $todayStr) {
+                            if ($a->shift && $a->shift->location) {
+                                $locId = $a->shift->schedule_location_id;
+                                if (is_array($crew->custom_rates) && isset($crew->custom_rates[$locId])) {
+                                    $komisi += $crew->custom_rates[$locId];
+                                } else {
+                                    $komisi += $a->shift->location->shift_rate ?? 0;
+                                }
                             }
                         }
                     }
@@ -589,13 +592,16 @@ class DashboardController extends Controller
                     ->get();
                     
                 $komisiShift = 0;
+                $todayStr = \Carbon\Carbon::today()->format('Y-m-d');
                 foreach ($userAsgn as $asgn) {
-                    if ($asgn->shift && $asgn->shift->location) {
-                        $locId = $asgn->shift->schedule_location_id;
-                        if (is_array(auth()->user()->custom_rates) && isset(auth()->user()->custom_rates[$locId])) {
-                            $komisiShift += auth()->user()->custom_rates[$locId];
-                        } else {
-                            $komisiShift += $asgn->shift->location->shift_rate;
+                    if ($asgn->date < $todayStr) {
+                        if ($asgn->shift && $asgn->shift->location) {
+                            $locId = $asgn->shift->schedule_location_id;
+                            if (is_array(auth()->user()->custom_rates) && isset(auth()->user()->custom_rates[$locId])) {
+                                $komisiShift += auth()->user()->custom_rates[$locId];
+                            } else {
+                                $komisiShift += $asgn->shift->location->shift_rate;
+                            }
                         }
                     }
                 }
