@@ -162,7 +162,7 @@ class User extends Authenticatable
             return true;
         }
 
-        if ($this->role === 'crew' && $permission === 'schedules.view') {
+        if (in_array($this->role, ['crew', 'kasir']) && $permission === 'schedules.view') {
             return true;
         }
 

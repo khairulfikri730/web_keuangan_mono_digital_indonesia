@@ -55,10 +55,30 @@
                     {{ number_format($data['komisi_shift'], 0, ',', '.') }}<br>
                     <span style="font-size: 8px; color: #666;">{{ $data['total_shifts'] }} shift</span>
                 </td>
-                <td>{{ number_format($data['motret'], 0, ',', '.') }}</td>
-                <td>{{ number_format($data['lembur'], 0, ',', '.') }}</td>
-                <td>{{ number_format($data['bonus'], 0, ',', '.') }}</td>
-                <td style="color: #d32f2f;">- {{ number_format($data['kasbon'], 0, ',', '.') }}</td>
+                <td>
+                    {{ number_format($data['motret'], 0, ',', '.') }}
+                    @if($data['payroll'] && $data['payroll']->photographer_fee_note)
+                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->photographer_fee_note }}</span>
+                    @endif
+                </td>
+                <td>
+                    {{ number_format($data['lembur'], 0, ',', '.') }}
+                    @if($data['payroll'] && $data['payroll']->overtime_fee_note)
+                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->overtime_fee_note }}</span>
+                    @endif
+                </td>
+                <td>
+                    {{ number_format($data['bonus'], 0, ',', '.') }}
+                    @if($data['payroll'] && $data['payroll']->bonus_note)
+                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->bonus_note }}</span>
+                    @endif
+                </td>
+                <td style="color: #d32f2f;">
+                    - {{ number_format($data['kasbon'], 0, ',', '.') }}
+                    @if($data['payroll'] && $data['payroll']->deduction_note)
+                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->deduction_note }}</span>
+                    @endif
+                </td>
                 <td class="font-bold" style="background-color: #e8f5e9;">{{ number_format($data['total_bersih'], 0, ',', '.') }}</td>
                 <td class="text-left" style="font-size: 8px;">{{ $data['payroll'] && $data['payroll']->notes ? $data['payroll']->notes : '-' }}</td>
             </tr>
@@ -70,7 +90,9 @@
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="8" style="text-align: right; font-size: 11px;">TOTAL KESELURUHAN PENGELUARAN GAJI</th>
+                <th colspan="8" style="text-align: right; font-size: 11px;">
+                    {{ in_array(auth()->user()->role, ['crew', 'kasir']) ? 'TOTAL TAKE-HOME PAY' : 'TOTAL KESELURUHAN PENGELUARAN GAJI' }}
+                </th>
                 <th style="font-size: 12px; background-color: #c8e6c9;">Rp {{ number_format($totalSistem, 0, ',', '.') }}</th>
                 <th></th>
             </tr>

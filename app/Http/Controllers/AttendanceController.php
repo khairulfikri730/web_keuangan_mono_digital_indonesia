@@ -15,7 +15,7 @@ class AttendanceController extends Controller
         $query = Attendance::with(['user', 'location'])
             ->orderBy('created_at', 'desc');
             
-        if (auth()->user()->role === 'crew') {
+        if (in_array(auth()->user()->role, ['crew', 'kasir'])) {
             $query->where('user_id', auth()->id());
         }
         
@@ -41,12 +41,12 @@ class AttendanceController extends Controller
             ->where('date', now()->format('Y-m-d'))
             ->get();
             
-        if (auth()->user()->role === 'crew' && $todayAssignments->isEmpty()) {
+        if (in_array(auth()->user()->role, ['crew', 'kasir']) && $todayAssignments->isEmpty()) {
             return redirect()->route('schedules.attendances.index')
                 ->with('error', 'Anda tidak memiliki jadwal shift hari ini. Absensi hanya dapat dilakukan jika Anda memiliki shift aktif.');
         }
         
-        if (auth()->user()->role === 'crew') {
+        if (in_array(auth()->user()->role, ['crew', 'kasir'])) {
             // Only allow locations they are assigned to today
             $locationIds = $todayAssignments->pluck('shift.schedule_location_id')->unique();
             $locations = ScheduleLocation::whereIn('id', $locationIds)->get();

@@ -183,9 +183,9 @@ class ScheduleController extends Controller
             ];
         }
 
-        // Data Finansial khusus Crew Biasa
+        // Data Finansial khusus Crew Biasa & Kasir
         $crewFinancial = null;
-        if (auth()->user()->role === 'crew') {
+        if (in_array(auth()->user()->role, ['crew', 'kasir'])) {
             // Gunakan $month yang dipilih di filter, bukan Carbon::now()
             $filterMonth = Carbon::parse($month . '-01');
             $monthStart = $filterMonth->copy()->startOfMonth()->format('Y-m-d');
@@ -231,6 +231,7 @@ class ScheduleController extends Controller
                 'tambahan' => $lembur + $motret + $bonus,
                 'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
                 'total_shifts' => $userAsgn->count(),
+                'payroll' => $payroll,
             ];
         }
 

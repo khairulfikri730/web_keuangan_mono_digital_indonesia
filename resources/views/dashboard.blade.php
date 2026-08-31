@@ -19,8 +19,20 @@
                 <button type="submit" name="filter" value="today" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'today' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Hari</button>
                 <button type="submit" name="filter" value="week" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'week' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Minggu</button>
                 <button type="submit" name="filter" value="month" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all {{ $filter == 'month' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">Bulan</button>
+                
+                <div class="w-px h-6 bg-slate-700/50 mx-1"></div>
+                
+                <a href="{{ route('schedules.attendances.index') }}" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-emerald-600 hover:text-white transition-colors flex items-center">
+                    <i class="fas fa-camera mr-2"></i> Absensi
+                </a>
             @else
                 <button type="button" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]">Hari Ini</button>
+                
+                @if(auth()->user()->role === 'kasir' || auth()->user()->role === 'crew')
+                <a href="{{ route('schedules.attendances.index') }}" class="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/50 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-600 hover:text-white transition-colors flex items-center">
+                    <i class="fas fa-camera mr-2"></i> Absensi
+                </a>
+                @endif
             @endif
         </form>
     </div>
@@ -990,12 +1002,14 @@
     {{-- INSERT CREW FINANCIAL (KASIR ROLE) --}}
     @if(isset($crewFinancial))
     <div class="mt-6 border-t border-white/5 pt-6">
-        <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2 mb-4">
-            <i class="fas fa-user-circle text-orange-400"></i> Performa Pribadi Saya Bulan Ini
-        </h3>
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2">
+                <i class="fas fa-user-circle text-orange-400"></i> Performa Pribadi Saya Bulan Ini
+            </h3>
+        </div>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <!-- Pendapatan Kotor -->
-            <div class="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border border-emerald-700/50 rounded-2xl p-4">
+            <div class="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border border-emerald-700/50 rounded-2xl p-4 flex flex-col justify-between">
                 <div class="flex justify-between items-start mb-2">
                     <div>
                         <p class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Gaji Kotor</p>
@@ -1019,7 +1033,11 @@
                         <i class="fas fa-hand-holding-usd text-xs"></i>
                     </div>
                 </div>
-                <p class="text-[10px] text-red-400/80">Total kasbon ditarik</p>
+                @if(isset($crewFinancial['payroll']) && $crewFinancial['payroll']->deduction_note)
+                    <p class="text-[10px] text-red-400/80 italic">{{ $crewFinancial['payroll']->deduction_note }}</p>
+                @else
+                    <p class="text-[10px] text-red-400/80">Total kasbon ditarik</p>
+                @endif
             </div>
 
             <!-- Lembur -->
@@ -1033,7 +1051,11 @@
                         <i class="fas fa-clock text-xs"></i>
                     </div>
                 </div>
-                <p class="text-[10px] text-orange-400/80">Tambahan lembur</p>
+                @if(isset($crewFinancial['payroll']) && $crewFinancial['payroll']->overtime_fee_note)
+                    <p class="text-[10px] text-orange-400/80 italic">{{ $crewFinancial['payroll']->overtime_fee_note }}</p>
+                @else
+                    <p class="text-[10px] text-orange-400/80">Tambahan lembur</p>
+                @endif
             </div>
 
             <!-- Bonus -->
@@ -1047,7 +1069,11 @@
                         <i class="fas fa-gift text-xs"></i>
                     </div>
                 </div>
-                <p class="text-[10px] text-purple-400/80">Bonus/reward ekstra</p>
+                @if(isset($crewFinancial['payroll']) && $crewFinancial['payroll']->bonus_note)
+                    <p class="text-[10px] text-purple-400/80 italic">{{ $crewFinancial['payroll']->bonus_note }}</p>
+                @else
+                    <p class="text-[10px] text-purple-400/80">Bonus/reward ekstra</p>
+                @endif
             </div>
 
             <!-- Pendapatan Bersih -->
@@ -1062,6 +1088,11 @@
                     </div>
                 </div>
                 <p class="text-[10px] text-blue-400/80">Take-home pay bulan ini</p>
+                @if(isset($crewFinancial['payroll']))
+                    <div class="mt-2 text-[10px] font-bold px-2 py-1 rounded {{ $crewFinancial['payroll']->is_finalized ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400' }}">
+                        Status: {{ $crewFinancial['payroll']->is_finalized ? 'Gaji Pas (Selesai)' : 'Sedang Proses' }}
+                    </div>
+                @endif
             </div>
 
             <!-- Kehadiran -->
@@ -1081,8 +1112,21 @@
                 <div class="h-1.5 w-full bg-slate-900 rounded-full mt-2 relative z-10 overflow-hidden border border-slate-700">
                     <div class="h-full bg-slate-400 rounded-full" style="width: {{ $pct }}%"></div>
                 </div>
+                <div class="mt-3 relative z-10">
+                    <a href="{{ route('schedules.payrolls.export-pdf', ['month' => Carbon\Carbon::now()->format('Y-m')]) }}" class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/30 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">
+                        <i class="fas fa-file-pdf"></i> Slip Gaji
+                    </a>
+                </div>
             </div>
         </div>
+        
+        @if(isset($crewFinancial['payroll']) && $crewFinancial['payroll']->notes)
+            <div class="mt-4 bg-slate-800/80 border border-slate-700 p-4 rounded-xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <p class="text-xs font-bold text-slate-400 mb-1"><i class="fas fa-sticky-note mr-1 text-blue-400"></i> Catatan Keseluruhan</p>
+                <p class="text-sm text-slate-200 italic">{{ $crewFinancial['payroll']->notes }}</p>
+            </div>
+        @endif
     </div>
     <div class="mt-8 border-t border-white/5 pt-6">
         <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2 mb-4">

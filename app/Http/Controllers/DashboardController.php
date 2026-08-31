@@ -626,6 +626,7 @@ class DashboardController extends Controller
                     'tambahan' => $lembur + $motret + $bonus,
                     'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
                     'total_shifts' => $userAsgn->count(),
+                    'payroll' => $payroll,
                 ];
             }
 

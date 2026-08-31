@@ -109,6 +109,7 @@
                         <th class="px-4 py-3 text-right text-red-400">Potongan/Kasbon</th>
                         <th class="px-4 py-3 text-right text-emerald-400 font-black">TOTAL BERSIH</th>
                         <th class="px-4 py-3 text-left">Catatan</th>
+                        <th class="px-4 py-3 text-center">Status</th>
                         <th class="px-4 py-3 text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -165,13 +166,28 @@
                             {{ $data['payroll'] && $data['payroll']->notes ? $data['payroll']->notes : '-' }}
                         </td>
                         <td class="px-4 py-3 text-center align-top">
+                            @if($data['payroll'])
+                                <form action="{{ route('schedules.payrolls.toggle-status', $data['payroll']->id) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {{ $data['payroll']->is_finalized ? 'bg-emerald-500' : 'bg-slate-600' }}" title="{{ $data['payroll']->is_finalized ? 'Gaji Pas' : 'Sedang Proses' }}">
+                                        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {{ $data['payroll']->is_finalized ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                                    </button>
+                                    <div class="text-[9px] mt-1 font-bold {{ $data['payroll']->is_finalized ? 'text-emerald-400' : 'text-slate-400' }}">
+                                        {{ $data['payroll']->is_finalized ? 'Selesai' : 'Proses' }}
+                                    </div>
+                                </form>
+                            @else
+                                <span class="text-[9px] text-slate-500 italic">Belum ada</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-center align-top">
                             <button @click="openEdit('{{ $data['user']->toJson() }}', '{{ $data['payroll'] ? $data['payroll']->toJson() : '' }}')" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-emerald-500 hover:text-white transition-colors text-slate-400 flex items-center justify-center inline-flex">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="11" class="px-4 py-8 text-center text-slate-500">Belum ada data crew.</td></tr>
+                    <tr><td colspan="12" class="px-4 py-8 text-center text-slate-500">Belum ada data crew.</td></tr>
                     @endforelse
                 </tbody>
             </table>

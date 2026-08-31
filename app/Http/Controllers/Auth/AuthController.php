@@ -106,7 +106,7 @@ class AuthController extends Controller
             'created_at' => now(),
         ]);
 
-        Mail::to($email)->send(new OtpMail($email, $otpCode, $expiredAt->format('H:i')));
+        Mail::to($email)->send(new OtpMail($email, $otpCode, $expiredAt->timezone('Asia/Jakarta')->format('H:i') . ' WIB'));
 
         session(['otp_email' => $email]);
 

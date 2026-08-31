@@ -8,7 +8,7 @@
 
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-700/50 pb-2">
         <div class="flex gap-2 overflow-x-auto custom-scrollbar">
-            @if(auth()->user()->role !== 'crew')
+            @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
                 <template x-for="t in tabs" :key="t.id">
                     <button @click="activeTab = t.id"
                         :class="activeTab === t.id ? 'text-yellow-400 border-b-2 border-yellow-400 font-bold' : 'text-slate-400 hover:text-white'"
@@ -24,9 +24,9 @@
         </div>
         <div class="flex gap-2">
             <a href="{{ route('schedules.attendances.index') }}" class="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/50 rounded-xl text-sm font-bold hover:bg-blue-600 hover:text-white transition-colors">
-                <i class="fas fa-camera mr-2"></i> Rekap Absensi
+                <i class="fas fa-camera mr-2"></i> Absensi
             </a>
-            @if(auth()->user()->role !== 'crew')
+            @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
             <a href="{{ route('schedules.payrolls.index') }}" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 rounded-xl text-sm font-bold hover:bg-emerald-600 hover:text-white transition-colors">
                 <i class="fas fa-money-check-alt mr-2"></i> Penggajian (Payroll)
             </a>
@@ -34,7 +34,7 @@
         </div>
     </div>
 
-    @if(auth()->user()->role !== 'crew')
+    @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
 
     @include('schedules._tab_dashboard')
     @include('schedules._tab_locations')
@@ -61,7 +61,7 @@ function confirmDelete(form, txt) {
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('scheduleApp', () => ({
-        activeTab: '{{ auth()->user()->role === 'crew' ? 'jadwal' : $tab }}',
+        activeTab: '{{ in_array(auth()->user()->role, ['superadmin', 'owner']) ? $tab : 'jadwal' }}',
         viewMode: '{{ $viewMode }}',
         selectedDate: '{{ $date }}',
         selectedMonth: '{{ $month }}',
@@ -77,7 +77,7 @@ document.addEventListener('alpine:init', () => {
         ])) !!},
         dates: {!! json_encode($dates) !!},
         tabs: [
-            @if(auth()->user()->role !== 'crew')
+            @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
             { id: 'dashboard', name: 'Dashboard', icon: 'fas fa-chart-pie' },
             { id: 'lokasi', name: 'Lokasi', icon: 'fas fa-building' },
             { id: 'shift', name: 'Shift', icon: 'fas fa-clock' },

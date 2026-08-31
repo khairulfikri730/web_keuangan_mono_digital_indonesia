@@ -278,6 +278,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/payrolls/export-pdf', [\App\Http\Controllers\PayrollController::class, 'exportPdf'])->middleware('permission:schedules.view,schedules.manage')->name('payrolls.export-pdf');
         Route::get('/payrolls/export-excel', [\App\Http\Controllers\PayrollController::class, 'exportExcel'])->middleware('permission:schedules.view,schedules.manage')->name('payrolls.export-excel');
         Route::post('/payrolls', [\App\Http\Controllers\PayrollController::class, 'store'])->middleware('permission:schedules.manage')->name('payrolls.store');
+        Route::post('/payrolls/{payroll}/toggle-status', [\App\Http\Controllers\PayrollController::class, 'toggleStatus'])->middleware('permission:schedules.manage')->name('payrolls.toggle-status');
         Route::post('/assignments/{assignment}/swap-request', [\App\Http\Controllers\ScheduleController::class, 'swapRequest'])->name('assignments.swap_request');
         Route::post('/assignments/{assignment}/swap-approve', [\App\Http\Controllers\ScheduleController::class, 'swapApprove'])->name('assignments.swap_approve');
         Route::post('/assignments/{assignment}/swap-reject', [\App\Http\Controllers\ScheduleController::class, 'swapReject'])->name('assignments.swap_reject');

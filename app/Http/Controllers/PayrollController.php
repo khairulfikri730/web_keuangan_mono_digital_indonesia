@@ -25,6 +25,10 @@ class PayrollController extends Controller
 
         $usersQuery = User::where('is_active', true)->orderBy('name');
         
+        if (in_array(auth()->user()->role, ['crew', 'kasir'])) {
+            $request->merge(['users' => auth()->id()]);
+        }
+
         if ($request->filled('users')) {
             $userIds = explode(',', $request->users);
             $usersQuery->whereIn('id', $userIds);
@@ -160,5 +164,14 @@ class PayrollController extends Controller
         $filename = 'LAPORAN_GAJI_' . strtoupper(str_replace(' ', '_', $monthText)) . '_' . now()->format('YmdHis') . '.xlsx';
         
         return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\PayrollExport($data), $filename);
+    }
+
+    public function toggleStatus(Request $request, \App\Models\Payroll $payroll)
+    {
+        $payroll->update([
+            'is_finalized' => !$payroll->is_finalized
+        ]);
+
+        return back()->with('success', 'Status penggajian berhasil diubah!');
     }
 }

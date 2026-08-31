@@ -6,16 +6,16 @@
     
     <!-- MAIN NAVIGATION TABS (Schedule Module) -->
     <div class="flex border-b border-slate-700/50 mb-2 overflow-x-auto hide-scrollbar">
-        @if(auth()->user()->role !== 'crew')
+        @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
         <a href="{{ route('schedules.index') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Dashboard & Shift</a>
         <a href="{{ route('schedules.poster') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Poster Jadwal</a>
         @else
         <a href="{{ route('schedules.index') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Jadwal Tim</a>
         @endif
         
-        <a href="{{ route('schedules.attendances.index') }}" class="px-6 py-3 border-b-2 border-emerald-500 text-emerald-500 font-black tracking-wide whitespace-nowrap">Rekap Absensi</a>
+        <a href="{{ route('schedules.attendances.index') }}" class="px-6 py-3 border-b-2 border-emerald-500 text-emerald-500 font-black tracking-wide whitespace-nowrap">Absensi</a>
         
-        @if(auth()->user()->role !== 'crew')
+        @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
         <a href="{{ route('schedules.payrolls.index') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Penggajian</a>
         @endif
     </div>
