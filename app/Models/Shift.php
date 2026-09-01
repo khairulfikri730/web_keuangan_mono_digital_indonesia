@@ -135,4 +135,24 @@ class Shift extends Model
         
         return implode(' ', $parts);
     }
+
+    /**
+     * Recalculates and updates the snapshotted financial totals for this shift.
+     * This is useful when transactions or cashflows are modified after a shift is closed.
+     */
+    public function recalculateSnapshot()
+    {
+        $summary = app(\App\Services\FinancialReportService::class)->getShiftSummary($this->id);
+        
+        $expectedCash = $this->opening_cash + $summary->cash_sales - $summary->cash_expense;
+        $this->update([
+            'cash_sales' => $summary->cash_sales,
+            'bank_sales' => $summary->bank_sales,
+            'total_sales' => $summary->total_sales,
+            'cash_expenses' => $summary->cash_expense,
+            'bank_expenses' => $summary->bank_expense,
+            'expected_cash' => $expectedCash,
+            'discrepancy'   => $this->closing_cash !== null ? ($this->closing_cash - $expectedCash) : null,
+        ]);
+    }
 }

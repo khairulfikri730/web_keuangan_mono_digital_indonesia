@@ -738,7 +738,21 @@ class CashflowController extends Controller
             return back()->with('success', 'Riwayat transfer berhasil dihapus dan saldo telah dikembalikan!');
         }
 
+        // Delete associated MonthlyUsage if it was created from POS Cash Out
+        if ($cashflow->reference_type === 'MonthlyUsage' && $cashflow->reference_id) {
+            \App\Models\MonthlyUsage::where('id', $cashflow->reference_id)->delete();
+        }
+
+        $shiftId = $cashflow->shift_id;
         $cashflow->delete();
+
+        if ($shiftId) {
+            $shift = \App\Models\Shift::find($shiftId);
+            if ($shift && in_array($shift->status, ['closed', 'pending_approval'])) {
+                $shift->recalculateSnapshot();
+            }
+        }
+
         return back()->with('success', 'Data cashflow dihapus!');
     }
 
@@ -813,6 +827,30 @@ class CashflowController extends Controller
         }
         
         $cashflow->update($data);
+
+        // Update associated MonthlyUsage if it was created from POS Cash Out
+        if ($cashflow->reference_type === 'MonthlyUsage' && $cashflow->reference_id) {
+            $monthlyUsage = \App\Models\MonthlyUsage::find($cashflow->reference_id);
+            if ($monthlyUsage) {
+                $monthlyUsage->update([
+                    'usage_amount' => $request->amount,
+                    'expense_date' => $data['transaction_date']->format('Y-m-d'),
+                    'month' => $data['transaction_date']->month,
+                    'year' => $data['transaction_date']->year,
+                    'sub_category' => $request->category ?: 'Operasional',
+                    'expense_name' => $request->description,
+                    'description' => $request->description,
+                    'payment_method' => $request->source === 'pos_cash' ? 'tunai' : 'transfer'
+                ]);
+            }
+        }
+
+        if ($cashflow->shift_id) {
+            $shift = \App\Models\Shift::find($cashflow->shift_id);
+            if ($shift && in_array($shift->status, ['closed', 'pending_approval'])) {
+                $shift->recalculateSnapshot();
+            }
+        }
 
         return back()->with('success', 'Cashflow berhasil diperbarui!');
     }

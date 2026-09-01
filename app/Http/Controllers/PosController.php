@@ -31,25 +31,49 @@ class PosController extends Controller
             'printer_paper_size', 'printer_auto_print', 'printer_font_small'
         ]);
         
-        // BEP Analysis Data
-        $totalCapital = \App\Models\Capital::sum('total_amount');
-        $monthlyRevenue = Transaction::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->sum('total');
+        $bepData = $this->getBepData();
+        $totalCapital = $bepData['totalCapital'];
+        $monthlyRevenue = $bepData['monthlyRevenue'];
 
-        // Promo Products
         $promoProductIds = Product::active()->where('is_promo', true)->pluck('id')->toArray();
+        $bestSellerProductIds = $this->getBestSellerProductIds();
+        $expenseCategories = $this->getExpenseCategories();
 
-        // Best Seller Products (Top 10 by quantity in last 30 days)
-        $bestSellerProductIds = TransactionItem::select('product_id', DB::raw('SUM(quantity) as total_sold'))
+        $editTransaction = null;
+        if (request()->has('edit')) {
+            $editTransaction = Transaction::with(['items.product'])->find(request('edit'));
+        }
+
+        return view('pos.index', compact(
+            'activeShift', 'categories', 'products', 'posGroups', 'settings', 
+            'totalCapital', 'monthlyRevenue', 'promoProductIds', 'bestSellerProductIds',
+            'expenseCategories', 'editTransaction'
+        ));
+    }
+
+    private function getBepData()
+    {
+        return [
+            'totalCapital' => \App\Models\Capital::sum('total_amount'),
+            'monthlyRevenue' => Transaction::whereMonth('created_at', now()->month)
+                                    ->whereYear('created_at', now()->year)
+                                    ->sum('total')
+        ];
+    }
+
+    private function getBestSellerProductIds()
+    {
+        return TransactionItem::select('product_id', DB::raw('SUM(quantity) as total_sold'))
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('product_id')
             ->orderByDesc('total_sold')
             ->limit(10)
             ->pluck('product_id')
             ->toArray();
+    }
 
-        // Hidden Master Categories
+    private function getExpenseCategories()
+    {
         $hiddenParents = \App\Models\MasterExpenseCategory::where('is_pos_hidden', true)
             ->get()
             ->map(function ($master) {
@@ -57,7 +81,6 @@ class PosController extends Controller
             })
             ->toArray();
 
-        // Expense Categories for Cash Out
         $expenseCategories = \App\Models\ExpenseCategory::where('is_active', true)
             ->whereNotIn('parent_category', $hiddenParents)
             ->get()
@@ -65,7 +88,6 @@ class PosController extends Controller
             ->groupBy('parent_category')
             ->toArray();
 
-        // Inject active users into the 'gaji' category for payroll
         $gajiKey = 'gaji';
         if (!in_array($gajiKey, $hiddenParents)) {
             $users = \App\Models\User::whereNotNull('email')->get();
@@ -79,16 +101,7 @@ class PosController extends Controller
             $expenseCategories[$gajiKey] = $gajiSubCategories;
         }
 
-        $editTransaction = null;
-        if (request()->has('edit')) {
-            $editTransaction = Transaction::with(['items.product'])->find(request('edit'));
-        }
-
-        return view('pos.index', compact(
-            'activeShift', 'categories', 'products', 'posGroups', 'settings', 
-            'totalCapital', 'monthlyRevenue', 'promoProductIds', 'bestSellerProductIds',
-            'expenseCategories', 'editTransaction'
-        ));
+        return $expenseCategories;
     }
 
     public function getProducts(Request $request)
@@ -336,7 +349,12 @@ class PosController extends Controller
                 try {
                     $printerService = app(\App\Services\PrinterService::class);
                     $printResult = $printerService->openDrawer($transaction->id);
-                    $printerStatus = $printResult;
+                    // Only send printer_status to frontend if it is successful. 
+                    // This suppresses the annoying 'smbclient not found' warnings 
+                    // when the drawer actually opens via frontend's receipt printing anyway.
+                    if ($printResult && $printResult['success']) {
+                        $printerStatus = $printResult;
+                    }
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::warning('Drawer server-side skipped (printer not available): ' . $e->getMessage());
                     $printerStatus = null;

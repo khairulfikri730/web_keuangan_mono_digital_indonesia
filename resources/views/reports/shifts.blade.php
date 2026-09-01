@@ -295,6 +295,9 @@
 
                             {{-- Actions --}}
                             <div class="flex items-center gap-1.5 md:ml-4">
+                                <a href="{{ route('transactions.index', ['shift_id' => $s->id]) }}" @click.stop class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-colors shadow-sm" title="Lihat Transaksi Lengkap">
+                                    <i class="fas fa-eye text-xs md:text-sm"></i>
+                                </a>
                                 @if($s->status === 'pending_approval' && auth()->user()->hasPermission('shifts.manage'))
                                 <form action="{{ route('shifts.approve', $s->id) }}" method="POST" class="m-0">
                                     @csrf

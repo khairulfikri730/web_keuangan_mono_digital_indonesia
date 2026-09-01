@@ -32,9 +32,16 @@ class TransactionController extends Controller
         $dfParam = is_array($request->date_from) ? null : $request->date_from;
         $dtParam = is_array($request->date_to) ? null : $request->date_to;
 
+        $targetShift = null;
+        if ($request->shift_id) {
+            $targetShift = Shift::find($request->shift_id);
+            $isLiveShift = true; // Use shift mode logic
+            $activeShift = $targetShift;
+        }
+
         if ($isLiveShift && $activeShift) {
-            $dateFrom = $activeShift->opened_at->copy()->startOfDay();
-            $dateTo = now()->endOfDay();
+            $dateFrom = clone $activeShift->opened_at;
+            $dateTo = $activeShift->closed_at ? clone $activeShift->closed_at : now();
         } else {
             if ($dfParam && $dtParam) {
                 $dateFrom = Carbon::parse($dfParam)->startOfDay();
@@ -252,11 +259,13 @@ class TransactionController extends Controller
         $todayTransfer = (clone $txQuery)->completed()->where('payment_method', 'transfer')->sum('total');
         $todayDebit = (clone $txQuery)->completed()->where('payment_method', 'debit')->sum('total');
 
+        $targetShiftForView = $request->shift_id ? \App\Models\Shift::find($request->shift_id) : null;
+
         return view('transactions.index', compact(
             'transactions', 'users', 'todayTotalSales', 'todayExpenses', 'todayCashExpense', 'todayBankExpense', 'todayNet',
             'saldoLaci', 'saldoLaciAwal', 'saldoBank', 'totalPiutang', 'activeShift',
             'countAll', 'countPenjualan', 'countExpense', 'countPiutang', 'countLunas', 'countCash', 'countQris', 'countTransfer', 'countDebit',
-            'todayQris', 'todayCash', 'todayTransfer', 'todayDebit'
+            'todayQris', 'todayCash', 'todayTransfer', 'todayDebit', 'targetShiftForView'
         ));
     }
 
@@ -548,6 +557,13 @@ class TransactionController extends Controller
 
         $transaction->update(['status' => 'cancelled']);
 
+        if ($transaction->shift_id) {
+            $shift = \App\Models\Shift::find($transaction->shift_id);
+            if ($shift && in_array($shift->status, ['closed', 'pending_approval'])) {
+                $shift->recalculateSnapshot();
+            }
+        }
+
         return back()->with('success', 'Transaksi berhasil dibatalkan dan stok dikembalikan!');
     }
 
@@ -582,6 +598,13 @@ class TransactionController extends Controller
 
         $transaction->update(['status' => 'completed']);
 
+        if ($transaction->shift_id) {
+            $shift = \App\Models\Shift::find($transaction->shift_id);
+            if ($shift && in_array($shift->status, ['closed', 'pending_approval'])) {
+                $shift->recalculateSnapshot();
+            }
+        }
+
         return back()->with('success', 'Transaksi berhasil dipulihkan!');
     }
 
@@ -601,7 +624,15 @@ class TransactionController extends Controller
                 $invoice->delete();
             }
 
+            $shiftId = $transaction->shift_id;
             $transaction->delete();
+
+            if ($shiftId) {
+                $shift = \App\Models\Shift::find($shiftId);
+                if ($shift && in_array($shift->status, ['closed', 'pending_approval'])) {
+                    $shift->recalculateSnapshot();
+                }
+            }
 
             DB::commit();
             return back()->with('success', 'Transaksi ' . $transaction->invoice_number . ' berhasil dihapus permanen!');

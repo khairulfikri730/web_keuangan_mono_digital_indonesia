@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Transaksi')
-@section('page-title', 'Riwayat Transaksi')
+@section('page-title', isset($targetShiftForView) ? 'Riwayat Shift: ' . ($targetShiftForView->opener->name ?? 'Kasir') : 'Riwayat Transaksi')
 
 @section('content')
 <div x-data="posApp()" x-init="loadPrinterSettings()">
@@ -110,8 +110,15 @@
                     <i class="fas fa-list"></i> Semua <span class="bg-white/20 text-white px-1.5 py-0.5 rounded-lg ml-1">{{ $countAll }}</span>
                 </a>
 
-                @if($activeShift)
-                <a href="{{ route('transactions.index', array_merge(request()->except(['page','status','payment_method']), ['shift' => 'live'])) }}" 
+                @if(isset($targetShiftForView))
+                <a href="{{ route('reports.shifts') }}" 
+                   class="px-4 py-2 rounded-xl text-[11px] font-black whitespace-nowrap transition-all border inline-flex items-center gap-2 uppercase tracking-wider bg-slate-700 text-white border-slate-600 shadow-lg hover:bg-slate-600">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Shifts
+                </a>
+                @endif
+
+                @if($activeShift && !isset($targetShiftForView))
+                <a href="{{ route('transactions.index', array_merge(request()->except(['page','status','payment_method','shift_id']), ['shift' => 'live'])) }}" 
                    class="{{ $pillBase }} {{ request('shift') === 'live' ? 'bg-rose-600 text-white border-rose-500 shadow-lg shadow-rose-900/20' : $pillInactive }}">
                     <i class="fas fa-satellite-dish {{ request('shift') === 'live' ? 'animate-pulse' : '' }}"></i> LIVE SHIFT
                 </a>
@@ -438,6 +445,26 @@
                                 <td class="px-4 py-4 text-right">
                                     <div class="flex items-center justify-end gap-1.5 sm:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onclick="document.getElementById('expense-detail-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Detail"><i class="fas fa-eye text-xs"></i></button>
+                                        @if(auth()->user()->isOwner())
+                                            <button onclick="document.getElementById('expense-edit-modal-{{ $model->id }}').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+                                            
+                                            <form action="{{ route('cashflow.destroy', $model) }}" method="POST" class="inline">@csrf @method('DELETE')
+                                                <button type="button" 
+                                                        onclick="Swal.fire({
+                                                            title: 'Hapus Pengeluaran?',
+                                                            text: 'Data pengeluaran ini akan dihapus permanen.',
+                                                            icon: 'warning',
+                                                            showCancelButton: true,
+                                                            confirmButtonColor: '#ef4444',
+                                                            cancelButtonColor: '#64748b',
+                                                            confirmButtonText: 'Ya, Hapus!',
+                                                            cancelButtonText: 'Batal'
+                                                        }).then((result) => {
+                                                            if (result.isConfirmed) this.closest('form').submit();
+                                                        })"
+                                                        class="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-all" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -681,6 +708,56 @@
                     </div>
                 </div>
             </div>
+
+            @if(auth()->user()->isOwner())
+            {{-- Expense Edit Modal --}}
+            <div id="expense-edit-modal-{{ $model->id }}" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto scrollbar-hide">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-3xl z-10">
+                        <h3 class="text-lg font-black text-slate-800">Edit Pengeluaran</h3>
+                        <button onclick="this.closest('.fixed').classList.add('hidden')" class="w-8 h-8 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-800 transition-colors"><i class="fas fa-times"></i></button>
+                    </div>
+                    <form action="{{ route('cashflow.update', $model) }}" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="type" value="expense">
+                        <div class="p-5 space-y-4">
+                            <div>
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Tanggal & Waktu</label>
+                                <input type="datetime-local" name="transaction_date" value="{{ $model->transaction_date ? \Carbon\Carbon::parse($model->transaction_date)->format('Y-m-d\TH:i') : ($model->created_at ? $model->created_at->format('Y-m-d\TH:i') : now()->format('Y-m-d\TH:i')) }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors" required>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Sumber Dana</label>
+                                <select name="source" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors" required>
+                                    <option value="pos_cash" {{ $model->source == 'pos_cash' ? 'selected' : '' }}>Laci Kasir (Cash)</option>
+                                    <option value="pos_bank" {{ $model->source == 'pos_bank' ? 'selected' : '' }}>QRIS / Debit (POS)</option>
+                                    <option value="transfer" {{ $model->source == 'transfer' ? 'selected' : '' }}>Transfer Bank</option>
+                                    <option value="manual" {{ $model->source == 'manual' ? 'selected' : '' }}>Manual / Lainnya</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Kategori</label>
+                                <input type="text" name="category" value="{{ $model->category }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors" required placeholder="Cth: Operasional">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Nominal (Rp)</label>
+                                <input type="number" name="amount" value="{{ $model->amount }}" min="1" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-lg font-black text-red-600 outline-none focus:border-blue-500 transition-colors" required>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Deskripsi / Keterangan</label>
+                                <textarea name="description" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors" required>{{ $model->description }}</textarea>
+                            </div>
+                            
+                            <div class="flex gap-3 pt-2 mt-4">
+                                <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20 text-center text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-save"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @endif
         @endif
     @endforeach
 
