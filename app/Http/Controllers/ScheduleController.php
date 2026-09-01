@@ -185,9 +185,11 @@ class ScheduleController extends Controller
 
         // Data Finansial khusus Crew Biasa & Kasir
         $crewFinancial = null;
+        $crewFinancialMonth = null;
         if (in_array(auth()->user()->role, ['crew', 'kasir'])) {
-            // Gunakan $month yang dipilih di filter, bukan Carbon::now()
-            $filterMonth = Carbon::parse($month . '-01');
+            $crewMonthInput = $request->input('crew_month', Carbon::now()->format('Y-m'));
+            $filterMonth = Carbon::parse($crewMonthInput . '-01');
+            $crewFinancialMonth = $filterMonth;
             $monthStart = $filterMonth->copy()->startOfMonth()->format('Y-m-d');
             $monthEnd = $filterMonth->copy()->endOfMonth()->format('Y-m-d');
             
@@ -228,6 +230,7 @@ class ScheduleController extends Controller
                 'kasbon' => $kasbon,
                 'lembur' => $lembur,
                 'bonus' => $bonus,
+                'project' => $motret,
                 'tambahan' => $lembur + $motret + $bonus,
                 'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
                 'total_shifts' => $userAsgn->count(),
@@ -236,7 +239,7 @@ class ScheduleController extends Controller
         }
 
         return view('schedules.index', compact(
-            'locations', 'users', 'activeUsers', 'assignments', 'crewFinancial', 'pendingSwaps',
+            'locations', 'users', 'activeUsers', 'assignments', 'crewFinancial', 'crewFinancialMonth', 'pendingSwaps',
             'viewMode', 'date', 'month', 'startDate', 'endDate',
             'todayAssignments', 'todayOpen', 'todayClosed', 'totalShifts',
             'activeLocations', 'dates', 'tab',

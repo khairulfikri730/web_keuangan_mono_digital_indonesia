@@ -26,7 +26,35 @@
     </div>
 
     @if(isset($crewFinancial))
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 mt-6 gap-4" id="performa-pribadi">
+        <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2">
+            <i class="fas fa-user-circle text-orange-400"></i> Performa Pribadi Saya {{ $crewFinancialMonth->translatedFormat('F Y') }}
+        </h3>
+        <form action="{{ route('schedules.index') }}#performa-pribadi" method="GET" class="flex items-center gap-2">
+            <input type="hidden" name="tab" value="jadwal">
+            @if(isset($viewMode)) <input type="hidden" name="view" value="{{ $viewMode }}"> @endif
+            @if(isset($date)) <input type="hidden" name="date" value="{{ $date }}"> @endif
+            @if(isset($month)) <input type="hidden" name="month" value="{{ $month }}"> @endif
+            <div class="relative">
+                <select name="crew_month" onchange="this.form.submit()" class="bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-2 pr-10 focus:outline-none focus:border-blue-500 cursor-pointer appearance-none min-w-[160px] hover:bg-slate-800 transition-colors">
+                    @php
+                        $currentYear = \Carbon\Carbon::now()->year;
+                        $selectedMonth = $crewFinancialMonth->format('Y-m');
+                    @endphp
+                    @for($i = 1; $i <= 12; $i++)
+                        @php
+                            $val = $currentYear . '-' . str_pad($i, 2, '0', STR_PAD_LEFT);
+                        @endphp
+                        <option value="{{ $val }}" {{ $selectedMonth === $val ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }} {{ $currentYear }}
+                        </option>
+                    @endfor
+                </select>
+                <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+            </div>
+        </form>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <!-- Pendapatan Kotor -->
         <div class="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border border-emerald-700/50 rounded-2xl p-4 flex flex-col justify-between">
             <div class="flex justify-between items-start mb-2">
@@ -56,6 +84,24 @@
                 <p class="text-[10px] text-red-400/80 italic">{{ $crewFinancial['payroll']->deduction_note }}</p>
             @else
                 <p class="text-[10px] text-red-400/80">Total kasbon ditarik</p>
+            @endif
+        </div>
+
+        <!-- Project / Motret -->
+        <div class="bg-gradient-to-br from-cyan-900/40 to-cyan-800/20 border border-cyan-700/50 rounded-2xl p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <p class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mb-1">Project</p>
+                    <h3 class="text-lg font-black text-white">Rp {{ number_format($crewFinancial['project'], 0, ',', '.') }}</h3>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 text-cyan-400">
+                    <i class="fas fa-camera text-xs"></i>
+                </div>
+            </div>
+            @if(isset($crewFinancial['payroll']) && $crewFinancial['payroll']->photographer_fee_note)
+                <p class="text-[10px] text-cyan-400/80 italic">{{ $crewFinancial['payroll']->photographer_fee_note }}</p>
+            @else
+                <p class="text-[10px] text-cyan-400/80">Fee motret / project</p>
             @endif
         </div>
 
@@ -131,7 +177,7 @@
                 <div class="bg-blue-500 h-1.5 rounded-full" style="width: {{ $crewFinancial['total_shifts'] > 0 ? ($crewFinancial['completed_shifts'] / $crewFinancial['total_shifts']) * 100 : 0 }}%"></div>
             </div>
             <div class="mt-3 relative z-10">
-                <a href="{{ route('schedules.payrolls.export-pdf', ['month' => $month]) }}" class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/30 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">
+                <a href="{{ route('schedules.payrolls.export-pdf', ['month' => $crewFinancialMonth->format('Y-m')]) }}" class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/30 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">
                     <i class="fas fa-file-pdf"></i> Slip Gaji
                 </a>
             </div>
@@ -177,10 +223,11 @@
     @endif
 
     {{-- Filter Mode --}}
-    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
-        <form action="{{ route('schedules.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4" id="jadwal-tim">
+        <form action="{{ route('schedules.index') }}#jadwal-tim" method="GET" class="flex flex-wrap items-end gap-4">
             <input type="hidden" name="tab" value="jadwal">
             <input type="hidden" name="view" value="{{ $viewMode }}">
+            @if(isset($crewFinancialMonth)) <input type="hidden" name="crew_month" value="{{ $crewFinancialMonth->format('Y-m') }}"> @endif
             <div>
                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mode Tampilan</label>
                 <div class="flex rounded-xl overflow-hidden border border-slate-700">

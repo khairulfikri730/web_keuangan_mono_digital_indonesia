@@ -581,8 +581,11 @@ class DashboardController extends Controller
 
             // Data Finansial khusus untuk role kasir yang ingin melihat performa pribadi
             $crewFinancial = null;
+            $crewFinancialMonth = null;
             if (auth()->user()->role === 'kasir') {
-                $filterMonth = Carbon::now();
+                $crewMonthInput = $request->input('crew_month', Carbon::now()->format('Y-m'));
+                $filterMonth = Carbon::parse($crewMonthInput . '-01');
+                $crewFinancialMonth = $filterMonth;
                 $monthStart = $filterMonth->copy()->startOfMonth()->format('Y-m-d');
                 $monthEnd = $filterMonth->copy()->endOfMonth()->format('Y-m-d');
                 
@@ -623,6 +626,7 @@ class DashboardController extends Controller
                     'kasbon' => $kasbon,
                     'lembur' => $lembur,
                     'bonus' => $bonus,
+                    'project' => $motret,
                     'tambahan' => $lembur + $motret + $bonus,
                     'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
                     'total_shifts' => $userAsgn->count(),
@@ -679,7 +683,7 @@ class DashboardController extends Controller
             return view('dashboard', compact(
                 'activeShift', 'todaySales', 'todayTransactions', 'targetDaily', 'targetPercentage',
                 'recentTransactions', 'topPayment', 'topProduct', 'activities', 'lowStockCount', 'gamification',
-                'totalBiaya', 'totalBiayaTunai', 'totalBiayaBank', 'pendapatanBersih', 'saldoLaci', 'awalShift', 'totalPiutang', 'pemasukanQris', 'pemasukanTunai', 'pemasukanTransfer', 'crewFinancial',
+                'totalBiaya', 'totalBiayaTunai', 'totalBiayaBank', 'pendapatanBersih', 'saldoLaci', 'awalShift', 'totalPiutang', 'pemasukanQris', 'pemasukanTunai', 'pemasukanTransfer', 'crewFinancial', 'crewFinancialMonth',
                 'scheduleStartDate', 'scheduleEndDate', 'scheduleDates', 'scheduleLocations', 'scheduleAssignments', 'scheduleViewMode', 'scheduleDate', 'activeUsers'
             ));
         }
