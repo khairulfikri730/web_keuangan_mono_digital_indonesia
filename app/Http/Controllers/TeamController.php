@@ -10,7 +10,7 @@ class TeamController extends Controller
 {
     public function index()
     {
-        $users = User::with('worksheets')->latest()->paginate(15);
+        $users = User::with('worksheets')->orderBy('name')->paginate(15);
         $availablePermissions = User::AVAILABLE_PERMISSIONS;
         $permissionGroups = User::PERMISSION_GROUPS;
         $worksheets = \App\Models\Worksheet::all();
