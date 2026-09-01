@@ -108,6 +108,7 @@
                         <th class="px-4 py-3 text-right">Bonus</th>
                         <th class="px-4 py-3 text-right text-red-400">Potongan/Kasbon</th>
                         <th class="px-4 py-3 text-right text-emerald-400 font-black">TOTAL BERSIH</th>
+                        <th class="px-4 py-3 text-right text-blue-400 font-bold border-l border-slate-700">Cash PB (Di Tangan)</th>
                         <th class="px-4 py-3 text-left">Catatan</th>
                         <th class="px-4 py-3 text-center">Status</th>
                         <th class="px-4 py-3 text-center">Aksi</th>
@@ -162,8 +163,27 @@
                         <td class="px-4 py-3 text-right font-black text-emerald-400 text-base bg-emerald-500/5 align-top">
                             Rp {{ number_format($data['total_bersih'], 0, ',', '.') }}
                         </td>
-                        <td class="px-4 py-3 text-xs text-slate-400 align-top">
-                            {{ $data['payroll'] && $data['payroll']->notes ? $data['payroll']->notes : '-' }}
+                        <td class="px-4 py-3 text-right align-top border-l border-slate-700">
+                            <div class="font-bold text-blue-400">Rp {{ number_format($data['cash_balance'], 0, ',', '.') }}</div>
+                            @if($data['cash_income'] > 0 || $data['cash_expense'] > 0)
+                            <div class="text-[9px] text-slate-500 mt-1">In: Rp {{ number_format($data['cash_income'], 0, ',', '.') }}</div>
+                            <div class="text-[9px] text-slate-500">Out: Rp {{ number_format($data['cash_expense'], 0, ',', '.') }}</div>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-xs text-slate-400 align-top min-w-[150px] max-w-[250px]">
+                            @if($data['payroll'] && $data['payroll']->notes)
+                                <div x-data="{ expanded: false }">
+                                    <div :class="expanded ? '' : 'line-clamp-2'" class="transition-all duration-300 overflow-hidden text-ellipsis whitespace-pre-wrap leading-relaxed">
+                                        {{ $data['payroll']->notes }}
+                                    </div>
+                                    <button @click="expanded = !expanded" type="button" class="text-emerald-400 hover:text-emerald-300 text-[10px] mt-2 flex items-center gap-1 font-bold uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded transition-colors">
+                                        <span x-text="expanded ? 'Tutup' : 'Lihat Catatan'"></span>
+                                        <i class="fas" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                    </button>
+                                </div>
+                            @else
+                                <span class="text-slate-600">-</span>
+                            @endif
                         </td>
                         <td class="px-4 py-3 text-center align-top">
                             @if($data['payroll'])

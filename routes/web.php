@@ -284,6 +284,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/assignments/{assignment}/swap-reject', [\App\Http\Controllers\ScheduleController::class, 'swapReject'])->name('assignments.swap_reject');
         Route::post('/assignments/{assignment}/swap-dismiss', [\App\Http\Controllers\ScheduleController::class, 'swapDismiss'])->name('assignments.swap_dismiss');
         
+        // Crew Cash Tracking
+        Route::post('/crew-cash', [\App\Http\Controllers\CrewCashController::class, 'store'])->name('crew-cash.store');
+        Route::delete('/crew-cash/{crewCash}', [\App\Http\Controllers\CrewCashController::class, 'destroy'])->name('crew-cash.destroy');
+        
         // Absensi (Attendance)
         Route::get('/attendances', [\App\Http\Controllers\AttendanceController::class, 'index'])->name('attendances.index');
         Route::get('/attendances/create', [\App\Http\Controllers\AttendanceController::class, 'create'])->name('attendances.create');

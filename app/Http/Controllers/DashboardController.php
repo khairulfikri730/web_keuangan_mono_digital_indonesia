@@ -405,9 +405,15 @@ class DashboardController extends Controller
                     $payroll = \App\Models\Payroll::where('user_id', $crew->id)
                         ->where('period', $salaryMonth->format('Y-m'))
                         ->first();
+                        
+                    $crewCashExpensePersonal = \App\Models\CrewCashTransaction::where('user_id', $crew->id)
+                        ->whereBetween('date', [$salaryMonthStart, $salaryMonthEnd])
+                        ->where('type', 'expense_personal')
+                        ->sum('amount');
+                        
                     $lembur  = $payroll ? $payroll->overtime_fee : 0;
                     $bonus   = $payroll ? $payroll->bonus       : 0;
-                    $kasbon  = $payroll ? $payroll->deduction   : 0;
+                    $kasbon  = ($payroll ? $payroll->deduction   : 0) + $crewCashExpensePersonal;
                     $motret  = $payroll ? $payroll->photographer_fee : 0;
 
                     $gross = $komisi + $allowance + $lembur + $bonus + $motret;
@@ -428,6 +434,43 @@ class DashboardController extends Controller
 
             $salaryGrandTotal = $crewSalaryEstimations->sum('net');
 
+            // ── CREW CASH PHOTOBOX OVERVIEW ────────────────
+            $crewCashFilterUserId = $request->input('cash_user_id');
+            $crewCashMonth = $request->input('cash_month', Carbon::now()->format('Y-m'));
+            $crewCashMonthStart = Carbon::parse($crewCashMonth . '-01')->startOfMonth()->format('Y-m-d');
+            $crewCashMonthEnd = Carbon::parse($crewCashMonth . '-01')->endOfMonth()->format('Y-m-d');
+
+            $crewCashOverview = \App\Models\User::where('is_active', true)
+                ->whereIn('role', ['crew', 'kasir'])
+                ->when($crewCashFilterUserId, fn($q) => $q->where('id', $crewCashFilterUserId))
+                ->orderBy('name')
+                ->get()
+                ->map(function ($crew) use ($crewCashMonthStart, $crewCashMonthEnd) {
+                    $income = \App\Models\CrewCashTransaction::where('user_id', $crew->id)
+                        ->whereBetween('date', [$crewCashMonthStart, $crewCashMonthEnd])
+                        ->where('type', 'income')
+                        ->sum('amount');
+                    $expense = \App\Models\CrewCashTransaction::where('user_id', $crew->id)
+                        ->whereBetween('date', [$crewCashMonthStart, $crewCashMonthEnd])
+                        ->whereIn('type', ['expense_operational', 'expense_personal'])
+                        ->sum('amount');
+                    $transactions = \App\Models\CrewCashTransaction::where('user_id', $crew->id)
+                        ->whereBetween('date', [$crewCashMonthStart, $crewCashMonthEnd])
+                        ->orderByDesc('date')
+                        ->orderByDesc('id')
+                        ->get();
+                        
+                    return [
+                        'user' => $crew,
+                        'income' => $income,
+                        'expense' => $expense,
+                        'balance' => $income - $expense,
+                        'transactions' => $transactions
+                    ];
+                })->filter(function ($item) {
+                    return $item['income'] > 0 || $item['expense'] > 0 || $item['balance'] != 0;
+                })->values();
+
             return view('dashboard', compact(
                 'activeShift', 'totalSales', 'totalExpenses', 'netProfit', 'totalTransactions',
                 'salesGrowth', 'expenseGrowth', 'netProfitGrowth', 'trxGrowth', 
@@ -436,7 +479,8 @@ class DashboardController extends Controller
                 'targetData', 'filter', 'startDate', 'endDate',
                 'activeShiftsList', 'statusOperasional', 'alerts', 'branchPerformance', 'cashflowBreakdown',
                 'kpiData', 'liveActivity', 'financialInsight', 'aiForecast', 'systemHealth',
-                'crewSalaryEstimations', 'salaryGrandTotal', 'allCrewUsers', 'salaryFilterUserId', 'salaryMonth'
+                'crewSalaryEstimations', 'salaryGrandTotal', 'allCrewUsers', 'salaryFilterUserId', 'salaryMonth',
+                'crewCashOverview', 'crewCashFilterUserId', 'crewCashMonth'
             ));
         }
 

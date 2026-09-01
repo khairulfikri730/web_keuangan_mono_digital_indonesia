@@ -218,6 +218,152 @@
         @endif
     @endif
     @endif
+    
+    @if(isset($crewFinancial))
+    <!-- Uang Cash Photobox -->
+    <div class="mt-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest"><i class="fas fa-wallet text-emerald-400 mr-2"></i> Uang Cash Photobox</h3>
+            <button x-data @click="$dispatch('open-modal', 'add-crew-cash')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                <i class="fas fa-plus mr-1"></i> Input Transaksi
+            </button>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3">
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Pemasukan</p>
+                <h4 class="text-sm font-black text-emerald-400">Rp {{ number_format($crewFinancial['cash_income'], 0, ',', '.') }}</h4>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3">
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Pengeluaran</p>
+                <h4 class="text-sm font-black text-red-400">Rp {{ number_format($crewFinancial['cash_expense'], 0, ',', '.') }}</h4>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3">
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Saldo di Tangan</p>
+                <h4 class="text-sm font-black text-white">Rp {{ number_format($crewFinancial['cash_balance'], 0, ',', '.') }}</h4>
+            </div>
+        </div>
+
+        <div class="bg-slate-800/80 border border-slate-700 rounded-xl overflow-hidden">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/50 border-b border-slate-700">
+                            <th class="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                            <th class="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe</th>
+                            <th class="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap w-full">Keterangan</th>
+                            <th class="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Jumlah</th>
+                            @if(auth()->user()->isOwner())
+                            <th class="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Aksi</th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody class="text-xs divide-y divide-slate-700/50">
+                        @forelse($crewFinancial['cash_transactions'] as $trx)
+                        <tr class="hover:bg-slate-700/30 transition-colors">
+                            <td class="p-3 text-slate-300 whitespace-nowrap">{{ $trx->date->format('d/m/Y') }}</td>
+                            <td class="p-3 whitespace-nowrap">
+                                @if($trx->type === 'income')
+                                    <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-bold">Pemasukan</span>
+                                @elseif($trx->type === 'expense_operational')
+                                    <span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded text-[9px] font-bold">Operasional</span>
+                                @else
+                                    <span class="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[9px] font-bold">Pribadi/Kasbon</span>
+                                @endif
+                            </td>
+                            <td class="p-3 text-slate-300">{{ $trx->description }}</td>
+                            <td class="p-3 text-right font-bold {{ $trx->type === 'income' ? 'text-emerald-400' : 'text-red-400' }}">
+                                {{ $trx->type === 'income' ? '+' : '-' }}Rp {{ number_format($trx->amount, 0, ',', '.') }}
+                            </td>
+                            @if(auth()->user()->isOwner())
+                            <td class="p-3 text-center">
+                                <form action="{{ route('schedules.crew-cash.destroy', $trx) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus transaksi ini?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-slate-400 hover:text-red-400 transition-colors"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                            @endif
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="{{ auth()->user()->isOwner() ? 5 : 4 }}" class="p-4 text-center text-slate-500 text-xs italic">Belum ada transaksi cash bulan ini.</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Input Crew Cash -->
+    <div x-data="{ 
+        show: false, 
+        type: 'income',
+        rawAmount: '',
+        displayAmount: '',
+        formatRupiah(value) {
+            let val = value.toString().replace(/\D/g, '');
+            if (!val) return '';
+            return new Intl.NumberFormat('id-ID').format(val);
+        },
+        updateAmount(value) {
+            let raw = value.toString().replace(/\D/g, '');
+            this.rawAmount = raw ? parseInt(raw) : '';
+            this.displayAmount = this.formatRupiah(raw);
+        },
+        resetForm() {
+            this.type = 'income';
+            this.rawAmount = '';
+            this.displayAmount = '';
+        }
+    }" 
+    x-show="show" 
+    @open-modal.window="if ($event.detail === 'add-crew-cash') show = true" 
+    @close-modal.window="show = false; resetForm()" 
+    class="fixed inset-0 z-[99] flex items-center justify-center overflow-y-auto overflow-x-hidden" style="display: none;">
+        <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false; resetForm()"></div>
+        <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i class="fas fa-wallet text-emerald-400"></i> Input Uang Cash
+                </h3>
+                <button @click="show = false; resetForm()" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form action="{{ route('schedules.crew-cash.store') }}" method="POST">
+                @csrf
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipe Transaksi <span class="text-red-400">*</span></label>
+                        <select name="type" x-model="type" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 transition-all" required>
+                            <option value="income">Pemasukan (Terima Tunai)</option>
+                            <option value="expense_operational">Dipakai Operasional (Beli Barang/Becak)</option>
+                            <option value="expense_personal">Dipakai Pribadi (Kasbon/Makan)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Jumlah Uang (Rp) <span class="text-red-400">*</span></label>
+                        <input type="text" x-model="displayAmount" @input="updateAmount($event.target.value)" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 transition-all" required placeholder="Contoh: 150.000">
+                        <input type="hidden" name="amount" :value="rawAmount">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Keterangan / Rincian <span class="text-red-400">*</span></label>
+                        <input type="text" name="description" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 transition-all" required placeholder="Contoh: 6 orang bayar tunai / Beli makan">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tanggal Transaksi <span class="text-red-400">*</span></label>
+                        <input type="date" name="date" value="{{ date('Y-m-d') }}" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 transition-all" required>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
+                    <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700 transition-colors">Batal</button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
 
     @if($pendingSwaps->count() > 0)
     <div class="bg-orange-900/20 border border-orange-700/50 rounded-2xl p-4 mb-6">

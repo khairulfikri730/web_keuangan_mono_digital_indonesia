@@ -222,7 +222,30 @@ class ScheduleController extends Controller
             $motret = $payroll ? $payroll->photographer_fee : 0;
             $lembur = $payroll ? $payroll->overtime_fee : 0;
             $bonus = $payroll ? $payroll->bonus : 0;
-            $kasbon = $payroll ? $payroll->deduction : 0;
+            $crewCashIncome = \App\Models\CrewCashTransaction::where('user_id', auth()->id())
+                ->whereMonth('date', $filterMonth->month)
+                ->whereYear('date', $filterMonth->year)
+                ->where('type', 'income')
+                ->sum('amount');
+            $crewCashExpenseOperational = \App\Models\CrewCashTransaction::where('user_id', auth()->id())
+                ->whereMonth('date', $filterMonth->month)
+                ->whereYear('date', $filterMonth->year)
+                ->where('type', 'expense_operational')
+                ->sum('amount');
+            $crewCashExpensePersonal = \App\Models\CrewCashTransaction::where('user_id', auth()->id())
+                ->whereMonth('date', $filterMonth->month)
+                ->whereYear('date', $filterMonth->year)
+                ->where('type', 'expense_personal')
+                ->sum('amount');
+            
+            $crewCashExpense = $crewCashExpenseOperational + $crewCashExpensePersonal;
+            $kasbon = ($payroll ? $payroll->deduction : 0) + $crewCashExpensePersonal;
+            $crewCashTransactions = \App\Models\CrewCashTransaction::where('user_id', auth()->id())
+                ->whereMonth('date', $filterMonth->month)
+                ->whereYear('date', $filterMonth->year)
+                ->orderBy('date', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
             
             $crewFinancial = [
                 'totalKotor' => $komisiShift + $allowance + $motret + $lembur + $bonus,
@@ -235,6 +258,10 @@ class ScheduleController extends Controller
                 'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
                 'total_shifts' => $userAsgn->count(),
                 'payroll' => $payroll,
+                'cash_income' => $crewCashIncome,
+                'cash_expense' => $crewCashExpense,
+                'cash_balance' => $crewCashIncome - $crewCashExpense,
+                'cash_transactions' => $crewCashTransactions,
             ];
         }
 

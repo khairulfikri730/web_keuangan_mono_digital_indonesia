@@ -25,6 +25,9 @@
                 <a href="{{ route('schedules.attendances.index') }}" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-emerald-600 hover:text-white transition-colors flex items-center">
                     <i class="fas fa-camera mr-2"></i> Absensi
                 </a>
+                <a href="{{ route('schedules.payrolls.index') }}" class="px-4 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/50 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-purple-600 hover:text-white transition-colors flex items-center">
+                    <i class="fas fa-money-check-alt mr-2"></i> Payroll
+                </a>
             @else
                 <button type="button" class="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]">Hari Ini</button>
                 
@@ -579,6 +582,147 @@
                             <td class="px-3 py-3 text-right font-black text-emerald-400 text-base">Rp {{ number_format($salaryGrandTotal, 0, ',', '.') }}</td>
                         </tr>
                     </tfoot>
+                </table>
+            </div>
+            @endif
+        </div>
+
+        {{-- ========================================================= --}}
+        {{-- UANG CASH PHOTOBOX (SUPERADMIN) --}}
+        {{-- ========================================================= --}}
+        <div id="cash-photobox-section" class="bg-slate-900/60 border border-white/5 rounded-2xl p-6 backdrop-blur-xl mt-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                <div>
+                    <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2">
+                        <i class="fas fa-wallet text-blue-400"></i>
+                        Uang Cash Photobox Bulan {{ Carbon\Carbon::parse($crewCashMonth.'-01')->translatedFormat('F Y') }}
+                    </h3>
+                    <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-widest">Pantau uang tunai yang dipegang dan disetorkan oleh crew.</p>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    {{-- Total grand --}}
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-2 text-right">
+                        <p class="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Total Di Tangan Semua</p>
+                        <p class="text-lg font-black text-white">Rp {{ number_format($crewCashOverview->sum('balance'), 0, ',', '.') }}</p>
+                    </div>
+                    {{-- Filter user --}}
+                    <form id="cash-filter-form" method="GET" action="{{ route('dashboard') }}#cash-photobox-section" class="flex items-center gap-2">
+                        <input type="hidden" name="filter" value="{{ $filter }}">
+                        <select name="cash_user_id" onchange="document.getElementById('cash-filter-form').submit()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[160px]">
+                            <option value="">-- Semua Crew --</option>
+                            @foreach($allCrewUsers as $cu)
+                            <option value="{{ $cu->id }}" {{ $crewCashFilterUserId == $cu->id ? 'selected' : '' }}>
+                                {{ $cu->name }} ({{ $cu->role }})
+                            </option>
+                            @endforeach
+                        </select>
+                        @if($crewCashFilterUserId)
+                        <a href="{{ route('dashboard', ['filter' => $filter]) }}#cash-photobox-section" class="text-slate-400 hover:text-white text-xs px-2 py-2 rounded-lg hover:bg-slate-800 transition-colors" title="Reset filter">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        @endif
+                    </form>
+                </div>
+            </div>
+
+            @if($crewCashOverview->isEmpty())
+            <div class="py-10 text-center border border-dashed border-white/5 rounded-xl">
+                <i class="fas fa-wallet text-2xl text-slate-600 mb-2"></i>
+                <p class="text-sm text-slate-500">Tidak ada data uang cash aktif di bulan ini.</p>
+            </div>
+            @else
+            <div class="overflow-x-auto" x-data="{ expandedUser: null }">
+                <table class="w-full text-xs text-slate-300">
+                    <thead>
+                        <tr class="border-b border-white/5">
+                            <th class="text-left px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nama / Role</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Pemasukan (Tarik Tunai)</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-red-400 uppercase tracking-widest">Pengeluaran (Operasional/Pribadi)</th>
+                            <th class="text-right px-3 py-2 text-[10px] font-bold text-blue-400 uppercase tracking-widest">Sisa Di Tangan</th>
+                            <th class="text-center px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        @foreach($crewCashOverview as $cash)
+                        <tr class="hover:bg-slate-800/40 transition-colors group cursor-pointer" @click="expandedUser = expandedUser === {{ $cash['user']->id }} ? null : {{ $cash['user']->id }}">
+                            <td class="px-3 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-black text-slate-300 flex-shrink-0">
+                                        {{ strtoupper(substr($cash['user']->name, 0, 2)) }}
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-white">{{ $cash['user']->name }}</div>
+                                        <div class="text-[9px] text-slate-500 uppercase tracking-widest">{{ $cash['user']->role }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-3 py-3 text-right font-bold text-emerald-400">+ Rp {{ number_format($cash['income'], 0, ',', '.') }}</td>
+                            <td class="px-3 py-3 text-right font-bold text-red-400">- Rp {{ number_format($cash['expense'], 0, ',', '.') }}</td>
+                            <td class="px-3 py-3 text-right">
+                                <span class="font-black text-blue-400 text-sm">Rp {{ number_format($cash['balance'], 0, ',', '.') }}</span>
+                            </td>
+                            <td class="px-3 py-3 text-center">
+                                <button type="button" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-widest rounded transition-colors inline-block" title="Lihat Detail">
+                                    <i class="fas" :class="expandedUser === {{ $cash['user']->id }} ? 'fa-chevron-up' : 'fa-chevron-down'"></i> Detail
+                                </button>
+                            </td>
+                        </tr>
+                        {{-- Detail Row --}}
+                        <tr x-show="expandedUser === {{ $cash['user']->id }}" x-transition style="display: none;" class="bg-slate-900/40">
+                            <td colspan="5" class="p-4 border-t-0">
+                                <div class="rounded-xl border border-white/5 bg-slate-950/50 overflow-hidden">
+                                    <table class="w-full text-xs text-slate-300">
+                                        <thead>
+                                            <tr class="border-b border-white/5 bg-slate-900/50">
+                                                <th class="text-left px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tanggal</th>
+                                                <th class="text-left px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tipe</th>
+                                                <th class="text-left px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Keterangan</th>
+                                                <th class="text-right px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Jumlah</th>
+                                                <th class="text-center px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Hapus</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-white/5">
+                                            @forelse($cash['transactions'] as $trx)
+                                            <tr class="hover:bg-slate-800/40 transition-colors">
+                                                <td class="px-4 py-3">{{ \Carbon\Carbon::parse($trx->date)->format('d/m/Y') }}</td>
+                                                <td class="px-4 py-3">
+                                                    @if($trx->type === 'income')
+                                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400">Pemasukan</span>
+                                                    @elseif($trx->type === 'expense_operational')
+                                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/20 text-blue-400">Operasional</span>
+                                                    @else
+                                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-red-500/20 text-red-400">Pribadi/Kasbon</span>
+                                                    @endif
+                                                </td>
+                                                <td class="px-4 py-3">{{ $trx->description }}</td>
+                                                <td class="px-4 py-3 text-right">
+                                                    @if($trx->type === 'income')
+                                                        <span class="font-bold text-emerald-400">+Rp {{ number_format($trx->amount, 0, ',', '.') }}</span>
+                                                    @else
+                                                        <span class="font-bold text-red-400">-Rp {{ number_format($trx->amount, 0, ',', '.') }}</span>
+                                                    @endif
+                                                </td>
+                                                <td class="px-4 py-3 text-center">
+                                                    <form action="{{ route('schedules.crew-cash.destroy', $trx) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus transaksi ini?')">
+                                                        @csrf @method('DELETE')
+                                                        <button type="submit" class="text-slate-400 hover:text-red-400 transition-colors"><i class="fas fa-trash"></i></button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            @empty
+                                            <tr>
+                                                <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                                                    Belum ada transaksi
+                                                </td>
+                                            </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
                 </table>
             </div>
             @endif

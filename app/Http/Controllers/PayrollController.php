@@ -83,7 +83,22 @@ class PayrollController extends Controller
             $motret = $payroll ? $payroll->photographer_fee : 0;
             $lembur = $payroll ? $payroll->overtime_fee : 0;
             $bonus = $payroll ? $payroll->bonus : 0;
-            $kasbon = $payroll ? $payroll->deduction : 0;
+            // 4. Crew Cash Photobox
+            $crewCashIncome = \App\Models\CrewCashTransaction::where('user_id', $user->id)
+                ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
+                ->where('type', 'income')
+                ->sum('amount');
+            $crewCashExpenseOperational = \App\Models\CrewCashTransaction::where('user_id', $user->id)
+                ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
+                ->where('type', 'expense_operational')
+                ->sum('amount');
+            $crewCashExpensePersonal = \App\Models\CrewCashTransaction::where('user_id', $user->id)
+                ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
+                ->where('type', 'expense_personal')
+                ->sum('amount');
+            
+            $crewCashExpense = $crewCashExpenseOperational + $crewCashExpensePersonal;
+            $kasbon = ($payroll ? $payroll->deduction : 0) + $crewCashExpensePersonal;
 
             $totalKotor = $komisiShift + $allowance + $motret + $lembur + $bonus;
             $totalBersih = $totalKotor - $kasbon;
@@ -100,6 +115,9 @@ class PayrollController extends Controller
                 'bonus' => $bonus,
                 'kasbon' => $kasbon,
                 'total_bersih' => $totalBersih,
+                'cash_income' => $crewCashIncome,
+                'cash_expense' => $crewCashExpense,
+                'cash_balance' => $crewCashIncome - $crewCashExpense,
             ];
         }
         
