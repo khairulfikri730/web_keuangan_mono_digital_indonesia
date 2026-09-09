@@ -269,7 +269,7 @@
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
-                                <div><span class="text-xs font-bold text-slate-200">Auto Open Drawer</span><p class="text-[9px] text-indigo-400">RJ11 Trigger</p></div>
+                                <div><span class="text-xs font-bold text-slate-200">Auto Open Drawer</span><p class="text-[9px] text-indigo-400">RJ11 saat Tunai</p></div>
                                 <input type="hidden" name="drawer_auto_open" value="0"><input type="checkbox" name="drawer_auto_open" value="1" class="sr-only peer" {{ ($settings['drawer_auto_open'] ?? '0') == '1' ? 'checked' : '' }}><div class="w-10 h-5 bg-slate-700 rounded-full peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 relative"></div>
                             </label>
                             <div>
@@ -280,6 +280,10 @@
                                 </div>
                             </div>
                         </div>
+                        <label class="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded-xl cursor-pointer hover:border-amber-500/50 transition-all mt-3">
+                            <div><span class="text-xs font-bold text-slate-200">Buka Laci Saat Tutup Shift</span><p class="text-[9px] text-amber-400">ON: Laci terbuka saat klik Tutup Shift di POS &nbsp;|&nbsp; OFF: Tidak terbuka</p></div>
+                            <input type="hidden" name="drawer_open_on_close_shift" value="0"><input type="checkbox" name="drawer_open_on_close_shift" value="1" class="sr-only peer" {{ ($settings['drawer_open_on_close_shift'] ?? '1') == '1' ? 'checked' : '' }}><div class="w-10 h-5 bg-slate-700 rounded-full peer-checked:bg-amber-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 relative shrink-0 ml-2"></div>
+                        </label>
                         <div class="mt-3" x-data="cashDrawerTest" x-init="loadConnection()">
                             <div class="flex items-center gap-2 mb-2">
                                 <div :class="printerStatus === 'connected' ? 'bg-emerald-500' : 'bg-slate-500'" class="w-2.5 h-2.5 rounded-full animate-pulse"></div>

@@ -27,7 +27,7 @@ class PosController extends Controller
             'custom_price_enabled', 'custom_price_allow_hpp', 'custom_price_show_badge',
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
             'cashout_source_access', 'cashout_role_access', 'cashout_manual_date',
-            'drawer_auto_open', 'drawer_pulse_pin',
+            'drawer_auto_open', 'drawer_pulse_pin', 'drawer_open_on_close_shift',
             'printer_paper_size', 'printer_auto_print', 'printer_font_small'
         ]);
         

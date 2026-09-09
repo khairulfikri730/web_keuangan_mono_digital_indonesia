@@ -1536,7 +1536,65 @@
     <iframe id="print-iframe" style="display:none;"></iframe>
 
 <script>
-function openTutupShift() {
+async function openCashDrawerForPos() {
+    try {
+        // Cek setting Buka Laci Saat Tutup Shift (drawer_open_on_close_shift)
+        // ON = laci terbuka saat klik Tutup Shift, OFF = tidak terbuka
+        const alpineEl = document.querySelector('[x-data]');
+        const alpineData = alpineEl && alpineEl.__x ? alpineEl.__x.$data : null;
+        let autoOpen = null;
+        if (alpineData && typeof alpineData.shiftCloseDrawerAutoOpen !== 'undefined') {
+            autoOpen = alpineData.shiftCloseDrawerAutoOpen;
+        } else {
+            autoOpen = {{ ($settings['drawer_open_on_close_shift'] ?? '1') === '1' ? 'true' : 'false' }};
+        }
+        if (!autoOpen) return;
+        if (!navigator.usb) return;
+        const savedRaw = localStorage.getItem('pos_printer_settings');
+        if (!savedRaw) return;
+        const s = JSON.parse(savedRaw);
+        if (s.connectionMethod !== 'usb_direct' || !s.printerName) return;
+        let pin = {{ (int)($settings['drawer_pulse_pin'] ?? 0) }};
+        if (alpineData && typeof alpineData.drawerPulsePin !== 'undefined') pin = alpineData.drawerPulsePin;
+        if (typeof s.drawerPulsePin !== 'undefined') pin = s.drawerPulsePin;
+        const devices = await navigator.usb.getDevices();
+        const device = devices.find(d => d.productName === s.printerName);
+        if (!device) return;
+        if (!device.opened) await device.open();
+        await device.selectConfiguration(1);
+        let ifaceNum = -1, epOut = -1;
+        for (const iface of device.configuration.interfaces) {
+            for (const alt of iface.alternates) {
+                if (alt.interfaceClass === 7) {
+                    ifaceNum = iface.interfaceNumber;
+                    for (const ep of alt.endpoints) {
+                        if (ep.direction === 'out') { epOut = ep.endpointNumber; break; }
+                    }
+                }
+            }
+            if (ifaceNum !== -1 && epOut !== -1) break;
+        }
+        if (ifaceNum === -1 || epOut === -1) {
+            for (const iface of device.configuration.interfaces) {
+                for (const alt of iface.alternates) {
+                    for (const ep of alt.endpoints) {
+                        if (ep.direction === 'out') { ifaceNum = iface.interfaceNumber; epOut = ep.endpointNumber; break; }
+                    }
+                    if (ifaceNum !== -1) break;
+                }
+                if (ifaceNum !== -1) break;
+            }
+        }
+        if (ifaceNum === -1 || epOut === -1) return;
+        await device.claimInterface(ifaceNum);
+        await device.transferOut(epOut, new Uint8Array([0x1B, 0x70, pin, 0x19, 0xFA]));
+        await device.releaseInterface(ifaceNum);
+        await device.close();
+    } catch (e) { console.error('Drawer POS error:', e); }
+}
+
+async function openTutupShift() {
+    try { await openCashDrawerForPos(); } catch(e) { console.error(e); }
     document.getElementById('modal-tutup-shift').classList.remove('hidden');
     setTimeout(() => document.getElementById('closing_cash_display')?.focus(), 100);
 }
@@ -1699,6 +1757,7 @@ function closeCashOut() {
             printerFeedLines: {{ $settings['printer_feed_lines'] ?? 0 }},
             drawerAutoOpen: {{ ($settings['drawer_auto_open'] ?? '0') === '1' ? 'true' : 'false' }},
             drawerPulsePin: {{ $settings['drawer_pulse_pin'] ?? '0' }},
+            shiftCloseDrawerAutoOpen: {{ ($settings['drawer_open_on_close_shift'] ?? '1') === '1' ? 'true' : 'false' }},
             isScanning: false,
             discoveredDevices: [],
             
