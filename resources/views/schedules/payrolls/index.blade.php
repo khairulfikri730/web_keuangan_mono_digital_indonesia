@@ -19,9 +19,7 @@
         this.form[field] = raw ? parseInt(raw) : 0;
         this.formatted[field] = this.formatRupiah(raw);
     },
-    openEdit(userStr, payrollStr) {
-        let u = JSON.parse(userStr);
-        let p = payrollStr ? JSON.parse(payrollStr) : null;
+    openEdit(u, p) {
         this.currentUser = u;
         this.form.user_id = u.id;
         
@@ -201,7 +199,17 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 text-center align-top">
-                            <button @click="openEdit('{{ $data['user']->toJson() }}', '{{ $data['payroll'] ? $data['payroll']->toJson() : '' }}')" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-emerald-500 hover:text-white transition-colors text-slate-400 flex items-center justify-center inline-flex">
+                            <button @click="openEdit({{ \Illuminate\Support\Js::from(["id" => $data["user"]->id, "name" => $data["user"]->name]) }}, {{ \Illuminate\Support\Js::from($data["payroll"] ? [
+                                "photographer_fee" => $data["payroll"]->photographer_fee,
+                                "overtime_fee" => $data["payroll"]->overtime_fee,
+                                "bonus" => $data["payroll"]->bonus,
+                                "deduction" => $data["payroll"]->deduction,
+                                "photographer_fee_note" => $data["payroll"]->photographer_fee_note,
+                                "overtime_fee_note" => $data["payroll"]->overtime_fee_note,
+                                "bonus_note" => $data["payroll"]->bonus_note,
+                                "deduction_note" => $data["payroll"]->deduction_note,
+                                "notes" => $data["payroll"]->notes,
+                            ] : null) }})" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-emerald-500 hover:text-white transition-colors text-slate-400 flex items-center justify-center inline-flex">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>
