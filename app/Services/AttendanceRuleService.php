@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\OvertimeRequest;
 use App\Models\ScheduleAssignment;
 use App\Models\ScheduleLocation;
 use App\Models\ScheduleShift;
@@ -34,6 +35,22 @@ class AttendanceRuleService
     }
 
     /**
+     * Absen keluar yang menutup sebuah absen masuk. Dipilih berdasarkan urutan waktu
+     * pencatatan, bukan kesamaan tanggal, karena absen keluar setelah tengah malam
+     * tercatat pada tanggal hari berikutnya.
+     */
+    public static function closingOut(Attendance $in): ?Attendance
+    {
+        $next = Attendance::where('user_id', $in->user_id)
+            ->where('schedule_location_id', $in->schedule_location_id)
+            ->where('created_at', '>', $in->created_at)
+            ->orderBy('created_at')
+            ->first();
+
+        return $next && $next->type === 'out' ? $next : null;
+    }
+
+    /**
      * Satu sesi absen = satu crew di satu lokasi pada satu tanggal operasional,
      * sehingga lokasi dengan 2 shift tetap cukup absen masuk sekali dan keluar sekali.
      */
@@ -49,14 +66,7 @@ class AttendanceRuleService
             ->get();
 
         foreach ($ins as $in) {
-            $closedOut = Attendance::where('user_id', $user->id)
-                ->where('schedule_location_id', $location->id)
-                ->where('type', 'out')
-                ->whereDate('date', $in->date->format('Y-m-d'))
-                ->where('created_at', '>', $in->created_at)
-                ->exists();
-
-            if (!$closedOut) {
+            if (!self::closingOut($in)) {
                 return $in;
             }
         }
@@ -165,6 +175,63 @@ class AttendanceRuleService
     }
 
     /**
+     * Tandai sesi yang absen masuknya tidak pernah ditutup sampai melewati batas
+     * toleransi. Dipanggil setiap kali data absensi dibaca sehingga server tidak
+     * memerlukan cron.
+     *
+     * @return int jumlah sesi yang baru ditandai
+     */
+    public static function markMissingCheckOut(?Carbon $now = null): int
+    {
+        if (!self::enforcementEnabled()) {
+            return 0;
+        }
+
+        $now = $now ?? Carbon::now();
+        $marked = 0;
+
+        foreach (self::recentSessions(30, $now) as $session) {
+            $in = $session['in'];
+
+            if (!$in || $session['out'] || !$in->user || !$in->location) {
+                continue;
+            }
+
+            $window = self::sessionWindow(
+                self::assignmentsFor($in->user, $in->location, $session['date']),
+                $session['date']
+            );
+            $deadline = self::missingDeadline($window);
+
+            if (!$deadline || !$deadline->lessThan($now)) {
+                continue;
+            }
+
+            $violations = (array) ($in->violations ?? []);
+
+            if (array_key_exists(self::MISSING_CHECK_OUT, $violations)) {
+                continue;
+            }
+
+            $violations[self::MISSING_CHECK_OUT] = (int) $window['out'][1]->diffInMinutes($now, false);
+            $in->update(['violations' => $violations]);
+            $marked++;
+        }
+
+        return $marked;
+    }
+
+    /**
+     * Semua aturan absensi yang berjalan saat halaman dibaca: nilai ulang status,
+     * buatkan pengajuan lembur, dan tandai sesi yang lupa ditutup.
+     */
+    public static function enforceRecentRules(?Carbon $now = null): void
+    {
+        self::reassess($now);
+        self::markMissingCheckOut($now);
+    }
+
+    /**
      * Batas akhir sesi masih wajar belum absen keluar.
      *
      * @param array{in: array{0: ?Carbon, 1: ?Carbon}, out: array{0: ?Carbon, 1: ?Carbon}} $window
@@ -197,72 +264,159 @@ class AttendanceRuleService
     }
 
     /**
-     * Sesi yang absen masuknya tidak pernah ditutup hingga melewati batas toleransi
-     * dinyatakan lupa absen keluar. Dipanggil setiap kali data absensi dibaca sehingga
-     * tidak memerlukan cron pada server.
+     * Susun sesi absen dari urutan pencatatan per crew dan lokasi. Absen keluar yang
+     * tercatat setelah tengah malam tetap menjadi penutup sesi hari sebelumnya.
      *
-     * Hanya baris yang sudah dinilai (violations terisi) dan masih baru yang diperiksa,
-     * supaya data lama sebelum jendela absen ada tidak ikut ditandai.
-     *
-     * @return int jumlah sesi yang baru ditandai
+     * @return array<int, array{user: User, location: ScheduleLocation, date: string, in: ?Attendance, out: ?Attendance}>
      */
-    public static function markMissingCheckOut(?Carbon $now = null): int
+    public static function recentSessions(int $days = 30, ?Carbon $until = null): array
     {
-        if (!self::enforcementEnabled()) {
-            return 0;
-        }
+        $from = Carbon::now()->subDays($days)->startOfDay();
+        $until = $until ?? Carbon::now();
 
-        $now = $now ?? Carbon::now();
-        $since = $now->copy()->subDays(30)->toDateString();
-        $until = $now->toDateString();
-
-        $lastOut = Attendance::where('type', 'out')
-            ->whereBetween('date', [$since, $until])
-            ->get(['user_id', 'schedule_location_id', 'date', 'created_at'])
-            ->reduce(function (array $carry, Attendance $out) {
-                $key = $out->user_id . '-' . $out->schedule_location_id . '-' . $out->date->toDateString();
-                $previous = $carry[$key] ?? null;
-                $carry[$key] = $previous && $previous->greaterThan($out->created_at) ? $previous : $out->created_at;
-
-                return $carry;
-            }, []);
-
-        $marked = 0;
-
-        $ins = Attendance::with(['user', 'location'])
-            ->where('type', 'in')
-            ->whereNotNull('violations')
-            ->whereBetween('date', [$since, $until])
+        $rows = Attendance::with(['user', 'location'])
+            ->whereBetween('created_at', [$from, $until])
+            ->orderBy('created_at')
             ->get();
 
-        foreach ($ins as $in) {
-            $key = $in->user_id . '-' . $in->schedule_location_id . '-' . $in->date->toDateString();
-            $closedAt = $lastOut[$key] ?? null;
+        $sessions = [];
 
-            if ($closedAt && $closedAt->greaterThan($in->created_at)) {
-                continue;
+        foreach ($rows->groupBy(fn (Attendance $row) => $row->user_id . '-' . $row->schedule_location_id) as $group) {
+            $pending = null;
+
+            foreach ($group as $row) {
+                if ($row->type === 'in') {
+                    if ($pending) {
+                        $sessions[] = self::sessionOf($pending, null);
+                    }
+                    $pending = $row;
+                    continue;
+                }
+
+                if ($pending) {
+                    $sessions[] = self::sessionOf($pending, $row);
+                    $pending = null;
+                    continue;
+                }
+
+                $sessions[] = self::sessionOf(null, $row);
             }
 
-            $date = $in->date->toDateString();
-            $window = self::sessionWindow(self::assignmentsFor($in->user, $in->location, $date), $date);
-            $deadline = self::missingDeadline($window);
-
-            if (!$deadline || !$deadline->lessThan($now)) {
-                continue;
+            if ($pending) {
+                $sessions[] = self::sessionOf($pending, null);
             }
-
-            $violations = (array) ($in->violations ?? []);
-
-            if (array_key_exists(self::MISSING_CHECK_OUT, $violations)) {
-                continue;
-            }
-
-            $violations[self::MISSING_CHECK_OUT] = (int) $window['out'][1]->diffInMinutes($now, false);
-            $in->update(['violations' => $violations]);
-            $marked++;
         }
 
-        return $marked;
+        return $sessions;
+    }
+
+    private static function sessionOf(?Attendance $in, ?Attendance $out): array
+    {
+        $base = $in ?? $out;
+
+        return [
+            'user' => $base->user,
+            'location' => $base->location,
+            'date' => ($in ?? $out)->date->toDateString(),
+            'in' => $in,
+            'out' => $out,
+        ];
+    }
+
+    /**
+     * Nilai ulang absensi yang tercatat sebelum jendela waktu diatur, dan buatkan
+     * pengajuan lembur otomatis untuk absen keluar yang lewat batas. Nama crew dan
+     * jamnya tidak diubah, hanya statusnya yang mengikuti jendela saat ini.
+     *
+     * @return array{dinilai: int, lembur: int}
+     */
+    public static function reassess(?Carbon $now = null): array
+    {
+        if (!self::enforcementEnabled()) {
+            return ['dinilai' => 0, 'lembur' => 0];
+        }
+
+        $updated = $overtimes = 0;
+
+        foreach (self::recentSessions(30, $now) as $session) {
+            if (!$session['in'] && !$session['out']) {
+                continue;
+            }
+
+            if (!$session['user'] || !$session['location']) {
+                continue;
+            }
+
+            $window = self::sessionWindow(
+                self::assignmentsFor($session['user'], $session['location'], $session['date']),
+                $session['date']
+            );
+
+            if (!$window['in'][1] && !$window['out'][1]) {
+                continue;
+            }
+
+            foreach (['in' => $session['in'], 'out' => $session['out']] as $type => $row) {
+                if (!$row) {
+                    continue;
+                }
+
+                $violations = self::timeViolations($type, $row->created_at, $window);
+
+                $existing = (array) ($row->violations ?? []);
+
+                // Jarak radius dan keputusan lupa absen keluar adalah penilaian yang
+                // sudah dibuat, jadi tidak dihitung ulang.
+                foreach ([self::OUT_OF_RADIUS, self::MISSING_CHECK_OUT] as $keep) {
+                    if (isset($existing[$keep])) {
+                        $violations[$keep] = $existing[$keep];
+                    }
+                }
+
+                // Absen keluar setelah tengah malam tercatat pada tanggal shift asalnya.
+                $date = $type === 'out' ? $session['date'] : $row->date->toDateString();
+
+                if ($violations !== (array) ($row->violations ?? []) || $date !== $row->date->toDateString()) {
+                    $row->update(['violations' => $violations, 'date' => $date]);
+                    $updated++;
+                }
+            }
+
+            if ($session['out'] && !$session['in']) {
+                continue;
+            }
+
+            $minutes = self::overtimeMinutes(
+                $session['out']?->created_at ?? $now ?? Carbon::now(),
+                $window['out'][1]
+            );
+
+            $known = OvertimeRequest::where('user_id', $session['user']->id)
+                ->where('schedule_location_id', $session['location']->id)
+                ->whereDate('date', $session['date'])
+                ->exists();
+
+            if ($session['out'] && $minutes > 0 && !$known) {
+                $rate = self::overtimeRate();
+
+                OvertimeRequest::create([
+                    'user_id' => $session['user']->id,
+                    'schedule_location_id' => $session['location']->id,
+                    'date' => $session['date'],
+                    'window_end_at' => $window['out'][1],
+                    'check_out_at' => $session['out']->created_at,
+                    'minutes' => $minutes,
+                    'rate_per_hour' => $rate,
+                    'amount' => OvertimeRequest::amountFor($minutes, $rate),
+                    'note' => 'Lembur terdeteksi otomatis dari absen keluar',
+                    'status' => OvertimeRequest::STATUS_PENDING,
+                ]);
+
+                $overtimes++;
+            }
+        }
+
+        return ['dinilai' => $updated, 'lembur' => $overtimes];
     }
 
     /**

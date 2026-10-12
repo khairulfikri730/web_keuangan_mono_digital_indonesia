@@ -10,6 +10,7 @@ use App\Models\ScheduleAssignment;
 use App\Models\ScheduleLocation;
 use App\Models\ScheduleShift;
 use App\Models\User;
+use App\Services\AttendanceRuleService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -705,6 +706,142 @@ class AttendanceRuleTest extends TestCase
             'Sesi yang ditandai lupa absen tidak boleh ditutup diam-diam oleh isi otomatis.');
         $this->assertSame(2, Attendance::where('date', '2026-10-12')->count(),
             'Sesi lain yang bersih tetap diisi.');
+    }
+
+    public function test_absen_keluar_setelah_tengah_malam_menutup_sesi_kemarin(): void
+    {
+        \App\Models\Setting::set('overtime_rate_per_hour', '15000');
+
+        $shift = $this->makeShift([
+            'check_in_start' => '18:40:00',
+            'check_in_end' => '19:00:00',
+            'check_out_start' => '23:00:00',
+            'check_out_end' => '23:20:00',
+        ]);
+        $this->assign($shift, '2026-10-10');
+
+        // Baris lama: tercatat sebelum jendela waktu ada, jadi statusnya belum dinilai.
+        $in = new Attendance([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'schedule_shift_id' => $shift->id, 'type' => 'in', 'date' => '2026-10-10',
+            'status' => 'in_radius', 'notes' => 'hujan deras, telat datang',
+        ]);
+        $in->created_at = Carbon::parse('2026-10-10 20:55:00');
+        $in->save();
+
+        $out = new Attendance([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'schedule_shift_id' => $shift->id, 'type' => 'out', 'date' => '2026-10-11',
+            'status' => 'in_radius',
+        ]);
+        $out->created_at = Carbon::parse('2026-10-11 00:49:00');
+        $out->save();
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+        $this->get(route('schedules.attendances.index'));
+
+        $this->assertSame(['late_check_in' => 115], $in->fresh()->violations, 'Status dinilai ulang dari jam aslinya.');
+        $this->assertSame('2026-10-10', $out->fresh()->date->toDateString(), 'Absen keluar ikut tanggal shift asalnya.');
+        $this->assertSame([], $out->fresh()->violations);
+
+        $overtime = OvertimeRequest::sole();
+        $this->assertSame(89, $overtime->minutes);
+        $this->assertSame(22250, $overtime->amount);
+        $this->assertSame('2026-10-10', $overtime->date->toDateString());
+    }
+
+    public function test_sesi_lintas_tengah_malam_tidak_lagi_disebut_belum_absen_keluar(): void
+    {
+        $shift = $this->makeShift(['check_out_start' => '23:00:00', 'check_out_end' => '23:20:00']);
+        $this->assign($shift, '2026-10-10');
+
+        $in = Attendance::create([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'schedule_shift_id' => $shift->id, 'type' => 'in', 'date' => '2026-10-10',
+            'status' => 'in_radius', 'violations' => [],
+        ]);
+        $in->created_at = Carbon::parse('2026-10-10 19:00:00');
+        $in->save();
+
+        $out = Attendance::create([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'schedule_shift_id' => $shift->id, 'type' => 'out', 'date' => '2026-10-11',
+            'status' => 'in_radius', 'violations' => [],
+        ]);
+        $out->created_at = Carbon::parse('2026-10-11 00:49:00');
+        $out->save();
+
+        $this->assertNotNull(AttendanceRuleService::closingOut($in->fresh()));
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+
+        $response = $this->get(route('schedules.attendances.index', ['date' => '2026-10-10']));
+
+        // Sesi dianggap tertutup, jadi tidak ada baris yang menunggu tindakan owner.
+        $this->assertEmpty($response->viewData('openIds'));
+        $this->assertSame([], $in->fresh()->violations);
+        $this->assertSame([], $out->fresh()->violations);
+    }
+
+    public function test_status_lembur_dari_koreksi_owner_membuat_pengajuan_lembur_otomatis(): void
+    {
+        \App\Models\Setting::set('overtime_rate_per_hour', '15000');
+
+        $shift = $this->makeShift([
+            'check_in_start' => '09:20:00', 'check_in_end' => '09:40:00',
+            'check_out_start' => '22:00:00', 'check_out_end' => '22:20:00',
+        ]);
+        $this->assign($shift, '2026-10-12');
+
+        $this->actingAs($this->crew);
+        Carbon::setTestNow('2026-10-12 09:30:00');
+        $this->clockIn();
+        Carbon::setTestNow('2026-10-12 23:50:00');
+        $this->clockOut();
+
+        $out = Attendance::where('type', 'out')->sole();
+
+        $owner = User::factory()->create(['role' => 'owner']);
+        $this->actingAs($owner);
+
+        $this->put(route('schedules.attendances.update', $out), [
+            'date' => '2026-10-12',
+            'time' => '23:50',
+            'status' => 'lembur',
+            'notes' => 'Lembur packing produk',
+        ])->assertSessionHas('success');
+
+        $overtime = OvertimeRequest::sole();
+        $this->assertSame(90, $overtime->minutes);
+        $this->assertSame(22500, $overtime->amount);
+        $this->assertSame(OvertimeRequest::STATUS_PENDING, $overtime->status);
+        $this->assertSame([], $out->fresh()->violations);
+    }
+
+    public function test_log_absensi_memakai_sepuluh_baris_saat_default(): void
+    {
+        $shift = $this->makeShift();
+
+        for ($day = 1; $day <= 12; $day++) {
+            Attendance::create([
+                'user_id' => $this->crew->id,
+                'schedule_location_id' => $this->location->id,
+                'schedule_shift_id' => $shift->id,
+                'type' => 'in',
+                'date' => sprintf('2026-10-%02d', $day),
+                'status' => 'in_radius',
+                'violations' => [],
+            ]);
+        }
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+
+        $this->get(route('schedules.attendances.index'))
+            ->assertSee('10 baris')
+            ->assertViewHas('perPage', 10);
+
+        $this->get(route('schedules.attendances.index', ['per_page' => 25]))
+            ->assertViewHas('perPage', 25);
     }
 
     public function test_laporan_pdf_absensi_harian_mingguan_dan_bulanan(): void

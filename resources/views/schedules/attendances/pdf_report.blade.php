@@ -74,10 +74,7 @@
                     @else
                         @foreach($session['violations'] as $code => $value)
                             <span class="violation">{{ \App\Services\AttendanceRuleService::labels()[$code] ?? $code }}</span>
-                            @if($code !== \App\Services\AttendanceRuleService::MISSING_CHECK_OUT)
-                                <span class="sub">{{ $code === 'out_of_radius' ? $value . ' m' : $value . ' menit' }}</span>
-                            @endif
-                            <br>
+                            <span class="sub">{{ $code === 'out_of_radius' ? $value . ' m' : $value . ' menit' }}</span><br>
                         @endforeach
                     @endif
                 </td>

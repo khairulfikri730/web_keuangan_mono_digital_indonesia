@@ -17,7 +17,7 @@ class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
-        AttendanceRuleService::markMissingCheckOut();
+        AttendanceRuleService::enforceRecentRules();
 
         $query = Attendance::with(['user', 'location', 'shift', 'overtimeRequest'])
             ->orderByDesc('date')
@@ -42,16 +42,12 @@ class AttendanceController extends Controller
             }
         }
 
-        $attendances = $query->paginate(20)->withQueryString();
+        $perPage = in_array((int) $request->input('per_page'), [10, 25, 50, 100]) ? (int) $request->input('per_page') : 10;
+        $attendances = $query->paginate($perPage)->withQueryString();
 
         // Absen masuk yang belum ditutup, agar owner dapat melengkapinya.
         $openIds = $attendances->filter(fn (Attendance $row) => $row->type === 'in')
-            ->filter(fn (Attendance $row) => !Attendance::where('user_id', $row->user_id)
-                ->where('schedule_location_id', $row->schedule_location_id)
-                ->where('type', 'out')
-                ->whereDate('date', $row->date->toDateString())
-                ->where('created_at', '>', $row->created_at)
-                ->exists())
+            ->filter(fn (Attendance $row) => !AttendanceRuleService::closingOut($row))
             ->pluck('id')
             ->all();
 
@@ -61,7 +57,7 @@ class AttendanceController extends Controller
         $canManage = $this->isOwner();
 
         return view('schedules.attendances.index', compact(
-            'attendances', 'locations', 'openIds', 'users', 'overtimeRate', 'canManage'
+            'attendances', 'locations', 'openIds', 'users', 'overtimeRate', 'canManage', 'perPage'
         ));
     }
 
@@ -304,18 +300,22 @@ class AttendanceController extends Controller
             'date' => 'required|date',
             'time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:500',
-            'status' => 'required|in:auto,clean,unjudged,' . implode(',', array_keys(AttendanceRuleService::labels())),
+            'status' => 'required|in:auto,clean,unjudged,lembur,' . implode(',', array_keys(AttendanceRuleService::labels())),
         ], [], ['status' => 'status absensi']);
 
         $moment = Carbon::parse($data['date'] . ' ' . $data['time']);
         $assignments = AttendanceRuleService::assignmentsFor($attendance->user, $attendance->location, $data['date']);
         $window = AttendanceRuleService::sessionWindow($assignments, $data['date']);
 
+        if ($data['status'] === 'lembur' && $attendance->type !== 'out') {
+            return back()->with('error', 'Status Lembur hanya berlaku untuk absen keluar.');
+        }
+
         $radius = (array) ($attendance->violations ?? []);
         $radius = $radius[AttendanceRuleService::OUT_OF_RADIUS] ?? null;
 
         $violations = match ($data['status']) {
-            'clean' => [],
+            'clean', 'lembur' => [],
             'unjudged' => null,
             'auto' => AttendanceRuleService::timeViolations($attendance->type, $moment, $window),
             default => [$data['status'] => $this->violationValue($data['status'], $moment, $window, $attendance)],
@@ -336,7 +336,43 @@ class AttendanceController extends Controller
         $attendance->created_at = $moment;
         $attendance->save();
 
-        return back()->with('success', 'Absensi ' . ($attendance->user->name ?? 'crew') . ' diperbarui.');
+        $messages = ['Absensi ' . ($attendance->user->name ?? 'crew') . ' diperbarui.'];
+
+        if ($data['status'] === 'lembur') {
+            $minutes = AttendanceRuleService::overtimeMinutes($moment, $window['out'][1]);
+
+            if ($minutes <= 0) {
+                return back()->with('error', 'Jam absen keluar ' . $moment->format('H:i')
+                    . ' belum lewat batas jendela' . ($window['out'][1] ? ' (' . $window['out'][1]->format('H:i') . ')' : '')
+                    . ', jadi tidak bisa dinilai lembur. Atur dulu jendela absen keluarnya di Master Shift.');
+            }
+
+            $rate = AttendanceRuleService::overtimeRate();
+            $overtime = OvertimeRequest::updateOrCreate(
+                [
+                    'user_id' => $attendance->user_id,
+                    'date' => $data['date'],
+                    'schedule_location_id' => $attendance->schedule_location_id,
+                ],
+                [
+                    'window_end_at' => $window['out'][1],
+                    'check_out_at' => $moment,
+                    'minutes' => $minutes,
+                    'rate_per_hour' => $rate,
+                    'amount' => OvertimeRequest::amountFor($minutes, $rate),
+                    'note' => $request->input('notes') ?: 'Lembur tercatat dari absensi ' . $moment->format('H:i'),
+                    'status' => OvertimeRequest::STATUS_PENDING,
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'payroll_entry_id' => null,
+                ]
+            );
+
+            $messages[] = 'Lembur ' . $overtime->durationLabel() . ' senilai Rp '
+                . number_format($overtime->amount, 0, ',', '.') . ' langsung masuk ke Rekap Lembur.';
+        }
+
+        return back()->with('success', implode(' ', $messages));
     }
 
     /**
@@ -364,12 +400,7 @@ class AttendanceController extends Controller
 
         $date = $attendance->date->toDateString();
 
-        $hasOut = Attendance::where('user_id', $attendance->user_id)
-            ->where('schedule_location_id', $attendance->schedule_location_id)
-            ->where('type', 'out')
-            ->whereDate('date', $date)
-            ->where('created_at', '>', $attendance->created_at)
-            ->exists();
+        $hasOut = AttendanceRuleService::closingOut($attendance);
 
         if ($hasOut) {
             return back()->with('error', 'Sesi ini sudah memiliki absen keluar.');
@@ -574,7 +605,7 @@ class AttendanceController extends Controller
      */
     public function report(Request $request)
     {
-        AttendanceRuleService::markMissingCheckOut();
+        AttendanceRuleService::enforceRecentRules();
 
         [$from, $to, $periodLabel] = AttendanceRuleService::reportPeriod(
             $request->input('period', 'daily'),

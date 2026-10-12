@@ -1,6 +1,8 @@
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'auto-fill-attendance') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
-    <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
-    <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-lg m-4 z-10">
+<div x-data="{ show: false }" @open-modal.window="if ($event.detail === 'auto-fill-attendance') show = true" @close-modal.window="show = false">
+    <template x-teleport="body">
+        <div x-show="show" x-cloak class="fixed inset-0 z-[99] flex items-center justify-center p-4">
+            <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
+            <div class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-lg z-10 max-h-[92vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center">
             <h3 class="text-lg font-black text-white"><i class="fas fa-magic text-emerald-400 mr-2"></i>Isi Absensi Otomatis</h3>
             <button @click="show = false" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
@@ -52,5 +54,7 @@
                 </button>
             </div>
         </form>
-    </div>
+            </div>
+        </div>
+    </template>
 </div>

@@ -139,15 +139,18 @@ class SchedulePagesTest extends TestCase
     {
         $lain = User::factory()->create(['role' => 'crew', 'is_active' => true]);
 
-        Attendance::create([
+        $telat = new Attendance([
             'user_id' => $this->crew->id,
             'schedule_location_id' => $this->location->id,
             'schedule_shift_id' => $this->shift->id,
             'type' => 'in',
             'date' => now()->toDateString(),
             'status' => 'in_radius',
-            'violations' => ['late_check_in' => 9],
+            'violations' => ['late_check_in' => 15],
         ]);
+        // 09:55, 15 menit sesudah jendela absen masuk 09:20 - 09:40.
+        $telat->created_at = now()->setTime(9, 55);
+        $telat->save();
 
         Attendance::create([
             'user_id' => $lain->id,
@@ -160,20 +163,15 @@ class SchedulePagesTest extends TestCase
             'violations' => ['out_of_radius' => 800],
         ]);
 
-        // Nama crew juga tampil di dropdown "Isi Otomatis", jadi cukup periksa isi tabel.
-        $tbody = function ($html) {
-            return preg_match('/<tbody.*?>(.*?)<\/tbody>/s', $html, $m) ? $m[1] : '';
-        };
+        // Periksa data yang dikirim ke view, bukan HTML-nya, karena nama crew juga
+        // tampil di dropdown filter dan modal "Isi Otomatis".
+        $late = $this->actingAs($this->owner)->get('/schedules/attendances?violation=late_check_in')
+            ->assertOk()->viewData('attendances');
+        $this->assertSame([$this->crew->name], $late->pluck('user.name')->all());
 
-        $late = $tbody($this->actingAs($this->owner)->get('/schedules/attendances?violation=late_check_in')
-            ->assertOk()->getContent());
-        $this->assertStringContainsString($this->crew->name, $late);
-        $this->assertStringNotContainsString($lain->name, $late);
-
-        $radius = $tbody($this->actingAs($this->owner)->get('/schedules/attendances?violation=out_of_radius')
-            ->assertOk()->getContent());
-        $this->assertStringContainsString($lain->name, $radius);
-        $this->assertStringNotContainsString($this->crew->name, $radius);
+        $radius = $this->actingAs($this->owner)->get('/schedules/attendances?violation=out_of_radius')
+            ->assertOk()->viewData('attendances');
+        $this->assertSame([$lain->name], $radius->pluck('user.name')->all());
     }
 
     public function test_halaman_jadwal_dan_absensiversi_crew(): void

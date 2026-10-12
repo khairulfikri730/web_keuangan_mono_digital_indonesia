@@ -73,6 +73,15 @@
                 </select>
             </div>
 
+            <div class="w-full md:w-auto">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Jumlah Baris</label>
+                <select name="per_page" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                    @foreach([10, 25, 50, 100] as $size)
+                        <option value="{{ $size }}" {{ $perPage === $size ? 'selected' : '' }}>{{ $size }} baris</option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="w-full md:w-auto flex gap-2">
                 <button type="submit" class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors">
                     <i class="fas fa-filter mr-1"></i> Filter
@@ -149,12 +158,10 @@
                             <div class="flex flex-wrap gap-1">
                                 @forelse($row->violations ?? [] as $code => $value)
                                     <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border"
-                                        title="{{ $code === \App\Services\AttendanceRuleService::MISSING_CHECK_OUT ? 'Sesi belum ditutup sampai lewat batas toleransi' : 'Nilai: ' . $value . ' (menit di luar jendela / meter di luar radius)' }}"
+                                        title="{{ $code === \App\Services\AttendanceRuleService::MISSING_CHECK_OUT ? 'Menit sejak batas akhir jendela absen keluar' : 'Nilai: ' . $value . ' (menit di luar jendela / meter di luar radius)' }}"
                                         style="background:rgba(239,68,68,.12); color:#f87171; border-color:rgba(239,68,68,.3)">
                                         <i class="fas fa-triangle-exclamation mr-1"></i>{{ \App\Services\AttendanceRuleService::labels()[$code] ?? $code }}
-                                        @if($code !== \App\Services\AttendanceRuleService::MISSING_CHECK_OUT)
-                                        <span class="font-mono">{{ $value }}</span>
-                                        @endif
+                                        <span class="font-mono">{{ $code === 'out_of_radius' ? $value . ' m' : $value }}</span>
                                     </span>
                                 @empty
                                     @if(is_null($row->violations))
