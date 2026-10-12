@@ -221,4 +221,71 @@
             @endforelse
         </div>
     </div>
+
+    {{-- ═══ PERINGKAT PERFORMA CREW PER LOKASI ═══ --}}
+    @php
+        $topBonusAmount = (int) \App\Models\Setting::get('top_performer_bonus', 0);
+        $bonusPeriod = $statsStart->format('Y-m');
+        $canGrantBonus = auth()->user()->hasPermission('schedules.manage');
+    @endphp
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6">
+        <div class="flex flex-wrap gap-3 justify-between items-center mb-2">
+            <h3 class="text-lg font-black text-white"><i class="fas fa-trophy text-amber-400 mr-2"></i>Performa Crew per Lokasi</h3>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">{{ $statsStart->translatedFormat('d M') }} &ndash; {{ $statsEnd->translatedFormat('d M Y') }}</span>
+        </div>
+        <p class="text-[11px] text-slate-400 mb-5 leading-relaxed">
+            Peringkat dihitung dari jumlah hari hadir (absen masuk tercatat) dikurangi pelanggaran absensi, lalu kontribusi lembur yang sudah di-acc.
+            Peringkat 1 berhak atas bonus performa
+            @if($topBonusAmount > 0)
+                senilai <b class="text-amber-400">Rp {{ number_format($topBonusAmount, 0, ',', '.') }}</b>.
+            @else
+                &mdash; nominalnya belum diatur, isi di halaman Pengaturan bagian Absensi &amp; Lembur.
+            @endif
+        </p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            @forelse($locationStats as $locStat)
+                @if($locStat['ranking']->isNotEmpty())
+                <div class="bg-slate-900/30 rounded-xl border border-slate-700/50 overflow-hidden">
+                    <div class="px-4 py-3 bg-slate-800/80 border-b border-slate-700 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-black"><i class="fas fa-map-marker-alt"></i></div>
+                        <h4 class="font-bold text-white">{{ $locStat['location']->name }}</h4>
+                    </div>
+                    <div class="p-4 space-y-2">
+                        @foreach($locStat['ranking'] as $index => $cs)
+                        <div class="flex flex-wrap items-center gap-3 rounded-xl px-3 py-2 border {{ $index === 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-900/40 border-slate-700/50' }}">
+                            <span class="w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs {{ $index === 0 ? 'bg-amber-400 text-slate-900' : 'bg-slate-700 text-slate-300' }}">{{ $index + 1 }}</span>
+                            <div class="flex-1 min-w-[130px]">
+                                <p class="text-xs font-black text-white">{{ $cs['user']->name }}</p>
+                                <p class="text-[10px] text-slate-400">
+                                    Hadir {{ $cs['hadir'] }} hari
+                                    &middot; <span class="{{ $cs['pelanggaran'] > 0 ? 'text-red-400 font-bold' : '' }}">{{ $cs['pelanggaran'] }} pelanggaran</span>
+                                    &middot; Lembur {{ intdiv($cs['lembur_menit'], 60) }}j {{ $cs['lembur_menit'] % 60 }}m
+                                </p>
+                            </div>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-emerald-400">Skor {{ $cs['skor'] }}</span>
+
+                            @if($index === 0 && $canGrantBonus)
+                            <form action="{{ route('schedules.locations.top_bonus', $locStat['location']) }}" method="POST" class="flex items-center gap-1.5">
+                                @csrf
+                                <input type="hidden" name="user_id" value="{{ $cs['user']->id }}">
+                                <input type="hidden" name="period" value="{{ $bonusPeriod }}">
+                                <input type="number" name="amount" value="{{ $topBonusAmount }}" min="1" step="1000" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-[10px] font-bold text-white focus:outline-none focus:border-amber-500" title="Nominal bonus">
+                                <button type="submit" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 text-[10px] font-black uppercase tracking-wider transition-colors">
+                                    <i class="fas fa-gift mr-1"></i> Bonus
+                                </button>
+                            </form>
+                            @endif
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+            @empty
+            <div class="text-center p-8 text-slate-500 border border-slate-700/50 rounded-2xl bg-slate-800/50">
+                Belum ada data crew pada periode ini.
+            </div>
+            @endforelse
+        </div>
+    </div>
 </div>

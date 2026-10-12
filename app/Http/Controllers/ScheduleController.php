@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use App\Models\ScheduleLocation;
 use App\Models\User;
 use App\Models\ScheduleShift;
 use App\Models\ScheduleAssignment;
+use App\Models\Attendance;
+use App\Models\OvertimeRequest;
 use Carbon\Carbon;
 
 class ScheduleController extends Controller
@@ -124,6 +127,25 @@ class ScheduleController extends Controller
             ->whereBetween('date', [$statsStart->format('Y-m-d'), $statsEnd->format('Y-m-d')])
             ->get();
 
+        $statsAttendances = Attendance::whereBetween('date', [$statsStart->format('Y-m-d'), $statsEnd->format('Y-m-d')])
+            ->get()
+            ->groupBy(['user_id', 'schedule_location_id'])
+            ->map(fn ($perLocation) => $perLocation->map(function ($rows) {
+                return [
+                    'hadir' => $rows->where('type', 'in')->pluck('date')->map(fn ($d) => $d->toDateString())->unique()->count(),
+                    'pelanggaran' => $rows->flatMap(fn ($row) => array_keys($row->violations ?? []))->count(),
+                ];
+            }));
+
+        $statsOvertimes = OvertimeRequest::where('status', OvertimeRequest::STATUS_APPROVED)
+            ->whereBetween('date', [$statsStart->format('Y-m-d'), $statsEnd->format('Y-m-d')])
+            ->get()
+            ->groupBy(['user_id', 'schedule_location_id'])
+            ->map(fn ($perLocation) => $perLocation->map(fn ($rows) => [
+                'menit' => (int) $rows->sum('minutes'),
+                'nominal' => (int) $rows->sum('amount'),
+            ]));
+
         $locationStats = [];
         foreach ($locations->where('is_active', true) as $loc) {
             $locUsers = [];
@@ -156,6 +178,12 @@ class ScheduleController extends Controller
                         $komisi = $completedCount * $loc->shift_rate;
                     }
 
+                    $statistik = $statsAttendances[$user->id][$loc->id] ?? null;
+                    $lembur = $statsOvertimes[$user->id][$loc->id] ?? null;
+
+                    // Skor performa: kehadiran nyata dikurangi pelanggaran absensi.
+                    $skor = ($statistik['hadir'] ?? 0) - ($statistik['pelanggaran'] ?? 0);
+
                     $locUsers[] = [
                         'user' => $user,
                         'total_shifts' => $total,
@@ -165,6 +193,11 @@ class ScheduleController extends Controller
                         'shift_counts' => $shiftCounts,
                         'komisi' => $komisi,
                         'pct_active' => round(($open / $total) * 100),
+                        'hadir' => $statistik['hadir'] ?? 0,
+                        'pelanggaran' => $statistik['pelanggaran'] ?? 0,
+                        'lembur_menit' => $lembur['menit'] ?? 0,
+                        'lembur_nominal' => $lembur['nominal'] ?? 0,
+                        'skor' => $skor,
                     ];
                 }
             }
@@ -177,9 +210,17 @@ class ScheduleController extends Controller
                 return $b['total_shifts'] <=> $a['total_shifts'];
             });
 
+            // Peringkat performa: skor kehadiran, lalu kontribusi lembur ter-acc.
+            $ranking = collect($locUsers)->sortBy([
+                fn ($a, $b) => $b['skor'] <=> $a['skor'],
+                fn ($a, $b) => $b['lembur_menit'] <=> $a['lembur_menit'],
+                fn ($a, $b) => strcmp(mb_strtolower($a['user']->name), mb_strtolower($b['user']->name)),
+            ])->take(3)->values();
+
             $locationStats[$loc->id] = [
                 'location' => $loc,
-                'users' => $locUsers
+                'users' => $locUsers,
+                'ranking' => $ranking,
             ];
         }
 
@@ -219,9 +260,15 @@ class ScheduleController extends Controller
                 $allowance = auth()->user()->allowance_amount;
             }
             $payroll = \App\Models\Payroll::where('user_id', auth()->id())->where('period', $filterMonth->format('Y-m'))->first();
-            $motret = $payroll ? $payroll->photographer_fee : 0;
-            $lembur = $payroll ? $payroll->overtime_fee : 0;
-            $bonus = $payroll ? $payroll->bonus : 0;
+            $salaryEntries = \App\Models\PayrollEntry::totals(auth()->id(), $monthStart, $monthEnd);
+            $entryList = \App\Models\PayrollEntry::where('user_id', auth()->id())
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->orderBy('date')
+                ->get();
+
+            $motret = $salaryEntries['photographer_fee'] ?? 0;
+            $lembur = $salaryEntries['overtime_fee'] ?? 0;
+            $bonus = $salaryEntries['bonus'] ?? 0;
             $crewCashIncome = \App\Models\CrewCashTransaction::where('user_id', auth()->id())
                 ->whereMonth('date', $filterMonth->month)
                 ->whereYear('date', $filterMonth->year)
@@ -239,7 +286,7 @@ class ScheduleController extends Controller
                 ->sum('amount');
             
             $crewCashExpense = $crewCashExpenseOperational + $crewCashExpensePersonal;
-            $kasbon = ($payroll ? $payroll->deduction : 0) + $crewCashExpensePersonal;
+            $kasbon = ($salaryEntries['deduction'] ?? 0) + (int) $crewCashExpensePersonal;
             $crewCashTransactions = \App\Models\CrewCashTransaction::where('user_id', auth()->id())
                 ->whereMonth('date', $filterMonth->month)
                 ->whereYear('date', $filterMonth->year)
@@ -258,6 +305,7 @@ class ScheduleController extends Controller
                 'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
                 'total_shifts' => $userAsgn->count(),
                 'payroll' => $payroll,
+                'entries' => $entryList,
                 'cash_income' => $crewCashIncome,
                 'cash_expense' => $crewCashExpense,
                 'cash_balance' => $crewCashIncome - $crewCashExpense,
@@ -368,6 +416,46 @@ class ScheduleController extends Controller
         return back()->with('success', 'Lokasi berhasil dihapus!');
     }
 
+    /**
+     * Bonus untuk crew peringkat 1 performa di sebuah lokasi pada satu bulan.
+     */
+    public function grantTopBonus(Request $request, ScheduleLocation $location)
+    {
+        $payload = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'period' => 'required|date_format:Y-m',
+            'amount' => 'nullable|integer|min:1',
+        ]);
+
+        $amount = (int) ($payload['amount'] ?? \App\Models\Setting::get('top_performer_bonus', 0));
+
+        if ($amount <= 0) {
+            return back()->with('error', 'Nominal bonus performa belum diatur. Isi lebih dulu di Pengaturan &rarr; Absensi & Lembur.');
+        }
+
+        $user = User::findOrFail($payload['user_id']);
+        $period = Carbon::parse($payload['period'] . '-01');
+
+        \App\Models\PayrollEntry::updateOrCreate(
+            [
+                'source' => 'top_performer',
+                'reference_id' => $location->id,
+                'user_id' => $user->id,
+                'component' => 'bonus',
+                'date' => $period->copy()->endOfMonth()->toDateString(),
+            ],
+            [
+                'amount' => $amount,
+                'note' => 'Bonus performa crew terbaik di ' . $location->name . ' periode ' . $period->translatedFormat('F Y'),
+            ]
+        );
+
+        \App\Models\Payroll::firstOrCreate(['user_id' => $user->id, 'period' => $payload['period']]);
+
+        return back()->with('success', 'Bonus performa Rp ' . number_format($amount, 0, ',', '.')
+            . ' dicatat untuk ' . $user->name . ' di ' . $location->name . '.');
+    }
+
     // ── SHIFTS ─────────────────────────────────────────────────
 
     public function storeShift(Request $request)
@@ -379,9 +467,12 @@ class ScheduleController extends Controller
             'end_time' => 'required',
             'color' => 'required|string',
             'max_crew' => 'required|integer|min:1',
-        ]);
+        ] + $this->windowRules());
 
-        ScheduleShift::create($request->only('schedule_location_id', 'name', 'start_time', 'end_time', 'color', 'max_crew'));
+        ScheduleShift::create($request->only(
+            'schedule_location_id', 'name', 'start_time', 'end_time', 'color', 'max_crew'
+        ) + $this->normalizedWindows($request));
+
         return back()->with('success', 'Shift berhasil ditambahkan!');
     }
 
@@ -393,10 +484,67 @@ class ScheduleController extends Controller
             'end_time' => 'required',
             'color' => 'required|string',
             'max_crew' => 'required|integer|min:1',
-        ]);
+        ] + $this->windowRules());
 
-        $shift->update($request->only('name', 'start_time', 'end_time', 'color', 'max_crew'));
+        $shift->update($request->only('name', 'start_time', 'end_time', 'color', 'max_crew')
+            + $this->normalizedWindows($request));
+
         return back()->with('success', 'Shift berhasil diperbarui!');
+    }
+
+    private function windowRules(): array
+    {
+        $pattern = 'nullable|regex:/^\d{1,2}:\d{2}(:\d{2})?$/';
+
+        return [
+            'check_in_start' => $pattern,
+            'check_in_end' => $pattern,
+            'check_out_start' => $pattern,
+            'check_out_end' => $pattern,
+        ];
+    }
+
+    /**
+     * Jendela absen disimpan sebagai HH:MM. Satu pasang harus diisi lengkap
+     * supaya tidak ada jendela yang menggantung (satu sisi saja).
+     */
+    private function normalizedWindows(Request $request): array
+    {
+        $labels = ['in' => 'masuk', 'out' => 'keluar'];
+        $pairs = [
+            'in' => ['check_in_start', 'check_in_end'],
+            'out' => ['check_out_start', 'check_out_end'],
+        ];
+
+        $data = [];
+        foreach ($pairs as $type => [$fromKey, $toKey]) {
+            $from = $this->toClock($request->input($fromKey));
+            $to = $this->toClock($request->input($toKey));
+
+            if ((bool) $from !== (bool) $to) {
+                $missing = $from ? $toKey : $fromKey;
+                throw ValidationException::withMessages([
+                    $missing => 'Jendela absen ' . $labels[$type] . ' harus diisi jam awal dan jam akhirnya.',
+                ]);
+            }
+
+            $data[$fromKey] = $from;
+            $data[$toKey] = $to;
+        }
+
+        return $data;
+    }
+
+    private function toClock(?string $time): ?string
+    {
+        $time = trim((string) $time);
+        if ($time === '') {
+            return null;
+        }
+
+        $parts = explode(':', $time);
+
+        return str_pad($parts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($parts[1], 2, '0', STR_PAD_LEFT);
     }
 
     public function destroyShift(ScheduleShift $shift)

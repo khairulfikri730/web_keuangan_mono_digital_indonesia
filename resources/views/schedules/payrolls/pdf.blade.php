@@ -22,7 +22,12 @@
 </head>
 <body>
     <div class="header">
-        <h1>LAPORAN GAJI & PAYROLL CREW</h1>
+        @php $logoDataUri = \App\Models\Setting::logoDataUri(); @endphp
+        @if($logoDataUri)
+            <img src="{{ $logoDataUri }}" style="width: 90px; margin-bottom: 8px;">
+        @endif
+        <h1>{{ strtoupper(\App\Models\Setting::get('store_name', 'MONOFRAME')) }}</h1>
+        <p>LAPORAN GAJI &amp; PAYROLL CREW</p>
         <p>Periode: {{ \Carbon\Carbon::parse($month.'-01')->translatedFormat('F Y') }}</p>
     </div>
 
@@ -55,30 +60,10 @@
                     {{ number_format($data['komisi_shift'], 0, ',', '.') }}<br>
                     <span style="font-size: 8px; color: #666;">{{ $data['total_shifts'] }} shift</span>
                 </td>
-                <td>
-                    {{ number_format($data['motret'], 0, ',', '.') }}
-                    @if($data['payroll'] && $data['payroll']->photographer_fee_note)
-                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->photographer_fee_note }}</span>
-                    @endif
-                </td>
-                <td>
-                    {{ number_format($data['lembur'], 0, ',', '.') }}
-                    @if($data['payroll'] && $data['payroll']->overtime_fee_note)
-                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->overtime_fee_note }}</span>
-                    @endif
-                </td>
-                <td>
-                    {{ number_format($data['bonus'], 0, ',', '.') }}
-                    @if($data['payroll'] && $data['payroll']->bonus_note)
-                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->bonus_note }}</span>
-                    @endif
-                </td>
-                <td style="color: #d32f2f;">
-                    - {{ number_format($data['kasbon'], 0, ',', '.') }}
-                    @if($data['payroll'] && $data['payroll']->deduction_note)
-                        <br><span style="font-size: 7px; color: #666; font-style: italic;">{{ $data['payroll']->deduction_note }}</span>
-                    @endif
-                </td>
+                <td>@include('schedules.payrolls._pdf_entry_cell', ['data' => $data, 'key' => 'motret', 'component' => 'photographer_fee'])</td>
+                <td>@include('schedules.payrolls._pdf_entry_cell', ['data' => $data, 'key' => 'lembur', 'component' => 'overtime_fee'])</td>
+                <td>@include('schedules.payrolls._pdf_entry_cell', ['data' => $data, 'key' => 'bonus', 'component' => 'bonus'])</td>
+                <td style="color: #d32f2f;">- @include('schedules.payrolls._pdf_entry_cell', ['data' => $data, 'key' => 'kasbon', 'component' => 'deduction'])</td>
                 <td class="font-bold" style="background-color: #e8f5e9;">{{ number_format($data['total_bersih'], 0, ',', '.') }}</td>
                 <td class="text-left" style="font-size: 8px;">{{ $data['payroll'] && $data['payroll']->notes ? $data['payroll']->notes : '-' }}</td>
             </tr>

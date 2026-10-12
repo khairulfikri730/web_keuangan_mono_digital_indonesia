@@ -5,20 +5,7 @@
 <div class="flex flex-col gap-6 font-sans antialiased text-slate-300">
     
     <!-- MAIN NAVIGATION TABS (Schedule Module) -->
-    <div class="flex border-b border-slate-700/50 mb-2 overflow-x-auto hide-scrollbar">
-        @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
-        <a href="{{ route('schedules.index') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Dashboard & Shift</a>
-        <a href="{{ route('schedules.poster') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Poster Jadwal</a>
-        @else
-        <a href="{{ route('schedules.index') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Jadwal Tim</a>
-        @endif
-        
-        <a href="{{ route('schedules.attendances.index') }}" class="px-6 py-3 border-b-2 border-emerald-500 text-emerald-500 font-black tracking-wide whitespace-nowrap">Absensi</a>
-        
-        @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
-        <a href="{{ route('schedules.payrolls.index') }}" class="px-6 py-3 text-slate-500 hover:text-slate-300 font-bold tracking-wide transition-colors whitespace-nowrap">Penggajian</a>
-        @endif
-    </div>
+    @include('schedules._nav_tabs', ['tab' => 'attendances'])
 
     <!-- TOP HEADER -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -27,8 +14,21 @@
             <p class="text-slate-400 text-sm mt-1">Pantau riwayat foto masuk dan keluar kru beserta lokasi GPS-nya.</p>
         </div>
         
-        <div class="flex items-center gap-3">
-            <a href="{{ route('schedules.attendances.create') }}" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 text-sm">
+        <div class="flex flex-wrap items-center gap-3">
+            @if($canManage)
+            <button type="button" @click="$dispatch('open-modal', 'auto-fill-attendance')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-emerald-500/30 transition-all flex items-center gap-2 text-sm">
+                <i class="fas fa-magic"></i> Isi Otomatis
+            </button>
+            <div class="flex rounded-xl overflow-hidden border border-slate-700">
+                @foreach(['daily' => 'Harian', 'weekly' => 'Mingguan', 'monthly' => 'Bulanan'] as $period => $label)
+                <a href="{{ route('schedules.attendances.report', ['period' => $period, 'date' => request('date') ?: now()->toDateString(), 'location_id' => request('location_id'), 'preview' => 1]) }}"
+                    class="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors {{ $loop->first ? '' : 'border-l border-slate-700' }}">
+                    <i class="fas fa-file-pdf text-red-400 mr-1"></i>{{ $label }}
+                </a>
+                @endforeach
+            </div>
+            @endif
+            <a href="{{ route('schedules.attendances.create') }}" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2 text-sm">
                 <i class="fas fa-camera"></i> Mulai Absen (Selfie)
             </a>
         </div>
@@ -63,6 +63,16 @@
                 </select>
             </div>
             
+            <div class="w-full md:w-auto">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Pelanggaran</label>
+                <select name="violation" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 w-full md:max-w-xs">
+                    <option value="">Semua Status</option>
+                    @foreach(\App\Services\AttendanceRuleService::labels() as $code => $label)
+                        <option value="{{ $code }}" {{ request('violation') === $code ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="w-full md:w-auto flex gap-2">
                 <button type="submit" class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors">
                     <i class="fas fa-filter mr-1"></i> Filter
@@ -83,10 +93,11 @@
                         <th class="px-8 py-5">Kru</th>
                         <th class="px-8 py-5 text-center">Waktu</th>
                         <th class="px-8 py-5 text-center">Tipe</th>
+                        <th class="px-8 py-5">Status Waktu &amp; Lembur</th>
                         <th class="px-8 py-5">Lokasi & GPS</th>
                         <th class="px-8 py-5 text-center">Jarak</th>
                         <th class="px-8 py-5 text-center">Foto</th>
-                        @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
+                        @if($canManage)
                         <th class="px-8 py-5 text-center">Aksi</th>
                         @endif
                     </tr>
@@ -113,8 +124,11 @@
 
                         <!-- Waktu -->
                         <td class="px-8 py-5 text-center">
-                            <p class="text-xs font-black text-white">{{ $row->created_at->format('d M Y') }}</p>
+                            <p class="text-xs font-black text-white">{{ $row->date?->format('d M Y') ?? $row->created_at->format('d M Y') }}</p>
                             <p class="text-xs font-bold text-slate-400 mt-1">{{ $row->created_at->format('H:i') }} WIB</p>
+                            @if($row->date && $row->date->toDateString() !== $row->created_at->toDateString())
+                                <p class="text-[9px] font-black text-purple-400 uppercase mt-1"><i class="fas fa-moon mr-1"></i>Lewat tengah malam</p>
+                            @endif
                         </td>
 
                         <!-- Tipe -->
@@ -127,6 +141,60 @@
                                 <span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider">
                                     <i class="fas fa-sign-out-alt mr-1"></i> Keluar
                                 </span>
+                            @endif
+                        </td>
+
+                        <!-- Status Waktu & Lembur -->
+                        <td class="px-8 py-5">
+                            <div class="flex flex-wrap gap-1">
+                                @forelse($row->violations ?? [] as $code => $value)
+                                    <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border"
+                                        title="{{ $code === \App\Services\AttendanceRuleService::MISSING_CHECK_OUT ? 'Sesi belum ditutup sampai lewat batas toleransi' : 'Nilai: ' . $value . ' (menit di luar jendela / meter di luar radius)' }}"
+                                        style="background:rgba(239,68,68,.12); color:#f87171; border-color:rgba(239,68,68,.3)">
+                                        <i class="fas fa-triangle-exclamation mr-1"></i>{{ \App\Services\AttendanceRuleService::labels()[$code] ?? $code }}
+                                        @if($code !== \App\Services\AttendanceRuleService::MISSING_CHECK_OUT)
+                                        <span class="font-mono">{{ $value }}</span>
+                                        @endif
+                                    </span>
+                                @empty
+                                    @if(is_null($row->violations))
+                                        <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border" style="background:rgba(100,116,139,.12); color:#94a3b8; border-color:rgba(100,116,139,.25)" title="Tercatat sebelum jendela waktu absensi diatur">
+                                            <i class="fas fa-minus mr-1"></i>Belum Dinilai
+                                        </span>
+                                    @else
+                                        <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border" style="background:rgba(16,185,129,.12); color:#34d399; border-color:rgba(16,185,129,.3)">
+                                            <i class="fas fa-check mr-1"></i>Tepat Waktu
+                                        </span>
+                                    @endif
+                                @endforelse
+
+                                @if($row->type === 'out' && $row->overtimeRequest)
+                                    @php $ot = $row->overtimeRequest; @endphp
+                                    <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border"
+                                        style="background:rgba(168,85,247,.12); color:#c084fc; border-color:rgba(168,85,247,.3)">
+                                        <i class="fas fa-stopwatch mr-1"></i>Lembur {{ intdiv($ot->minutes, 60) }}j {{ $ot->minutes % 60 }}m
+                                        <span style="color:#facc15">{{ \App\Models\OvertimeRequest::statusLabel($ot->status) }}</span>
+                                    </span>
+                                @endif
+
+                                @if(in_array($row->id, $openIds))
+                                    <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border"
+                                        style="background:rgba(250,204,21,.12); color:#facc15; border-color:rgba(250,204,21,.3)">
+                                        <i class="fas fa-hourglass-half mr-1"></i>Belum absen keluar
+                                    </span>
+                                @endif
+                            </div>
+
+                            @if($row->source !== \App\Models\Attendance::SOURCE_DEVICE)
+                                <p class="text-[9px] font-bold text-purple-300 mt-1.5">
+                                    <i class="fas fa-user-edit mr-1"></i>{{ \App\Models\Attendance::sourceLabel($row->source) }}{{ $row->corrected_by ? ' · ' . $row->corrected_by : '' }}
+                                </p>
+                            @endif
+
+                            @if($row->notes)
+                                <p class="text-[10px] text-slate-400 italic mt-1">{{ $row->notes }}</p>
+                            @elseif($row->shift)
+                                <p class="text-[9px] text-slate-500 mt-1.5 font-bold">{{ $row->shift->name }} &middot; {{ $row->shift->time_range }}</p>
                             @endif
                         </td>
 
@@ -164,21 +232,32 @@
                         </td>
                         
                         <!-- Aksi -->
-                        @if(in_array(auth()->user()->role, ['superadmin', 'owner']))
+                        @if($canManage)
                         <td class="px-8 py-5 text-center">
-                            <form action="{{ route('schedules.attendances.destroy', $row) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data absensi ini?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-400 hover:text-red-300 transition-colors" title="Hapus Data">
-                                    <i class="fas fa-trash-alt"></i>
+                            <div class="flex items-center justify-center gap-3">
+                                <button type="button" @click="$dispatch('open-modal', 'edit-attendance-{{ $row->id }}')" class="text-blue-400 hover:text-blue-300 transition-colors" title="Ubah jam &amp; keterangan">
+                                    <i class="fas fa-pen"></i>
                                 </button>
-                            </form>
+                                @if(in_array($row->id, $openIds))
+                                <button type="button" @click="$dispatch('open-modal', 'close-session-{{ $row->id }}')" class="text-amber-400 hover:text-amber-300 transition-colors" title="Tutup sesi: lupa absen keluar atau dijadikan lembur">
+                                    <i class="fas fa-door-closed"></i>
+                                </button>
+                                @endif
+                                <form action="{{ route('schedules.attendances.destroy', $row) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data absensi ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-400 hover:text-red-300 transition-colors" title="Hapus Data">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            @include('schedules.attendances._modals', ['row' => $row])
                         </td>
                         @endif
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="{{ in_array(auth()->user()->role, ['superadmin', 'owner']) ? '7' : '6' }}" class="px-8 py-16 text-center text-slate-500 text-sm">
+                        <td colspan="{{ $canManage ? '8' : '7' }}" class="px-8 py-16 text-center text-slate-500 text-sm">
                             <i class="fas fa-camera text-3xl mb-3 block opacity-50"></i>
                             Belum ada data absensi
                         </td>
@@ -194,5 +273,9 @@
         </div>
         @endif
     </div>
+
+    @if($canManage)
+        @include('schedules.attendances._autofill_modal')
+    @endif
 </div>
 @endsection

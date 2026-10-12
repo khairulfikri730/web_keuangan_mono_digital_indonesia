@@ -410,6 +410,51 @@
             </div>
         </div>
 
+        {{-- ROW 6: Absensi & Lembur --}}
+        <div class="card overflow-hidden border border-slate-700/80 shadow-xl rounded-2xl">
+            <div class="p-5 border-b border-slate-700 bg-slate-800/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400"><i class="fas fa-fingerprint"></i></div>
+                    <div>
+                        <h3 class="text-base font-black text-white">Absensi &amp; Lembur</h3>
+                        <p class="text-[10px] text-slate-400">Penegakan jendela waktu absen dan perhitungan upah lembur</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5 space-y-4">
+                <label class="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded-xl cursor-pointer hover:border-amber-500/50 transition-all">
+                    <div>
+                        <span class="text-xs font-bold text-slate-200">Tegakkan Jendela Waktu Absen</span>
+                        <p class="text-[9px] text-slate-500">ON: absen di luar jendela shift ditandai terlambat / keluar cepat / lembur. OFF: semua absen diterima tanpa penilaian.</p>
+                    </div>
+                    <input type="hidden" name="attendance_window_enabled" value="0"><input type="checkbox" name="attendance_window_enabled" value="1" class="sr-only peer" {{ ($settings['attendance_window_enabled'] ?? '1') == '1' ? 'checked' : '' }}><div class="w-10 h-5 bg-slate-700 rounded-full peer-checked:bg-amber-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 relative shrink-0 ml-2"></div>
+                </label>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Upah Lembur per Jam (Rp)</label>
+                        <input type="number" name="overtime_rate_per_hour" value="{{ $settings['overtime_rate_per_hour'] ?? 15000 }}" min="0" step="500" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="15000">
+                        <p class="text-[9px] text-slate-500 mt-1">Dihitung proporsional per menit.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Toleransi Lembur (menit)</label>
+                        <input type="number" name="overtime_grace_minutes" value="{{ $settings['overtime_grace_minutes'] ?? 0 }}" min="0" max="240" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="0">
+                        <p class="text-[9px] text-slate-500 mt-1">Lewat jendela kurang dari ini tidak dihitung lembur.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Batas Lupa Absen Keluar (jam)</label>
+                        <input type="number" name="missing_check_out_grace_hours" value="{{ $settings['missing_check_out_grace_hours'] ?? 3 }}" min="0" max="24" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="3">
+                        <p class="text-[9px] text-slate-500 mt-1">Sesi tanpa absen keluar sampai sekian jam setelah jendela keluar ditandai "Lupa absen keluar".</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Bonus Crew Performa Tertinggi (Rp)</label>
+                        <input type="number" name="top_performer_bonus" value="{{ $settings['top_performer_bonus'] ?? 0 }}" min="0" step="1000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="0">
+                        <p class="text-[9px] text-slate-500 mt-1">Diberikan ke peringkat 1 tiap lokasi, per bulan.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </form>
 
     {{-- Danger Zone --}}

@@ -278,6 +278,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/payrolls/export-pdf', [\App\Http\Controllers\PayrollController::class, 'exportPdf'])->middleware('permission:schedules.view,schedules.manage')->name('payrolls.export-pdf');
         Route::get('/payrolls/export-excel', [\App\Http\Controllers\PayrollController::class, 'exportExcel'])->middleware('permission:schedules.view,schedules.manage')->name('payrolls.export-excel');
         Route::post('/payrolls', [\App\Http\Controllers\PayrollController::class, 'store'])->middleware('permission:schedules.manage')->name('payrolls.store');
+        Route::post('/payrolls/entries', [\App\Http\Controllers\PayrollController::class, 'storeEntry'])->middleware('permission:schedules.manage')->name('payrolls.entries.store');
+        Route::delete('/payrolls/entries/{entry}', [\App\Http\Controllers\PayrollController::class, 'destroyEntry'])->middleware('permission:schedules.manage')->name('payrolls.entries.destroy');
         Route::post('/payrolls/{payroll}/toggle-status', [\App\Http\Controllers\PayrollController::class, 'toggleStatus'])->middleware('permission:schedules.manage')->name('payrolls.toggle-status');
         Route::post('/assignments/{assignment}/swap-request', [\App\Http\Controllers\ScheduleController::class, 'swapRequest'])->name('assignments.swap_request');
         Route::post('/assignments/{assignment}/swap-approve', [\App\Http\Controllers\ScheduleController::class, 'swapApprove'])->name('assignments.swap_approve');
@@ -291,14 +293,26 @@ Route::middleware(['auth'])->group(function () {
         // Absensi (Attendance)
         Route::get('/attendances', [\App\Http\Controllers\AttendanceController::class, 'index'])->name('attendances.index');
         Route::get('/attendances/create', [\App\Http\Controllers\AttendanceController::class, 'create'])->name('attendances.create');
+        Route::get('/attendances/report', [\App\Http\Controllers\AttendanceController::class, 'report'])->middleware('permission:schedules.view')->name('attendances.report');
         Route::post('/attendances', [\App\Http\Controllers\AttendanceController::class, 'store'])->name('attendances.store');
+        Route::post('/attendances/auto-fill', [\App\Http\Controllers\AttendanceController::class, 'autoFill'])->middleware('permission:schedules.manage')->name('attendances.auto-fill');
+        Route::put('/attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'update'])->middleware('permission:schedules.manage')->name('attendances.update');
+        Route::post('/attendances/{attendance}/note', [\App\Http\Controllers\AttendanceController::class, 'saveNote'])->name('attendances.note');
+        Route::post('/attendances/{attendance}/close-session', [\App\Http\Controllers\AttendanceController::class, 'closeSession'])->middleware('permission:schedules.manage')->name('attendances.close-session');
         Route::delete('/attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'destroy'])->name('attendances.destroy');
+
+        // Rekap Lembur
+        Route::get('/overtimes', [\App\Http\Controllers\OvertimeController::class, 'index'])->name('overtimes.index');
+        Route::post('/overtimes', [\App\Http\Controllers\OvertimeController::class, 'store'])->middleware('permission:schedules.manage')->name('overtimes.store');
+        Route::post('/overtimes/{overtime}/approve', [\App\Http\Controllers\OvertimeController::class, 'approve'])->middleware('permission:schedules.manage')->name('overtimes.approve');
+        Route::post('/overtimes/{overtime}/reject', [\App\Http\Controllers\OvertimeController::class, 'reject'])->middleware('permission:schedules.manage')->name('overtimes.reject');
         
         Route::middleware('permission:schedules.manage')->group(function () {
             // Locations
             Route::post('/locations', [\App\Http\Controllers\ScheduleController::class, 'storeLocation'])->name('locations.store');
             Route::put('/locations/{location}', [\App\Http\Controllers\ScheduleController::class, 'updateLocation'])->name('locations.update');
             Route::delete('/locations/{location}', [\App\Http\Controllers\ScheduleController::class, 'destroyLocation'])->name('locations.destroy');
+            Route::post('/locations/{location}/top-bonus', [\App\Http\Controllers\ScheduleController::class, 'grantTopBonus'])->name('locations.top_bonus');
             
             // Custom Rates
             Route::put('/users/{user}/custom-rates', [\App\Http\Controllers\ScheduleController::class, 'updateCustomRates'])->name('users.custom_rates');

@@ -25,10 +25,100 @@
                 <!-- Tipe Absen -->
                 <div>
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Tipe Absen</label>
-                    <select name="type" x-model="attendanceType" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 font-bold">
+                    <select name="type" x-model="attendanceType" :disabled="isCrew && session?.has_open_in" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 font-bold disabled:opacity-60">
                         <option value="in">Absen MASUK</option>
                         <option value="out">Absen KELUAR</option>
                     </select>
+                    <p x-show="isCrew && session?.has_open_in" class="text-[10px] text-amber-400 font-bold mt-1">
+                        Absen masuk sudah tercatat, hanya absen keluar yang tersedia.
+                    </p>
+                </div>
+            </div>
+
+            {{-- JENDELA WAKTU ABSEN SESI INI --}}
+            <div x-show="session" x-cloak class="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Jendela Absen <span x-text="session?.date"></span>
+                    </p>
+                    <span x-show="session?.is_carryover" class="text-[9px] font-black uppercase tracking-wider text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded">
+                        Sesi kemarin, belum absen keluar
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <p class="text-[9px] uppercase font-black text-slate-500 mb-1">Absen Masuk</p>
+                        <p class="font-mono font-bold" :class="session?.in_window ? 'text-emerald-400' : 'text-slate-500'" x-text="session?.in_window || 'Tidak dibatasi'"></p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] uppercase font-black text-slate-500 mb-1">Absen Keluar</p>
+                        <p class="font-mono font-bold" :class="session?.out_window ? 'text-amber-400' : 'text-slate-500'" x-text="session?.out_window || 'Tidak dibatasi'"></p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- SESI TERKUNCI: LUPA ABSEN KELUAR --}}
+            <div x-show="session?.blocked" x-cloak class="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-black text-red-300 uppercase tracking-wide">Absensi Anda dikunci</p>
+                        <p class="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                            Sesi <span x-text="session?.date"></span> belum ada absen keluar sampai melewati batas toleransi,
+                            jadi tercatat sebagai <b>lupa absen keluar</b>. Tulis alasan Anda di bawah ini, lalu hubungi owner
+                            agar sesi tersebut ditutup atau dihitung sebagai lembur.
+                        </p>
+                    </div>
+                </div>
+
+                <div x-show="session?.blocked_id" class="space-y-2">
+                    <label class="block text-[10px] font-black text-red-200 uppercase tracking-widest">Alasan Anda</label>
+                    <textarea rows="2" placeholder="Contoh: langsung dibawa keluar kota, HP mati jadi tidak sempat absen keluar"
+                        class="w-full bg-slate-900 border border-red-500/40 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-400"
+                        x-model="blockedReason" @blur="simpanAlasan()"></textarea>
+                    <p class="text-[10px] text-slate-400">
+                        <i class="fas fa-circle-info mr-1"></i>Alasan tersimpan otomatis saat kolom ini Anda isi.
+                        <span x-show="reasonSaved" class="text-emerald-400 font-bold">Tersimpan.</span>
+                    </p>
+                </div>
+            </div>
+
+            {{-- CATATAN ALASAN DARI CREW --}}
+            <div x-show="session" x-cloak class="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-2">
+                <p class="text-[11px] text-amber-200 leading-relaxed" x-show="isLateIn || isEarlyOut">
+                    <i class="fas fa-triangle-exclamation mr-1"></i>
+                    <span x-show="isLateIn">Jam sekarang melewati jendela absen masuk (<span class="font-mono" x-text="session?.in_window"></span>).</span>
+                    <span x-show="isEarlyOut">Jam sekarang masih sebelum jendela absen keluar (<span class="font-mono" x-text="session?.out_window"></span>).</span>
+                    Tulis alasannya supaya owner punya catatan.
+                </p>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest" x-show="!(isLateIn || isEarlyOut)">Catatan (opsional)</label>
+                <textarea name="note" x-model="reasonNote" rows="2" placeholder="Contoh: ban motor bocor di jalan, antrean cetak foto panjang, GPS sedang bermasalah"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500"></textarea>
+                <p class="text-[10px] text-slate-500" x-show="!(isLateIn || isEarlyOut)">
+                    Isi bila ada yang tidak beres dengan absen ini (terlambat, keluar cepat, atau lokasi terdeteksi di luar radius).
+                </p>
+            </div>
+
+            {{-- PENGAJUAN LEMBUR OTOMATIS --}}
+            <div x-show="isOvertimeOut" x-cloak class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-black text-amber-300 uppercase tracking-wide">Ini dihitung lembur</p>
+                        <p class="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                            Jam sekarang sudah lewat batas absen keluar (<span class="font-mono" x-text="session?.out_window"></span>).
+                            Diperkirakan lembur <span class="font-black text-amber-300" x-text="durationLabel(overtimeMinutes)"></span> &asymp; Rp <span class="font-black text-amber-300" x-text="formatRupiah(overtimeAmount)"></span>.
+                            Setelah di-acc owner, nominal ini masuk ke gaji Anda.
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-amber-200 uppercase tracking-widest mb-1">Catatan Lembur <span class="text-red-400">*</span></label>
+                    <textarea name="overtime_note" x-model="overtimeNote" rows="2" placeholder="Contoh: lanjut edit foto pesanan customer A" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500"></textarea>
                 </div>
             </div>
 
@@ -103,7 +193,18 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('attendanceApp', () => ({
         selectedLocation: '',
         attendanceType: 'in',
-        
+
+        sessions: {{ \Illuminate\Support\Js::from($sessions) }},
+        isCrew: {{ \Illuminate\Support\Js::from($isCrew) }},
+        overtimeRate: {{ $overtimeRate }},
+        overtimeNote: '',
+        reasonNote: '',
+        blockedReason: '',
+        reasonSaved: false,
+        noteUrl: {{ \Illuminate\Support\Js::from(route('schedules.attendances.note', ['attendance' => '__ID__'])) }},
+        csrfToken: {{ \Illuminate\Support\Js::from(csrf_token()) }},
+        now: new Date(),
+
         cameraActive: false,
         stream: null,
         photoData: null,
@@ -115,10 +216,78 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             this.getLocation();
+            setInterval(() => this.now = new Date(), 30000);
+
+            this.$watch('selectedLocation', (value) => {
+                if (this.isCrew && this.session?.has_open_in) {
+                    this.attendanceType = 'out';
+                }
+                this.blockedReason = this.session?.blocked_note || '';
+                this.reasonSaved = false;
+            });
+
+            this.$watch('blockedReason', () => this.simpanAlasan());
+        },
+
+        get session() {
+            return this.sessions[this.selectedLocation] || null;
+        },
+
+        get isLateIn() {
+            return !this.session?.blocked && this.attendanceType === 'in'
+                && this.session?.in_to && this.now > new Date(this.session.in_to);
+        },
+
+        get isEarlyOut() {
+            return !this.session?.blocked && this.attendanceType === 'out'
+                && this.session?.out_from && this.now < new Date(this.session.out_from);
+        },
+
+        /** Alasan crew untuk sesi yang terkunci dikirim sendiri, tanpa perlu absen. */
+        simpanAlasan() {
+            const id = this.session?.blocked_id;
+            const alasan = (this.blockedReason || '').trim();
+
+            if (!id || alasan === '') return;
+
+            const body = new URLSearchParams({ _token: this.csrfToken, notes: alasan });
+
+            this.reasonSaved = false;
+            fetch(this.noteUrl.replace('__ID__', id), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: body.toString(),
+            }).then(() => this.reasonSaved = true);
+        },
+
+        get overtimeMinutes() {
+            if (!this.session?.out_deadline) return 0;
+            return Math.max(0, Math.round((this.now - new Date(this.session.out_deadline)) / 60000));
+        },
+
+        get overtimeAmount() {
+            return Math.round(this.overtimeMinutes * this.overtimeRate / 60);
+        },
+
+        get isOvertimeOut() {
+            return this.attendanceType === 'out' && this.overtimeMinutes > 0;
+        },
+
+        durationLabel(minutes) {
+            return Math.floor(minutes / 60) + ' jam ' + (minutes % 60) + ' menit';
+        },
+
+        formatRupiah(value) {
+            return new Intl.NumberFormat('id-ID').format(Math.round(value || 0));
         },
 
         get isReadyToSubmit() {
-            return this.selectedLocation !== '' && this.photoData !== null && this.latitude !== '' && this.longitude !== '';
+            if (this.selectedLocation === '' || this.photoData === null) return false;
+            if (this.session?.blocked) return false;
+            if (this.latitude === '' || this.longitude === '') return false;
+            if (this.isOvertimeOut && this.overtimeNote.trim() === '') return false;
+
+            return true;
         },
 
         async startCamera() {

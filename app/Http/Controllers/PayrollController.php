@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Payroll;
+use App\Models\PayrollEntry;
 use App\Models\ScheduleAssignment;
 use Carbon\Carbon;
 
@@ -16,12 +17,18 @@ class PayrollController extends Controller
         return view('schedules.payrolls.index', $data);
     }
 
+    /**
+     * Komponen gaji dibaca dari entri per tanggal (payroll_entries) sehingga menambah
+     * nominal di tanggal baru tidak menimpa entri sebelumnya.
+     */
     private function getSalaryData(Request $request)
     {
         $month = $request->input('month', now()->format('Y-m'));
         $periodStart = Carbon::parse($month . '-01')->startOfMonth();
         $periodEnd = $periodStart->copy()->endOfMonth();
         $daysInMonth = $periodStart->daysInMonth;
+        $monthStart = $periodStart->format('Y-m-d');
+        $monthEnd = $periodEnd->format('Y-m-d');
 
         $usersQuery = User::where('is_active', true)->orderBy('name');
         
@@ -38,11 +45,22 @@ class PayrollController extends Controller
 
         // Get all shift assignments for this month
         $assignments = ScheduleAssignment::with('shift.location')
-            ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
+            ->whereBetween('date', [$monthStart, $monthEnd])
             ->get();
 
-        // Get payroll manual adjustments
+        // Status & catatan keseluruhan per crew per periode
         $payrolls = Payroll::where('period', $month)->get()->keyBy('user_id');
+
+        $entries = PayrollEntry::with('user')
+            ->whereBetween('date', [$monthStart, $monthEnd])
+            ->orderBy('date')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('user_id');
+
+        $crewCash = \App\Models\CrewCashTransaction::whereBetween('date', [$monthStart, $monthEnd])
+            ->get()
+            ->groupBy('user_id');
 
         $salaryData = [];
         $totalSistem = 0;
@@ -53,12 +71,10 @@ class PayrollController extends Controller
 
             // 1. Hitung Komisi Shift
             $komisiShift = 0;
-            $completedShiftsCount = 0;
-            $todayStr = \Carbon\Carbon::today()->format('Y-m-d');
+            $todayStr = Carbon::today()->format('Y-m-d');
             
             foreach ($userAsgn as $asgn) {
                 if ($asgn->date < $todayStr) {
-                    $completedShiftsCount++;
                     if ($asgn->shift && $asgn->shift->location) {
                         $locId = $asgn->shift->schedule_location_id;
                         if (is_array($user->custom_rates) && isset($user->custom_rates[$locId])) {
@@ -78,27 +94,24 @@ class PayrollController extends Controller
                 $allowance = $user->allowance_amount;
             }
 
-            // 3. Tambahan Lain dari tabel Payroll
-            $payroll = $payrolls->get($user->id);
-            $motret = $payroll ? $payroll->photographer_fee : 0;
-            $lembur = $payroll ? $payroll->overtime_fee : 0;
-            $bonus = $payroll ? $payroll->bonus : 0;
+            // 3. Komponen tambahan dari entri gaji
+            $userEntries = $entries->get($user->id, collect());
+            $totals = $userEntries->groupBy('component')
+                ->map(fn ($group) => (int) $group->sum('amount'));
+
+            $motret = (int) $totals->get('photographer_fee', 0);
+            $lembur = (int) $totals->get('overtime_fee', 0);
+            $bonus = (int) $totals->get('bonus', 0);
+            $deductionEntry = (int) $totals->get('deduction', 0);
+
             // 4. Crew Cash Photobox
-            $crewCashIncome = \App\Models\CrewCashTransaction::where('user_id', $user->id)
-                ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
-                ->where('type', 'income')
-                ->sum('amount');
-            $crewCashExpenseOperational = \App\Models\CrewCashTransaction::where('user_id', $user->id)
-                ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
-                ->where('type', 'expense_operational')
-                ->sum('amount');
-            $crewCashExpensePersonal = \App\Models\CrewCashTransaction::where('user_id', $user->id)
-                ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
-                ->where('type', 'expense_personal')
-                ->sum('amount');
-            
+            $userCash = $crewCash->get($user->id, collect());
+            $crewCashIncome = (int) $userCash->where('type', 'income')->sum('amount');
+            $crewCashExpenseOperational = (int) $userCash->where('type', 'expense_operational')->sum('amount');
+            $crewCashExpensePersonal = (int) $userCash->where('type', 'expense_personal')->sum('amount');
+
             $crewCashExpense = $crewCashExpenseOperational + $crewCashExpensePersonal;
-            $kasbon = ($payroll ? $payroll->deduction : 0) + $crewCashExpensePersonal;
+            $kasbon = $deductionEntry + $crewCashExpensePersonal;
 
             $totalKotor = $komisiShift + $allowance + $motret + $lembur + $bonus;
             $totalBersih = $totalKotor - $kasbon;
@@ -109,7 +122,8 @@ class PayrollController extends Controller
                 'total_shifts' => $totalShifts,
                 'komisi_shift' => $komisiShift,
                 'allowance' => $allowance,
-                'payroll' => $payroll,
+                'payroll' => $payrolls->get($user->id),
+                'entries' => $userEntries,
                 'motret' => $motret,
                 'lembur' => $lembur,
                 'bonus' => $bonus,
@@ -124,38 +138,62 @@ class PayrollController extends Controller
         return compact('month', 'salaryData', 'totalSistem');
     }
 
+    /**
+     * Menambahkan satu entri komponen gaji pada satu tanggal. Entri lain tidak tersentuh,
+     * jadi lembur tanggal 10 tetap ada ketika lembur tanggal 12 ditambahkan.
+     */
+    public function storeEntry(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'period' => 'required|date_format:Y-m',
+            'component' => 'required|in:' . implode(',', array_keys(PayrollEntry::COMPONENTS)),
+            'date' => 'required|date',
+            'amount' => 'required|numeric|min:1',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        if (Carbon::parse($request->date)->format('Y-m') !== $request->period) {
+            return back()->with('error', 'Tanggal entri harus berada di periode ' . $request->period . '.');
+        }
+
+        PayrollEntry::create([
+            'user_id' => $request->user_id,
+            'date' => $request->date,
+            'component' => $request->component,
+            'amount' => (int) $request->amount,
+            'note' => $request->note ?: null,
+            'source' => 'manual',
+        ]);
+
+        Payroll::firstOrCreate(['user_id' => $request->user_id, 'period' => $request->period]);
+
+        return back()->with('success', PayrollEntry::componentLabel($request->component)
+            . ' Rp ' . number_format($request->amount, 0, ',', '.')
+            . ' dicatat untuk ' . Carbon::parse($request->date)->translatedFormat('d F Y') . '.');
+    }
+
+    public function destroyEntry(PayrollEntry $entry)
+    {
+        $entry->delete();
+
+        return back()->with('success', 'Entri komponen gaji dihapus.');
+    }
+
     public function store(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'period' => 'required|date_format:Y-m',
-            'photographer_fee' => 'nullable|numeric|min:0',
-            'overtime_fee' => 'nullable|numeric|min:0',
-            'bonus' => 'nullable|numeric|min:0',
-            'deduction' => 'nullable|numeric|min:0',
-            'photographer_fee_note' => 'nullable|string',
-            'overtime_fee_note' => 'nullable|string',
-            'bonus_note' => 'nullable|string',
-            'deduction_note' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
 
         Payroll::updateOrCreate(
             ['user_id' => $request->user_id, 'period' => $request->period],
-            [
-                'photographer_fee' => $request->photographer_fee ?? 0,
-                'overtime_fee' => $request->overtime_fee ?? 0,
-                'bonus' => $request->bonus ?? 0,
-                'deduction' => $request->deduction ?? 0,
-                'photographer_fee_note' => $request->photographer_fee_note,
-                'overtime_fee_note' => $request->overtime_fee_note,
-                'bonus_note' => $request->bonus_note,
-                'deduction_note' => $request->deduction_note,
-                'notes' => $request->notes,
-            ]
+            ['notes' => $request->notes]
         );
 
-        return back()->with('success', 'Data tambahan gaji berhasil disimpan!');
+        return back()->with('success', 'Catatan keseluruhan gaji disimpan!');
     }
 
     public function exportPdf(Request $request)

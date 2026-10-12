@@ -24,6 +24,7 @@
                     <tr>
                         <th class="px-6 py-3">Nama Shift</th>
                         <th class="px-6 py-3 text-center">Jam Kerja</th>
+                        <th class="px-6 py-3 text-center">Jendela Absen</th>
                         <th class="px-6 py-3 text-center">Max Crew</th>
                         <th class="px-6 py-3 text-center">Warna</th>
                         <th class="px-6 py-3 text-center">Aksi</th>
@@ -40,6 +41,23 @@
                         </td>
                         <td class="px-6 py-4 text-center">
                             <span class="bg-slate-900 px-3 py-1 rounded text-xs font-mono text-blue-400 border border-slate-700">{{ substr($shift->start_time,0,5) }} - {{ substr($shift->end_time,0,5) }}</span>
+                            @if($shift->isOvernight())
+                                <div class="text-[9px] font-bold text-purple-400 uppercase mt-1"><i class="fas fa-moon mr-1"></i>Melewati tengah malam</div>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-center align-top">
+                            @if($shift->hasWindow('in') || $shift->hasWindow('out'))
+                                <div class="text-[10px] font-mono leading-relaxed">
+                                    <div class="text-emerald-400">
+                                        <i class="fas fa-sign-in-alt mr-1"></i>{{ $shift->hasWindow('in') ? substr($shift->check_in_start,0,5) . ' - ' . substr($shift->check_in_end,0,5) : '-' }}
+                                    </div>
+                                    <div class="text-amber-400 mt-1">
+                                        <i class="fas fa-sign-out-alt mr-1"></i>{{ $shift->hasWindow('out') ? substr($shift->check_out_start,0,5) . ' - ' . substr($shift->check_out_end,0,5) : '-' }}
+                                    </div>
+                                </div>
+                            @else
+                                <span class="text-[10px] font-bold text-slate-600 uppercase">Tidak dibatasi</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 text-center">
                             <span class="font-bold {{ $shift->max_crew > 1 ? 'text-orange-400' : 'text-slate-400' }}">{{ $shift->max_crew }} Orang</span>

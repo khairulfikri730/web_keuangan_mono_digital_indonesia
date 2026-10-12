@@ -20,7 +20,9 @@ class SettingController extends Controller
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
             'cashout_source_access', 'cashout_role_access', 'cashout_manual_date',
             'target_omzet', 'target_profit', 'target_transaksi',
-            'shift_approval_required', 'auto_sync_cashflow'
+            'shift_approval_required', 'auto_sync_cashflow',
+            'attendance_window_enabled', 'overtime_rate_per_hour', 'overtime_grace_minutes',
+            'missing_check_out_grace_hours', 'top_performer_bonus'
         ]);
         $worksheets = \App\Models\Worksheet::all();
         return view('settings.index', compact('settings', 'worksheets'));
@@ -65,6 +67,11 @@ class SettingController extends Controller
             'target_transaksi' => 'nullable|integer|min:0',
             'shift_approval_required' => 'nullable|string|in:0,1',
             'auto_sync_cashflow' => 'nullable|string|in:0,1',
+            'attendance_window_enabled' => 'nullable|string|in:0,1',
+            'overtime_rate_per_hour' => 'nullable|integer|min:0',
+            'overtime_grace_minutes' => 'nullable|integer|min:0|max:240',
+            'missing_check_out_grace_hours' => 'nullable|integer|min:0|max:24',
+            'top_performer_bonus' => 'nullable|integer|min:0',
         ]);
 
         $keys = [
@@ -76,7 +83,8 @@ class SettingController extends Controller
             'custom_price_require_reason', 'custom_price_access', 'delivery_presets',
             'cashout_source_access', 'cashout_role_access', 'cashout_manual_date',
             'target_omzet', 'target_profit', 'target_transaksi', 'shift_approval_required',
-            'auto_sync_cashflow'
+            'auto_sync_cashflow', 'attendance_window_enabled', 'overtime_rate_per_hour',
+            'overtime_grace_minutes', 'missing_check_out_grace_hours', 'top_performer_bonus'
         ];
         foreach ($keys as $key) {
             Setting::set($key, $request->input($key));

@@ -1288,56 +1288,7 @@
             </div>
         </div>
         
-        @if(isset($crewFinancial['payroll']))
-            @php
-                $p = $crewFinancial['payroll'];
-                $hasNotes = $p->notes || $p->deduction_note || $p->overtime_fee_note || $p->bonus_note || $p->photographer_fee_note;
-            @endphp
-            @if($hasNotes)
-            <div class="mt-4 bg-slate-800/80 border border-slate-700 p-4 rounded-xl relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-clipboard-list text-blue-400"></i> Evaluasi Bulanan</h4>
-                
-                <div class="space-y-2">
-                    @if($p->deduction_note)
-                    <div class="flex items-start gap-2">
-                        <i class="fas fa-minus-circle text-red-400 mt-0.5 text-xs"></i>
-                        <p class="text-sm text-slate-300"><span class="text-slate-400 font-semibold mr-1">Potongan:</span> {{ $p->deduction_note }}</p>
-                    </div>
-                    @endif
-                    @if($p->photographer_fee_note)
-                    <div class="flex items-start gap-2">
-                        <i class="fas fa-camera text-cyan-400 mt-0.5 text-xs"></i>
-                        <p class="text-sm text-slate-300"><span class="text-slate-400 font-semibold mr-1">Project:</span> {{ $p->photographer_fee_note }}</p>
-                    </div>
-                    @endif
-                    @if($p->overtime_fee_note)
-                    <div class="flex items-start gap-2">
-                        <i class="fas fa-clock text-orange-400 mt-0.5 text-xs"></i>
-                        <p class="text-sm text-slate-300"><span class="text-slate-400 font-semibold mr-1">Lembur:</span> {{ $p->overtime_fee_note }}</p>
-                    </div>
-                    @endif
-                    @if($p->bonus_note)
-                    <div class="flex items-start gap-2">
-                        <i class="fas fa-gift text-purple-400 mt-0.5 text-xs"></i>
-                        <p class="text-sm text-slate-300"><span class="text-slate-400 font-semibold mr-1">Bonus:</span> {{ $p->bonus_note }}</p>
-                    </div>
-                    @endif
-                    @if($p->notes)
-                    <div class="mt-4 bg-red-900/20 border border-red-700/50 rounded-lg p-3 flex items-start gap-3">
-                        <div class="mt-0.5">
-                            <i class="fas fa-exclamation-triangle text-red-500"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Perhatian Khusus / Evaluasi</p>
-                            <p class="text-sm text-red-200">{{ $p->notes }}</p>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-            </div>
-            @endif
-        @endif
+        @include('schedules._crew_evaluation', ['crewFinancial' => $crewFinancial])
     </div>
     <div class="mt-8 border-t border-white/5 pt-6">
         <h3 class="font-black text-white uppercase tracking-wider text-sm flex items-center gap-2 mb-4">

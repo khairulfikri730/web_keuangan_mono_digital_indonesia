@@ -183,8 +183,9 @@
     {{-- COVER PAGE --}}
     <div class="cover-page">
         <div class="cover-content">
-            @if($meta['settings']['store_logo'])
-                <img src="{{ public_path('storage/' . $meta['settings']['store_logo']) }}" class="cover-logo">
+            @php $logoDataUri = \App\Models\Setting::logoDataUri(); @endphp
+            @if($logoDataUri)
+                <img src="{{ $logoDataUri }}" class="cover-logo">
             @endif
             <h1 class="cover-title">{{ $meta['settings']['store_name'] }}</h1>
             <p class="cover-subtitle">LAPORAN ANALISA BISNIS PROFESIONAL</p>

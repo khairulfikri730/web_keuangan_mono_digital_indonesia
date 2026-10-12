@@ -402,19 +402,17 @@ class DashboardController extends Controller
                         $allowance = $crew->allowance_amount ?? 0;
                     }
 
-                    $payroll = \App\Models\Payroll::where('user_id', $crew->id)
-                        ->where('period', $salaryMonth->format('Y-m'))
-                        ->first();
-                        
                     $crewCashExpensePersonal = \App\Models\CrewCashTransaction::where('user_id', $crew->id)
                         ->whereBetween('date', [$salaryMonthStart, $salaryMonthEnd])
                         ->where('type', 'expense_personal')
                         ->sum('amount');
-                        
-                    $lembur  = $payroll ? $payroll->overtime_fee : 0;
-                    $bonus   = $payroll ? $payroll->bonus       : 0;
-                    $kasbon  = ($payroll ? $payroll->deduction   : 0) + $crewCashExpensePersonal;
-                    $motret  = $payroll ? $payroll->photographer_fee : 0;
+
+                    $salaryEntries = \App\Models\PayrollEntry::totals($crew->id, $salaryMonthStart, $salaryMonthEnd);
+
+                    $lembur  = $salaryEntries['overtime_fee'] ?? 0;
+                    $bonus   = $salaryEntries['bonus'] ?? 0;
+                    $kasbon  = ($salaryEntries['deduction'] ?? 0) + (int) $crewCashExpensePersonal;
+                    $motret  = $salaryEntries['photographer_fee'] ?? 0;
 
                     $gross = $komisi + $allowance + $lembur + $bonus + $motret;
                     $net   = $gross - $kasbon;
@@ -659,10 +657,16 @@ class DashboardController extends Controller
                     $allowance = auth()->user()->allowance_amount;
                 }
                 $payroll = \App\Models\Payroll::where('user_id', auth()->id())->where('period', $filterMonth->format('Y-m'))->first();
-                $motret = $payroll ? $payroll->photographer_fee : 0;
-                $lembur = $payroll ? $payroll->overtime_fee : 0;
-                $bonus = $payroll ? $payroll->bonus : 0;
-                $kasbon = $payroll ? $payroll->deduction : 0;
+                $salaryEntries = \App\Models\PayrollEntry::totals(auth()->id(), $monthStart, $monthEnd);
+                $entryList = \App\Models\PayrollEntry::where('user_id', auth()->id())
+                    ->whereBetween('date', [$monthStart, $monthEnd])
+                    ->orderBy('date')
+                    ->get();
+
+                $motret = $salaryEntries['photographer_fee'] ?? 0;
+                $lembur = $salaryEntries['overtime_fee'] ?? 0;
+                $bonus = $salaryEntries['bonus'] ?? 0;
+                $kasbon = $salaryEntries['deduction'] ?? 0;
                 
                 $crewFinancial = [
                     'totalKotor' => $komisiShift + $allowance + $motret + $lembur + $bonus,
@@ -675,6 +679,7 @@ class DashboardController extends Controller
                     'completed_shifts' => $userAsgn->where('date', '<', Carbon::today()->format('Y-m-d'))->count(),
                     'total_shifts' => $userAsgn->count(),
                     'payroll' => $payroll,
+                    'entries' => $entryList,
                 ];
             }
 

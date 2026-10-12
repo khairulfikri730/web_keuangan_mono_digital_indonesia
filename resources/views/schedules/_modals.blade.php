@@ -149,6 +149,8 @@
                         <input type="number" name="max_crew" value="1" min="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required>
                     </div>
                 </div>
+
+                @include('schedules._shift_window_fields', ['shift' => null])
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
                 <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
@@ -195,6 +197,8 @@
                         <input type="number" name="max_crew" value="{{ $shift->max_crew }}" min="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" required>
                     </div>
                 </div>
+
+                @include('schedules._shift_window_fields', ['shift' => $shift])
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
                 <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
