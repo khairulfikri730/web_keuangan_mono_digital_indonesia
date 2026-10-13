@@ -306,6 +306,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/overtimes', [\App\Http\Controllers\OvertimeController::class, 'store'])->middleware('permission:schedules.manage')->name('overtimes.store');
         Route::post('/overtimes/{overtime}/approve', [\App\Http\Controllers\OvertimeController::class, 'approve'])->middleware('permission:schedules.manage')->name('overtimes.approve');
         Route::post('/overtimes/{overtime}/reject', [\App\Http\Controllers\OvertimeController::class, 'reject'])->middleware('permission:schedules.manage')->name('overtimes.reject');
+        Route::put('/overtimes/{overtime}', [\App\Http\Controllers\OvertimeController::class, 'update'])->middleware('permission:schedules.manage')->name('overtimes.update');
         
         Route::middleware('permission:schedules.manage')->group(function () {
             // Locations

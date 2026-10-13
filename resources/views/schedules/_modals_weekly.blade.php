@@ -1,5 +1,5 @@
 ﻿{{-- WEEKLY BULK ASSIGN MODAL --}}
-<div x-data="weeklyBulk()" x-show="show" @open-modal.window="if ($event.detail === 'weekly-bulk-assign') { show = true; calcDates(); }" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="weeklyBulk()" x-show="show" @open-modal.window="if ($event.detail === 'weekly-bulk-assign') { show = true; calcDates(); }" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-lg m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">

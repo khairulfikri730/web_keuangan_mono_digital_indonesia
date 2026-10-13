@@ -148,17 +148,81 @@ class SchedulePagesTest extends TestCase
             ->assertSee('Luar Radius')
             ->assertSee('attendance/rekap-lembur.webp', false)
             ->assertSee('Rp 24.750', false)
-            ->assertSee('24.750');
+            ->assertSee('24.750')
+            ->assertSee('Koreksi Lembur');
+    }
+
+    public function test_log_absensi_tampilkan_lembur_sudah_di_acc(): void
+    {
+        $hari = '2026-10-12';
+
+        foreach ([['in', '09:30'], ['out', '23:30']] as [$type, $jam]) {
+            $row = new Attendance([
+                'user_id' => $this->crew->id,
+                'schedule_location_id' => $this->location->id,
+                'schedule_shift_id' => $this->shift->id,
+                'type' => $type,
+                'date' => $hari,
+                'status' => 'in_radius',
+                'violations' => [],
+            ]);
+            $row->created_at = \Illuminate\Support\Carbon::parse($hari . ' ' . $jam . ':00');
+            $row->save();
+        }
+
+        OvertimeRequest::create([
+            'user_id' => $this->crew->id,
+            'schedule_location_id' => $this->location->id,
+            'date' => $hari,
+            'window_end_at' => $hari . ' 22:20:00',
+            'check_out_at' => $hari . ' 23:30:00',
+            'minutes' => 70,
+            'rate_per_hour' => 15000,
+            'amount' => 17500,
+            'note' => 'Lembur sudah di-acc',
+            'status' => OvertimeRequest::STATUS_APPROVED,
+            'reviewed_by' => 'Khairul Fikri',
+        ]);
+
+        $attendances = $this->actingAs($this->owner)
+            ->get('/schedules/attendances?date=' . $hari . '&per_page=100')
+            ->assertOk()
+            ->viewData('attendances');
+
+        $keluar = $attendances->getCollection()->first(
+            fn (Attendance $row) => $row->user_id === $this->crew->id && $row->type === 'out'
+        );
+
+        $this->assertNotNull($keluar, 'Absen keluar crew ikut tampil.');
+        $this->assertNotNull($keluar->overtimeRequest, 'Lemburnya terpasang ke baris absensi.');
+        $this->assertSame(OvertimeRequest::STATUS_APPROVED, $keluar->overtimeRequest->status);
+
+        $this->get('/schedules/attendances?date=' . $hari . '&per_page=100')
+            ->assertSee('Lembur 1j 10m', false)
+            ->assertSee('Di-acc');
     }
 
     public function test_halaman_payroll_dengan_modal_entri(): void
     {
         Payroll::create(['user_id' => $this->crew->id, 'period' => now()->format('Y-m'), 'notes' => 'Catatan uji']);
 
+        foreach (['01', '02', '03'] as $tgl) {
+            \App\Models\PayrollEntry::create([
+                'user_id' => $this->crew->id,
+                'date' => now()->format('Y-m') . '-' . $tgl,
+                'component' => 'overtime_fee',
+                'amount' => 15000,
+                'note' => 'Lembur rapikan arsip tanggal ' . $tgl,
+                'source' => 'manual',
+            ]);
+        }
+
         $this->actingAs($this->owner)->get('/schedules/payrolls?month=' . now()->format('Y-m'))
             ->assertOk()
             ->assertSee('Edit Komponen Gaji: ' . $this->crew->name)
-            ->assertSee('Tambah');
+            ->assertSee('Tambah')
+            ->assertSee('Detail')
+            ->assertSee('Lembur rapikan arsip tanggal 03');
     }
 
     public function test_pdf_gaji_termuat_dengan_logo(): void

@@ -902,4 +902,100 @@ class AttendanceRuleTest extends TestCase
         $response = $this->get(route('schedules.attendances.report', ['period' => 'monthly', 'date' => '2026-10-12']));
         $this->assertStringContainsString('%PDF', $response->getContent());
     }
+
+    public function test_koreksi_lembur_setelah_diproses_menyesuaikan_entri_gaji(): void
+    {
+        $overtime = OvertimeRequest::create([
+            'user_id' => $this->crew->id,
+            'schedule_location_id' => $this->location->id,
+            'date' => '2026-10-10',
+            'window_end_at' => '2026-10-10 22:20:00',
+            'check_out_at' => '2026-10-10 23:20:00',
+            'minutes' => 60,
+            'rate_per_hour' => 15000,
+            'amount' => 15000,
+            'note' => 'Lembur rapikan arsip',
+            'status' => OvertimeRequest::STATUS_PENDING,
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+        $this->post(route('schedules.overtimes.approve', $overtime))->assertSessionHas('success');
+        $this->assertSame(15000, PayrollEntry::sole()->amount);
+
+        // Sudah di-acc masih boleh dikoreksi: durasi dan nominal ikut berubah di gaji.
+        $this->put(route('schedules.overtimes.update', $overtime), [
+            'minutes' => 120,
+            'amount' => 30000,
+            'note' => 'Ternyata sampai pagi',
+            'status' => OvertimeRequest::STATUS_APPROVED,
+        ])->assertSessionHas('success');
+
+        $this->assertSame(120, $overtime->fresh()->minutes);
+        $this->assertSame(30000, PayrollEntry::sole()->amount);
+        $this->assertSame(1, PayrollEntry::count(), 'Koreksi memakai ulang entri yang sama.');
+
+        // Diubah menjadi ditolak: entri gajinya hilang lagi.
+        $this->put(route('schedules.overtimes.update', $overtime), [
+            'minutes' => 120,
+            'status' => OvertimeRequest::STATUS_REJECTED,
+        ])->assertSessionHas('success');
+
+        $this->assertSame(0, PayrollEntry::count());
+        $this->assertNull($overtime->fresh()->payroll_entry_id);
+        // Nominal kosong dihitung ulang dari tarif per jam.
+        $this->assertSame(30000, $overtime->fresh()->amount);
+
+        // Lalu di-acc kembali dari halaman koreksi.
+        $this->put(route('schedules.overtimes.update', $overtime), [
+            'minutes' => 90,
+            'status' => OvertimeRequest::STATUS_APPROVED,
+        ])->assertSessionHas('success');
+
+        $entry = PayrollEntry::sole();
+        $this->assertSame(22500, $entry->amount);
+        $this->assertSame(OvertimeRequest::STATUS_APPROVED, $overtime->fresh()->status);
+        $this->assertSame($entry->id, $overtime->fresh()->payroll_entry_id);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_isi_otomatis_dapat_diminta_menutup_sesi_yang_lupa_absen_keluar(): void
+    {
+        $shift = $this->makeShift([
+            'check_in_start' => '09:20:00',
+            'check_in_end' => '09:40:00',
+            'check_out_start' => '22:00:00',
+            'check_out_end' => '22:20:00',
+        ]);
+        $this->assign($shift, '2026-10-11');
+
+        $this->actingAs($this->crew);
+        Carbon::setTestNow('2026-10-11 09:30:00');
+        $this->clockIn();
+
+        // Crew baru sempat absen setelah lewat tengah malam, sesinya sudah terkunci.
+        Carbon::setTestNow('2026-10-13 09:00:00');
+        $this->get(route('schedules.attendances.index'));
+        $this->assertArrayHasKey('missing_check_out', Attendance::where('date', '2026-10-11')->sole()->violations);
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+        $this->post(route('schedules.attendances.auto-fill'), [
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-13',
+            'close_missing' => '1',
+        ])->assertSessionHas('success');
+
+        $out = Attendance::where('date', '2026-10-11')->where('type', 'out')->sole();
+        $this->assertSame(Attendance::SOURCE_AUTO, $out->source);
+        $this->assertSame('2026-10-11 22:20:01', $out->created_at->format('Y-m-d H:i:s'),
+            'Jamnya diambil dari batas akhir jendela, bukan dikarang.');
+        $this->assertArrayHasKey('missing_check_out', $out->violations,
+            'Tetap ditandai lupa absen keluar supaya owner yang menilai ulang.');
+        $this->assertSame(0, OvertimeRequest::count(), 'Belum ada lembur sebelum keputusan owner.');
+
+        // Sesi selesai, crew tidak lagi terkunci untuk absen berikutnya.
+        $this->assertNull(AttendanceRuleService::staleOpenSession($this->crew, $this->location));
+
+        Carbon::setTestNow();
+    }
 }

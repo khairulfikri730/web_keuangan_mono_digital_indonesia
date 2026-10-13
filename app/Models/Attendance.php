@@ -38,8 +38,10 @@ class Attendance extends Model
 
     public function overtimeRequest()
     {
+        // Kolom date bertipe DATE, jadi nilainya harus dipotong jadi tanggal saja;
+        // Carbon yang di-bind ikut zona waktu dan bergeser sehari.
         return $this->hasOne(OvertimeRequest::class, 'user_id')
-            ->where('date', $this->date)
+            ->where('date', $this->date?->toDateString())
             ->where('schedule_location_id', $this->schedule_location_id);
     }
 

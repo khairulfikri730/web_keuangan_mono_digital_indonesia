@@ -271,7 +271,7 @@
     x-show="show" 
     @open-modal.window="if ($event.detail === 'add-crew-cash') show = true" 
     @close-modal.window="show = false; resetForm()" 
-    class="fixed inset-0 z-[99] flex items-center justify-center overflow-y-auto overflow-x-hidden" style="display: none;">
+    class="fixed inset-0 z-[160] flex items-center justify-center overflow-y-auto overflow-x-hidden" style="display: none;">
         <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false; resetForm()"></div>
         <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">

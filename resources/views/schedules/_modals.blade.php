@@ -1,7 +1,7 @@
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 {{-- MODAL: ADD LOCATION --}}
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'add-location') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'add-location') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -52,7 +52,7 @@
 
 {{-- EDIT LOCATION MODALS --}}
 @foreach($locations as $loc)
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'edit-location-{{ $loc->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'edit-location-{{ $loc->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -107,7 +107,7 @@
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 {{-- MODAL: ADD SHIFT --}}
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'add-shift') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'add-shift') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -163,7 +163,7 @@
 {{-- EDIT SHIFT MODALS --}}
 @foreach($locations as $loc)
 @foreach($loc->shifts as $shift)
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'edit-shift-{{ $shift->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'edit-shift-{{ $shift->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -213,7 +213,7 @@
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 {{-- MODAL: BULK ASSIGN --}}
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'bulk-assign') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'bulk-assign') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-lg m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -267,7 +267,7 @@
 
 {{-- CUSTOM RATE MODALS --}}
 @foreach($activeUsers as $user)
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'custom-rate-{{ $user->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'custom-rate-{{ $user->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">

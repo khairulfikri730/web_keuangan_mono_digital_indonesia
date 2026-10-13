@@ -166,4 +166,63 @@ class OvertimeController extends Controller
 
         return back()->with('success', 'Pengajuan lembur ditolak.');
     }
+
+    /**
+     * Mengoreksi pengajuan lembur yang sudah selesai diproses. Komponen gaji yang
+     * lahir dari pengajuan ini ikut diperbarui, dihapus, atau dibuat ulang supaya
+     * nominal di payroll selalu sama dengan lembur yang disetujui.
+     */
+    public function update(Request $request, OvertimeRequest $overtime)
+    {
+        $payload = $request->validate([
+            'minutes' => 'required|integer|min:1|max:1440',
+            'amount' => 'nullable|integer|min:0',
+            'note' => 'nullable|string|max:500',
+            'status' => 'required|in:' . OvertimeRequest::STATUS_PENDING . ',' . OvertimeRequest::STATUS_APPROVED . ',' . OvertimeRequest::STATUS_REJECTED,
+        ], [], ['minutes' => 'durasi lembur']);
+
+        $minutes = (int) $payload['minutes'];
+        $rate = (int) ($overtime->rate_per_hour ?: \App\Services\AttendanceRuleService::overtimeRate());
+        $amount = isset($payload['amount']) ? (int) $payload['amount'] : OvertimeRequest::amountFor($minutes, $rate);
+        $status = $payload['status'];
+        $note = $request->input('note');
+
+        $overtime->update([
+            'minutes' => $minutes,
+            'rate_per_hour' => $rate,
+            'amount' => $amount,
+            'note' => $note ?: null,
+        ]);
+
+        $entry = PayrollEntry::where('source', 'overtime_auto')->where('reference_id', $overtime->id)->first();
+
+        if ($status === OvertimeRequest::STATUS_APPROVED) {
+            $entry = PayrollEntry::updateOrCreate(
+                ['source' => 'overtime_auto', 'reference_id' => $overtime->id],
+                [
+                    'user_id' => $overtime->user_id,
+                    'date' => $overtime->date->toDateString(),
+                    'component' => 'overtime_fee',
+                    'amount' => $amount,
+                    'note' => 'Lembur otomatis ' . $overtime->durationLabel()
+                        . ' di ' . ($overtime->location->name ?? '-')
+                        . ($note ? ' — ' . $note : ''),
+                ]
+            );
+        } elseif ($entry) {
+            $entry->delete();
+            $entry = null;
+        }
+
+        $overtime->update([
+            'status' => $status,
+            'reviewed_by' => auth()->user()->name,
+            'reviewed_at' => now(),
+            'payroll_entry_id' => $entry?->id,
+        ]);
+
+        return back()->with('success', 'Lembur ' . $overtime->user->name . ' diperbarui ('
+            . $overtime->durationLabel() . ', Rp ' . number_format($amount, 0, ',', '.')
+            . ', ' . OvertimeRequest::statusLabel($status) . ').');
+    }
 }

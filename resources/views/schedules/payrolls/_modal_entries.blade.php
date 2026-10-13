@@ -11,9 +11,9 @@
 
 <div x-data="{ show: false }" @open-modal.window="if ($event.detail === 'edit-payroll-{{ $user->id }}') show = true" @close-modal.window="show = false">
     <template x-teleport="body">
-        <div x-show="show" x-cloak class="fixed inset-0 z-[99] flex items-center justify-center p-4">
+        <div x-show="show" x-cloak class="fixed inset-0 z-[160] flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
-            <div class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-2xl z-10 overflow-hidden max-h-[92vh] overflow-y-auto custom-scrollbar">
+            <div class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-2xl z-10 overflow-hidden max-h-[calc(100vh-2.5rem)] overflow-y-auto custom-scrollbar">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50 sticky top-0 z-10">
             <h3 class="text-lg font-black text-white"><i class="fas fa-money-check-alt text-emerald-400 mr-2"></i>Edit Komponen Gaji: {{ $user->name }}</h3>
             <button @click="show = false" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
@@ -44,7 +44,15 @@
                                 @endif
                             </p>
                             @if($entry->note)
-                            <p class="text-[10px] text-slate-400 italic truncate">{{ $entry->note }}</p>
+                            <div x-data="{ buka: false }">
+                                <p class="text-[10px] text-slate-400 italic" :class="buka ? 'whitespace-pre-wrap' : 'truncate'">{{ $entry->note }}</p>
+                                @if(strlen($entry->note) > 48)
+                                <button type="button" @click="buka = !buka" class="text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 inline-flex items-center gap-1 transition-colors">
+                                    <span x-text="buka ? 'Tutup' : 'Detail'"></span>
+                                    <i class="fas fa-chevron-down transition-transform" :class="buka && 'rotate-180'"></i>
+                                </button>
+                                @endif
+                            </div>
                             @endif
                         </div>
                         <form action="{{ route('schedules.payrolls.entries.destroy', $entry) }}" method="POST" class="m-0 shrink-0" onsubmit="return confirm('Hapus entri ini?')">

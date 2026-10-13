@@ -420,6 +420,32 @@ class AttendanceRuleService
     }
 
     /**
+     * Pasangkan pengajuan lembur ke sekumpulan baris absensi memakai satu query.
+     * Relasi overtimeRequest tidak dapat di-eager load karena konstraint tanggalnya
+     * dibuat dari model hampa, sehingga hasilnya selalu kosong.
+     */
+    public static function attachOvertime(Collection $rows): void
+    {
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $dates = $rows->map(fn (Attendance $row) => $row->date?->toDateString())->filter();
+
+        $requests = OvertimeRequest::whereIn('user_id', $rows->pluck('user_id')->unique())
+            ->whereBetween('date', [$dates->min(), $dates->max()])
+            ->get()
+            ->keyBy(fn (OvertimeRequest $o) => $o->user_id . '-' . $o->schedule_location_id . '-' . $o->date->toDateString());
+
+        foreach ($rows as $row) {
+            $row->setRelation(
+                'overtimeRequest',
+                $requests->get($row->user_id . '-' . $row->schedule_location_id . '-' . $row->date?->toDateString())
+            );
+        }
+    }
+
+    /**
      * Periode laporan: harian, mingguan, atau bulanan.
      *
      * @return array{0: Carbon, 1: Carbon, 2: string}

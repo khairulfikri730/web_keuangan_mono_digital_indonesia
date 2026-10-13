@@ -240,8 +240,8 @@
                         </td>
                         @if($canReview)
                         <td class="px-6 py-5 text-center">
-                            @if($row->status === \App\Models\OvertimeRequest::STATUS_PENDING)
-                                <div class="flex items-center justify-center gap-2">
+                            <div class="flex items-center justify-center gap-2">
+                                @if($row->status === \App\Models\OvertimeRequest::STATUS_PENDING)
                                     <form id="acc-{{ $row->id }}" action="{{ route('schedules.overtimes.approve', $row) }}" method="POST" class="m-0">
                                         @csrf
                                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider transition-colors">
@@ -250,14 +250,20 @@
                                     </form>
                                     <form action="{{ route('schedules.overtimes.reject', $row) }}" method="POST" class="m-0" onsubmit="return confirm('Tolak pengajuan lembur ini?')">
                                         @csrf
-                                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-red-600 hover:text-white text-slate-300 text-[10px] font-black uppercase tracking-wider transition-colors">
+                                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-red-600 hover:text-white text-slate-300 text-[10px] font-black uppercase tracking-wider transition-colors" title="Tolak">
                                             <i class="fas fa-xmark"></i>
                                         </button>
                                     </form>
-                                </div>
-                            @else
-                                <span class="text-[10px] text-slate-600">Selesai diproses</span>
-                            @endif
+                                @else
+                                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-500">{{ \App\Models\OvertimeRequest::statusLabel($row->status) }}</span>
+                                @endif
+
+                                <button type="button" @click="$dispatch('open-modal', 'edit-overtime-{{ $row->id }}')" class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-purple-600 text-slate-200 text-[10px] font-black uppercase tracking-wider transition-colors" title="Koreksi durasi, nominal, dan status">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+
+                            @include('schedules.overtimes._modal_edit', ['row' => $row])
                         </td>
                         @endif
                     </tr>

@@ -19,7 +19,7 @@ class AttendanceController extends Controller
     {
         AttendanceRuleService::enforceRecentRules();
 
-        $query = Attendance::with(['user', 'location', 'shift', 'overtimeRequest'])
+        $query = Attendance::with(['user', 'location', 'shift'])
             ->orderByDesc('date')
             ->orderByDesc('created_at');
 
@@ -44,6 +44,7 @@ class AttendanceController extends Controller
 
         $perPage = in_array((int) $request->input('per_page'), [10, 25, 50, 100]) ? (int) $request->input('per_page') : 10;
         $attendances = $query->paginate($perPage)->withQueryString();
+        AttendanceRuleService::attachOvertime($attendances->getCollection());
 
         // Absen masuk yang belum ditutup, agar owner dapat melengkapinya.
         $openIds = $attendances->filter(fn (Attendance $row) => $row->type === 'in')
@@ -597,7 +598,84 @@ class AttendanceController extends Controller
             $messages[] = $noWindow . ' sesi dilewati karena jendela absennya belum diatur di Master Shift';
         }
 
+        if ($request->boolean('close_missing')) {
+            $messages[] = $this->closeMissingSessions($data) . ' sesi lupa absen keluar ditutup oleh sistem';
+        }
+
         return back()->with('success', implode(', ', $messages) . '.');
+    }
+
+    /**
+     * Melengkapi absen keluar crew yang terkunci karena lupa absen (termasuk yang
+     * baru ingat setelah lewat tengah malam). Jamnya diambil dari batas jendela
+     * sehingga tidak ada jam yang dikarang semaunya, dan tetap ditandai lupa
+     * absen keluar supaya Anda bisa menilai ulang: lembur atau tidak.
+     *
+     * @param array{start_date: string, end_date: string, location_id?: ?int, user_id?: ?int} $data
+     */
+    private function closeMissingSessions(array $data): int
+    {
+        $from = Carbon::parse($data['start_date'])->startOfDay();
+        $to = Carbon::parse($data['end_date'])->endOfDay();
+        $closed = 0;
+
+        foreach (AttendanceRuleService::recentSessions(60) as $session) {
+            $in = $session['in'];
+
+            if (!$in || $session['out'] || !$session['location'] || !$session['user']
+                || $in->date->lessThan($from) || $in->date->greaterThan($to)) {
+                continue;
+            }
+
+            if (!array_key_exists(AttendanceRuleService::MISSING_CHECK_OUT, (array) ($in->violations ?? []))) {
+                continue;
+            }
+
+            if (($data['location_id'] ?? null) && $session['location']->id != $data['location_id']) {
+                continue;
+            }
+
+            if (($data['user_id'] ?? null) && $in->user_id != $data['user_id']) {
+                continue;
+            }
+
+            $date = $session['date'];
+            $window = AttendanceRuleService::sessionWindow(
+                AttendanceRuleService::assignmentsFor($session['user'], $session['location'], $date),
+                $date
+            );
+
+            $moment = $window['out'][1]
+                ? $window['out'][1]->copy()->addSecond()
+                : $in->created_at->copy()->addHour();
+
+            // Jam keluar tidak boleh lebih awal dari absen masuk yang ada.
+            if ($moment->lessThanOrEqualTo($in->created_at)) {
+                $moment = $in->created_at->copy()->addMinute();
+            }
+
+            $out = new Attendance([
+                'user_id' => $in->user_id,
+                'schedule_location_id' => $session['location']->id,
+                'schedule_shift_id' => $window['shifts']['out']?->id ?? $in->schedule_shift_id,
+                'type' => 'out',
+                'date' => $date,
+                'status' => $in->status,
+                'source' => Attendance::SOURCE_AUTO,
+                'corrected_by' => auth()->user()->name,
+                'violations' => [
+                    AttendanceRuleService::MISSING_CHECK_OUT =>
+                        $in->violations[AttendanceRuleService::MISSING_CHECK_OUT] ?? 0,
+                ],
+                'notes' => 'Absen keluar dilengkapi otomatis (lupa absen keluar). Cek lagi: lembur atau tidak.',
+            ]);
+            $out->created_at = $moment;
+            $out->save();
+
+            $closed++;
+        }
+
+        return $closed;
     }
 
     /**
@@ -612,13 +690,15 @@ class AttendanceController extends Controller
             $request->input('date') ?: now()->toDateString()
         );
 
-        $rows = Attendance::with(['user', 'location', 'shift', 'overtimeRequest'])
+        $rows = Attendance::with(['user', 'location', 'shift'])
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->when(in_array(auth()->user()->role, ['crew', 'kasir']), fn ($q) => $q->where('user_id', auth()->id()))
             ->when($request->filled('location_id'), fn ($q) => $q->where('schedule_location_id', $request->location_id))
             ->orderBy('date')
             ->orderBy('created_at')
             ->get();
+
+        AttendanceRuleService::attachOvertime($rows);
 
         $summary = $this->buildSessions($rows)
             ->groupBy(fn (array $session) => $session['user']?->name ?? '-')

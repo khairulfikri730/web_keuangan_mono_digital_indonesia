@@ -1,7 +1,7 @@
 {{-- CLOSE ASSIGNMENT MODALS --}}
 @foreach($assignments as $asgn)
 @if($asgn->isOpen())
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'close-assignment-{{ $asgn->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'close-assignment-{{ $asgn->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -33,7 +33,7 @@
     </div>
 </div>
 {{-- CHANGE CREW MODAL --}}
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'change-assignment-{{ $asgn->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'change-assignment-{{ $asgn->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -75,7 +75,7 @@
 @endforeach
 
 {{-- POSTER MODAL --}}
-<div x-data="{ show: false, type: 'weekly' }" x-show="show" @open-modal.window="if ($event.detail === 'poster-modal') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false, type: 'weekly' }" x-show="show" @open-modal.window="if ($event.detail === 'poster-modal') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -126,7 +126,7 @@
 {{-- SWAP REQUEST MODAL (For Crew and Superadmin) --}}
 @foreach($assignments as $asgn)
 @if($asgn->isOpen() && ($asgn->user_id == auth()->id() || in_array(auth()->user()->role, ['superadmin', 'owner'])))
-<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'swap-request-{{ $asgn->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false }" x-show="show" @open-modal.window="if ($event.detail === 'swap-request-{{ $asgn->id }}') show = true" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
@@ -162,7 +162,7 @@
 </div>
 @endif
 @endforeach{{-- QUICK ADD ASSIGNMENT MODAL --}}
-<div x-data="{ show: false, date: '', shiftId: '' }" x-show="show" @open-quick-add.window="date = $event.detail.date; shiftId = $event.detail.shiftId; show = true;" @close-modal.window="show = false" class="fixed inset-0 z-[99] flex items-center justify-center" style="display:none;">
+<div x-data="{ show: false, date: '', shiftId: '' }" x-show="show" @open-quick-add.window="date = $event.detail.date; shiftId = $event.detail.shiftId; show = true;" @close-modal.window="show = false" class="fixed inset-0 z-[160] flex items-center justify-center" style="display:none;">
     <div x-show="show" x-transition.opacity class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
     <div x-show="show" x-transition.scale.origin.bottom class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md m-4 z-10 overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide ">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
