@@ -205,6 +205,9 @@
                         <td class="px-6 py-5 text-center">
                             <span class="text-xs font-black text-white">{{ $row->durationLabel() }}</span>
                             <p class="text-[9px] text-slate-500 mt-1">Rp {{ number_format($row->rate_per_hour, 0, ',', '.') }}/jam</p>
+                            @if($row->source === \App\Models\OvertimeRequest::SOURCE_AUTO && $row->status === \App\Models\OvertimeRequest::STATUS_PENDING)
+                                <p class="text-[9px] text-emerald-500/80 mt-0.5" title="Durasi dihitung dari jam absen keluar dan batas jendela shift. Ubah jam absennya, lemburnya ikut berubah.">ikut jam absen</p>
+                            @endif
                         </td>
                         <td class="px-6 py-5 text-right">
                             @if($canReview && $row->status === \App\Models\OvertimeRequest::STATUS_PENDING)

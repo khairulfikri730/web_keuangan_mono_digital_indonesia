@@ -391,12 +391,17 @@ class AttendanceRuleService
                 $window['out'][1]
             );
 
-            $known = OvertimeRequest::where('user_id', $session['user']->id)
+            $existing = OvertimeRequest::where('user_id', $session['user']->id)
                 ->where('schedule_location_id', $session['location']->id)
                 ->whereDate('date', $session['date'])
-                ->exists();
+                ->orderBy('id')
+                ->first();
 
-            if ($session['out'] && $minutes > 0 && !$known) {
+            if (!$existing) {
+                if (!$session['out'] || $minutes <= 0) {
+                    continue;
+                }
+
                 $rate = self::overtimeRate();
 
                 OvertimeRequest::create([
@@ -410,9 +415,45 @@ class AttendanceRuleService
                     'amount' => OvertimeRequest::amountFor($minutes, $rate),
                     'note' => 'Lembur terdeteksi otomatis dari absen keluar',
                     'status' => OvertimeRequest::STATUS_PENDING,
+                    'source' => OvertimeRequest::SOURCE_AUTO,
                 ]);
 
                 $overtimes++;
+                continue;
+            }
+
+            // Lembur turunan sistem yang belum diproses ikut jam absen keluar dan
+            // jendela shift terbaru. Entri manual dan yang sudah di-acc/ditolak
+            // dikunci: itu keputusan owner, dan masih bisa lewat tombol Koreksi.
+            if ($session['out']
+                && $existing->source === OvertimeRequest::SOURCE_AUTO
+                && $existing->status === OvertimeRequest::STATUS_PENDING) {
+                $rate = self::overtimeRate();
+
+                if ($minutes <= 0) {
+                    $existing->delete();
+                    continue;
+                }
+
+                $nominal = OvertimeRequest::amountFor($minutes, $rate);
+
+                $berubah = $existing->minutes !== $minutes
+                    || $existing->amount !== $nominal
+                    || $existing->rate_per_hour !== $rate
+                    || !Carbon::parse($existing->check_out_at)->equalTo($session['out']->created_at)
+                    || !Carbon::parse($existing->window_end_at)->equalTo($window['out'][1]);
+
+                if ($berubah) {
+                    $existing->update([
+                        'window_end_at' => $window['out'][1],
+                        'check_out_at' => $session['out']->created_at,
+                        'minutes' => $minutes,
+                        'rate_per_hour' => $rate,
+                        'amount' => $nominal,
+                    ]);
+
+                    $overtimes++;
+                }
             }
         }
 

@@ -959,6 +959,84 @@ class AttendanceRuleTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_lembur_hasil_hitungan_sistem_ikut_dikoreksi_jam_absen_keluar(): void
+    {
+        \App\Models\Setting::set('overtime_rate_per_hour', '15000');
+        \App\Models\Setting::set('overtime_grace_minutes', '0');
+
+        $shift = $this->makeShift([
+            'check_in_start' => '09:20:00',
+            'check_in_end' => '09:40:00',
+            'check_out_start' => '22:00:00',
+            'check_out_end' => '22:20:00',
+        ]);
+        $this->assign($shift, '2026-10-12');
+
+        $masuk = new Attendance([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'schedule_shift_id' => $shift->id, 'type' => 'in', 'date' => '2026-10-12', 'status' => 'in_radius',
+        ]);
+        $masuk->created_at = Carbon::parse('2026-10-12 09:30:00');
+        $masuk->save();
+
+        $keluar = new Attendance([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'schedule_shift_id' => $shift->id, 'type' => 'out', 'date' => '2026-10-12', 'status' => 'in_radius',
+        ]);
+        $keluar->created_at = Carbon::parse('2026-10-12 23:20:00');
+        $keluar->save();
+
+        $owner = User::factory()->create(['role' => 'owner']);
+        $this->actingAs($owner);
+
+        $this->get(route('schedules.attendances.index'));
+        $lembur = OvertimeRequest::sole();
+        $this->assertSame(60, $lembur->minutes);
+        $this->assertSame(OvertimeRequest::SOURCE_AUTO, $lembur->source);
+
+        // Jam keluar dikoreksi lebih awal: lemburnya ikut berubah, bukan menumpuk duplikat.
+        $this->put(route('schedules.attendances.update', $keluar), [
+            'date' => '2026-10-12', 'time' => '22:50', 'status' => 'auto',
+        ])->assertSessionHas('success');
+        $this->get(route('schedules.attendances.index'));
+
+        $this->assertSame(30, $lembur->fresh()->minutes);
+        $this->assertSame(7500, $lembur->fresh()->amount);
+
+        // Pulang tepat waktu: lemburnya hilang sendiri.
+        $this->put(route('schedules.attendances.update', $keluar), [
+            'date' => '2026-10-12', 'time' => '22:10', 'status' => 'auto',
+        ])->assertSessionHas('success');
+        $this->get(route('schedules.attendances.index'));
+
+        $this->assertSame(0, OvertimeRequest::count());
+
+        // Batas jendela di Master Shift ikut menentukan: digeser lebih awal, lembur muncul lagi.
+        $shift->update(['check_out_start' => '21:30:00', 'check_out_end' => '21:40:00']);
+        $this->get(route('schedules.attendances.index'));
+
+        $this->assertSame(30, OvertimeRequest::sole()->minutes);
+
+        // Setelah dikoreksi owner lewat Rekap Lembur, nilainya tidak lagi dihitung ulang.
+        $dikoreksi = OvertimeRequest::sole();
+        $this->put(route('schedules.overtimes.update', $dikoreksi), [
+            'minutes' => 45, 'amount' => 20000, 'status' => OvertimeRequest::STATUS_PENDING,
+        ])->assertSessionHas('success');
+
+        $this->put(route('schedules.attendances.update', $keluar), [
+            'date' => '2026-10-12', 'time' => '23:40', 'status' => 'auto',
+        ])->assertSessionHas('success');
+        $this->get(route('schedules.attendances.index'));
+
+        $tetap = $dikoreksi->fresh();
+        $this->assertSame(45, $tetap->minutes);
+        $this->assertSame(20000, $tetap->amount);
+        $this->assertSame(OvertimeRequest::SOURCE_MANUAL, $tetap->source);
+        $this->assertSame(1, OvertimeRequest::count());
+
+        Carbon::setTestNow();
+    }
+
     public function test_isi_otomatis_dapat_diminta_menutup_sesi_yang_lupa_absen_keluar(): void
     {
         $shift = $this->makeShift([

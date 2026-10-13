@@ -10,10 +10,13 @@ class OvertimeRequest extends Model
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
 
+    public const SOURCE_AUTO = 'auto';
+    public const SOURCE_MANUAL = 'manual';
+
     protected $fillable = [
         'user_id', 'schedule_location_id', 'schedule_assignment_id', 'date',
         'window_end_at', 'check_out_at', 'minutes', 'rate_per_hour', 'amount',
-        'note', 'status', 'reviewed_by', 'reviewed_at', 'payroll_entry_id'
+        'note', 'status', 'source', 'reviewed_by', 'reviewed_at', 'payroll_entry_id'
     ];
 
     protected $casts = [

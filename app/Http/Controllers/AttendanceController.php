@@ -363,6 +363,7 @@ class AttendanceController extends Controller
                     'amount' => OvertimeRequest::amountFor($minutes, $rate),
                     'note' => $request->input('notes') ?: 'Lembur tercatat dari absensi ' . $moment->format('H:i'),
                     'status' => OvertimeRequest::STATUS_PENDING,
+                    'source' => OvertimeRequest::SOURCE_AUTO,
                     'reviewed_by' => null,
                     'reviewed_at' => null,
                     'payroll_entry_id' => null,
@@ -448,7 +449,10 @@ class AttendanceController extends Controller
         $messages = ['Absen keluar ' . ($attendance->user->name ?? 'crew') . ' pada ' . $moment->translatedFormat('d M Y') . ' berhasil ditutup.'];
 
         if ($isOvertime) {
-            $minutes = (int) ($request->input('minutes') ?: AttendanceRuleService::overtimeMinutes($moment, $window['out'][1]));
+            $ditentukanOwner = (int) $request->input('minutes') > 0;
+            $minutes = $ditentukanOwner
+                ? (int) $request->input('minutes')
+                : AttendanceRuleService::overtimeMinutes($moment, $window['out'][1]);
 
             if ($minutes <= 0) {
                 return back()->with('error', 'Isi durasi lembur lebih dari 0 menit.');
@@ -471,6 +475,8 @@ class AttendanceController extends Controller
                     'amount' => $amount,
                     'note' => $request->input('note') ?: 'Konversi lupa absen keluar menjadi lembur.',
                     'status' => OvertimeRequest::STATUS_PENDING,
+                    // Durasi yang diketik owner tidak boleh dihitung ulang oleh sistem.
+                    'source' => $ditentukanOwner ? OvertimeRequest::SOURCE_MANUAL : OvertimeRequest::SOURCE_AUTO,
                     'reviewed_by' => null,
                     'reviewed_at' => null,
                     'payroll_entry_id' => null,

@@ -105,6 +105,7 @@ class OvertimeController extends Controller
                 'amount' => $amount,
                 'note' => $data['note'],
                 'status' => OvertimeRequest::STATUS_PENDING,
+                'source' => OvertimeRequest::SOURCE_MANUAL,
                 'reviewed_by' => null,
                 'reviewed_at' => null,
                 'payroll_entry_id' => null,
@@ -192,6 +193,8 @@ class OvertimeController extends Controller
             'rate_per_hour' => $rate,
             'amount' => $amount,
             'note' => $note ?: null,
+            // Setelah dikoreksi owner, sistem tidak boleh menghitungnya ulang.
+            'source' => OvertimeRequest::SOURCE_MANUAL,
         ]);
 
         $entry = PayrollEntry::where('source', 'overtime_auto')->where('reference_id', $overtime->id)->first();
