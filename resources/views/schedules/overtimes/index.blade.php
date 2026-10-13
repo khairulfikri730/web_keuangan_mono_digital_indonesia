@@ -140,7 +140,10 @@
                 <thead class="bg-slate-900/40">
                     <tr class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                         <th class="px-6 py-5">Crew</th>
-                        <th class="px-6 py-5">Tanggal & Lokasi</th>
+                        <th class="px-6 py-5">Tanggal</th>
+                        <th class="px-6 py-5">Lokasi &amp; GPS</th>
+                        <th class="px-6 py-5 text-center">Jarak</th>
+                        <th class="px-6 py-5 text-center">Foto</th>
                         <th class="px-6 py-5 text-center">Batas &amp; Absen Keluar</th>
                         <th class="px-6 py-5 text-center">Durasi</th>
                         <th class="px-6 py-5 text-right">Nominal</th>
@@ -160,7 +163,40 @@
                         </td>
                         <td class="px-6 py-5">
                             <p class="text-xs font-bold text-slate-200">{{ $row->date->translatedFormat('D, d M Y') }}</p>
-                            <p class="text-[10px] text-slate-500 mt-0.5">{{ $row->location->name ?? '-' }}</p>
+                        </td>
+                        @php $absen = $row->checkoutAttendance; @endphp
+                        <td class="px-6 py-5">
+                            <p class="text-xs font-bold text-slate-300">{{ $row->location->name ?? '-' }}</p>
+                            @if($absen && $absen->latitude && $absen->longitude)
+                                <a href="https://maps.google.com/?q={{ $absen->latitude }},{{ $absen->longitude }}" target="_blank" class="text-[9px] font-black text-blue-400 hover:text-blue-300 mt-1 flex items-center gap-1">
+                                    <i class="fas fa-map-marker-alt"></i> Cek Maps
+                                </a>
+                            @else
+                                <p class="text-[9px] text-slate-600 mt-1">Tanpa data GPS</p>
+                            @endif
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            @if($absen && $absen->status === 'in_radius')
+                                <span class="text-emerald-400 text-xs font-black flex items-center justify-center gap-1">
+                                    <i class="fas fa-check-circle"></i> Sesuai
+                                </span>
+                            @elseif($absen)
+                                <span class="text-red-400 text-xs font-black flex items-center justify-center gap-1">
+                                    <i class="fas fa-exclamation-triangle"></i> Luar Radius
+                                </span>
+                            @else
+                                <span class="text-slate-600 text-xs">-</span>
+                            @endif
+                            <p class="text-[9px] text-slate-500 mt-1">{{ $absen && $absen->distance !== null ? round($absen->distance) . ' meter' : '' }}</p>
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            @if($absen && $absen->photo_path)
+                                <a href="{{ Storage::url($absen->photo_path) }}" target="_blank" class="inline-block hover:scale-110 transition-transform">
+                                    <img src="{{ Storage::url($absen->photo_path) }}" class="w-12 h-12 rounded-lg object-cover border border-slate-700 shadow-md">
+                                </a>
+                            @else
+                                <span class="text-slate-600 text-xs">-</span>
+                            @endif
                         </td>
                         <td class="px-6 py-5 text-center">
                             <p class="text-[10px] font-mono text-slate-500">{{ $row->window_end_at->format('d/m H:i') }}</p>
@@ -172,7 +208,14 @@
                         </td>
                         <td class="px-6 py-5 text-right">
                             @if($canReview && $row->status === \App\Models\OvertimeRequest::STATUS_PENDING)
-                                <input type="number" form="acc-{{ $row->id }}" name="amount" value="{{ $row->amount }}" min="0" step="500" class="w-28 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-xs font-bold text-white focus:outline-none focus:border-emerald-500">
+                                <div x-data="{ tampil: '{{ number_format($row->amount, 0, ',', '.') }}', raw: '{{ $row->amount }}' }" class="flex items-center justify-end gap-1">
+                                    <span class="text-[10px] text-slate-500 font-bold">Rp</span>
+                                    <input type="text" inputmode="numeric" form="acc-{{ $row->id }}" x-model="tampil"
+                                        @input="raw = tampil.replace(/\D/g, ''); tampil = raw ? new Intl.NumberFormat('id-ID').format(raw) : ''"
+                                        @blur="tampil = raw ? new Intl.NumberFormat('id-ID').format(raw) : ''"
+                                        class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-xs font-bold text-white focus:outline-none focus:border-emerald-500">
+                                    <input type="hidden" form="acc-{{ $row->id }}" name="amount" :value="raw">
+                                </div>
                             @else
                                 <span class="text-xs font-black text-emerald-400">Rp {{ number_format($row->amount, 0, ',', '.') }}</span>
                             @endif
@@ -220,7 +263,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="{{ $canReview ? '8' : '7' }}" class="px-8 py-16 text-center text-slate-500 text-sm">
+                        <td colspan="{{ $canReview ? '11' : '10' }}" class="px-8 py-16 text-center text-slate-500 text-sm">
                             <i class="fas fa-stopwatch text-3xl mb-3 block opacity-50"></i>
                             Tidak ada pengajuan lembur pada periode ini
                         </td>

@@ -39,6 +39,19 @@ class OvertimeRequest extends Model
     }
 
     /**
+     * Baris absen keluar yang melahirkan pengajuan lembur ini, dipakai untuk
+     * menampilkan lokasi GPS, jarak, dan fotonya di Rekap Lembur.
+     */
+    public function checkoutAttendance()
+    {
+        return $this->hasOne(Attendance::class, 'user_id', 'user_id')
+            ->where('type', 'out')
+            ->where('schedule_location_id', $this->schedule_location_id)
+            ->whereDate('date', $this->date)
+            ->orderByDesc('created_at');
+    }
+
+    /**
      * Nominal lembur: tarif per jam, dihitung proporsional per menit.
      */
     public static function amountFor(int $minutes, int $ratePerHour): int

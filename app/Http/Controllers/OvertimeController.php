@@ -32,6 +32,22 @@ class OvertimeController extends Controller
 
         $requests = $query->orderByDesc('date')->orderBy('created_at')->get();
 
+        // Absen keluar sebulan diambil sekali, lalu dipasangkan ke pengajuannya supaya
+        // Rekap Lembur dapat menampilkan GPS, jarak, dan foto tanpa query per baris.
+        $checkouts = \App\Models\Attendance::with('user')
+            ->where('type', 'out')
+            ->whereBetween('date', [$periodStart->format('Y-m-d'), $periodEnd->format('Y-m-d')])
+            ->orderBy('created_at')
+            ->get()
+            ->keyBy(fn ($row) => $row->user_id . '-' . $row->schedule_location_id . '-' . $row->date->toDateString());
+
+        foreach ($requests as $overtime) {
+            $overtime->setRelation(
+                'checkoutAttendance',
+                $checkouts->get($overtime->user_id . '-' . $overtime->schedule_location_id . '-' . $overtime->date->toDateString())
+            );
+        }
+
         $summary = [
             'pending' => $requests->where('status', OvertimeRequest::STATUS_PENDING),
             'approved' => $requests->where('status', OvertimeRequest::STATUS_APPROVED),

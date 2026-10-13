@@ -433,7 +433,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Upah Lembur per Jam (Rp)</label>
-                        <input type="number" name="overtime_rate_per_hour" value="{{ $settings['overtime_rate_per_hour'] ?? 15000 }}" min="0" step="500" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="15000">
+                        <input type="number" name="overtime_rate_per_hour" value="{{ $settings['overtime_rate_per_hour'] ?? 15000 }}" min="0" step="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="15000">
                         <p class="text-[9px] text-slate-500 mt-1">Dihitung proporsional per menit.</p>
                     </div>
                     <div>
@@ -448,7 +448,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Bonus Crew Performa Tertinggi (Rp)</label>
-                        <input type="number" name="top_performer_bonus" value="{{ $settings['top_performer_bonus'] ?? 0 }}" min="0" step="1000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="0">
+                        <input type="number" name="top_performer_bonus" value="{{ $settings['top_performer_bonus'] ?? 0 }}" min="0" step="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="0">
                         <p class="text-[9px] text-slate-500 mt-1">Diberikan ke peringkat 1 tiap lokasi, per bulan.</p>
                     </div>
                 </div>

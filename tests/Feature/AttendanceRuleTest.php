@@ -844,6 +844,32 @@ class AttendanceRuleTest extends TestCase
             ->assertViewHas('perPage', 25);
     }
 
+    public function test_acc_lembur_menerima_nominal_senilai_rupiah_penuh(): void
+    {
+        $overtime = OvertimeRequest::create([
+            'user_id' => $this->crew->id,
+            'schedule_location_id' => $this->location->id,
+            'date' => '2026-10-10',
+            'window_end_at' => '2026-10-10 23:20:00',
+            'check_out_at' => '2026-10-11 00:49:00',
+            'minutes' => 99,
+            'rate_per_hour' => 15000,
+            'amount' => 24750,
+            'note' => 'Pulang lewat tengah malam',
+            'status' => OvertimeRequest::STATUS_PENDING,
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+
+        // Nominal sebesar 24.750 bukan kelipatan 500; harus tetap bisa di-acc.
+        $this->post(route('schedules.overtimes.approve', $overtime), ['amount' => 24750])
+            ->assertSessionHas('success');
+
+        $entry = PayrollEntry::sole();
+        $this->assertSame(24750, $entry->amount);
+        $this->assertSame(OvertimeRequest::STATUS_APPROVED, $overtime->fresh()->status);
+    }
+
     public function test_laporan_pdf_absensi_harian_mingguan_dan_bulanan(): void
     {
         $shift = $this->makeShift([

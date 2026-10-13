@@ -91,10 +91,28 @@ class SchedulePagesTest extends TestCase
 
     public function test_halaman_rekap_lembur(): void
     {
+        $hari = now()->toDateString();
+
+        $absen = new Attendance([
+            'user_id' => $this->crew->id,
+            'schedule_location_id' => $this->location->id,
+            'schedule_shift_id' => $this->shift->id,
+            'type' => 'out',
+            'date' => $hari,
+            'photo_path' => 'attendance/rekap-lembur.webp',
+            'latitude' => -6.2,
+            'longitude' => 107.0,
+            'distance' => 320,
+            'status' => 'out_of_radius',
+            'violations' => [],
+        ]);
+        $absen->created_at = now()->setTime(23, 30);
+        $absen->save();
+
         OvertimeRequest::create([
             'user_id' => $this->crew->id,
             'schedule_location_id' => $this->location->id,
-            'date' => now()->toDateString(),
+            'date' => $hari,
             'window_end_at' => now()->setTime(22, 20),
             'check_out_at' => now()->setTime(23, 30),
             'minutes' => 70,
@@ -104,11 +122,33 @@ class SchedulePagesTest extends TestCase
             'status' => OvertimeRequest::STATUS_PENDING,
         ]);
 
+        OvertimeRequest::create([
+            'user_id' => $this->crew->id,
+            'schedule_location_id' => $this->location->id,
+            'date' => now()->subDay()->toDateString(),
+            'window_end_at' => now()->subDay()->setTime(22, 20),
+            'check_out_at' => now()->subDay()->setTime(23, 59),
+            'minutes' => 99,
+            'rate_per_hour' => 15000,
+            'amount' => 24750,
+            'note' => 'Lembur lintas tengah malam',
+            'status' => OvertimeRequest::STATUS_APPROVED,
+            'reviewed_by' => 'Khairul Fikri',
+        ]);
+
         $this->actingAs($this->owner)->get('/schedules/overtimes')
             ->assertOk()
             ->assertSee('Menunggu Acc')
             ->assertSee($this->crew->name)
-            ->assertSee('Lanjut edit foto');
+            ->assertSee('Lanjut edit foto')
+            ->assertSee('Lokasi &amp; GPS', false)
+            ->assertSee('Jarak', false)
+            ->assertSee('Foto', false)
+            ->assertSee('320 meter')
+            ->assertSee('Luar Radius')
+            ->assertSee('attendance/rekap-lembur.webp', false)
+            ->assertSee('Rp 24.750', false)
+            ->assertSee('24.750');
     }
 
     public function test_halaman_payroll_dengan_modal_entri(): void
