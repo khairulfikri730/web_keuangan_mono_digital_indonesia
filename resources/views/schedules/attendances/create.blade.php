@@ -25,10 +25,13 @@
                 <!-- Tipe Absen -->
                 <div>
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Tipe Absen</label>
-                    <select name="type" x-model="attendanceType" :disabled="isCrew && session?.has_open_in" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 font-bold disabled:opacity-60">
+                    {{-- Select-nya sengaja tanpa name: saat dinonaktifkan browser tidak ikut mengirimnya,
+                         jadi nilainya dibawa oleh hidden input di bawah. --}}
+                    <select x-model="attendanceType" :disabled="isCrew && session?.has_open_in" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 font-bold disabled:opacity-60">
                         <option value="in">Absen MASUK</option>
                         <option value="out">Absen KELUAR</option>
                     </select>
+                    <input type="hidden" name="type" value="in" x-model="attendanceType">
                     <p x-show="isCrew && session?.has_open_in" class="text-[10px] text-amber-400 font-bold mt-1">
                         Absen masuk sudah tercatat, hanya absen keluar yang tersedia.
                     </p>

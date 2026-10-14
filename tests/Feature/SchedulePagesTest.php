@@ -202,6 +202,17 @@ class SchedulePagesTest extends TestCase
             ->assertSee('Di-acc');
     }
 
+    public function test_tipe_absen_tetap_terkirim_saat_pilihannya_dikunci(): void
+    {
+        // Pilihan tipe dinonaktifkan untuk crew yang sudah absen masuk. Kontrol form
+        // yang disabled tidak ikut terkirim, jadi nilainya harus dibawa hidden input.
+        $html = $this->actingAs($this->crew)->get('/schedules/attendances/create')
+            ->assertOk()->getContent();
+
+        $this->assertStringContainsString('<input type="hidden" name="type"', $html);
+        $this->assertStringNotContainsString('<select name="type"', $html);
+    }
+
     public function test_halaman_payroll_dengan_modal_entri(): void
     {
         Payroll::create(['user_id' => $this->crew->id, 'period' => now()->format('Y-m'), 'notes' => 'Catatan uji']);
