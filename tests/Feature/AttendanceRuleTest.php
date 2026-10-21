@@ -1163,6 +1163,65 @@ class AttendanceRuleTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_absen_masuk_dan_keluar_pada_detik_sama_tetap_berpasangan(): void
+    {
+        // Baris buatan owner sering berakhir pada detik yang sama. Dulu pencocokan
+        // memakai > dan < ketat sehingga sesi terlihat masih terbuka dan setiap klik
+        // "Tutup Sesi" menambah baris keluar baru.
+        $masuk = new Attendance([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'type' => 'in', 'date' => '2026-09-19', 'status' => 'in_radius', 'violations' => [],
+        ]);
+        $masuk->created_at = Carbon::parse('2026-09-19 16:00:00');
+        $masuk->save();
+
+        $keluar = new Attendance([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'type' => 'out', 'date' => '2026-09-19', 'status' => 'in_radius', 'violations' => [],
+        ]);
+        $keluar->created_at = Carbon::parse('2026-09-19 16:00:00');
+        $keluar->save();
+
+        $this->assertSame($keluar->id, AttendanceRuleService::closingOut($masuk)?->id);
+        $this->assertSame($masuk->id, AttendanceRuleService::openingIn($keluar)?->id);
+        $this->assertNull(AttendanceRuleService::openSession($this->crew, $this->location));
+
+        Carbon::setTestNow('2026-10-21 09:00:00');
+        $this->assertSame(0, AttendanceRuleService::markMissingCheckOut());
+        $this->assertArrayNotHasKey('missing_check_out', $masuk->fresh()->violations);
+        $this->assertArrayNotHasKey('missing_check_in', $keluar->fresh()->violations);
+        Carbon::setTestNow();
+    }
+
+    public function test_sesi_lama_tanpa_jendela_shift_tetap_bisa_ditandai_lupa_absen(): void
+    {
+        // Sesi September ini tercatat sebelum jendela absen ada, tapi lokasinya sudah
+        // punya jam malam. Dulu markMissingCheckOut() crash di sini karena memakai
+        // batas jendela keluar yang null.
+        $this->location->update(['check_out_cutoff' => '00:00:00']);
+
+        $lama = new Attendance([
+            'user_id' => $this->crew->id, 'schedule_location_id' => $this->location->id,
+            'type' => 'in', 'date' => '2026-09-21', 'status' => 'in_radius',
+        ]);
+        $lama->created_at = Carbon::parse('2026-09-21 10:00:00');
+        $lama->save();
+
+        Carbon::setTestNow('2026-10-21 09:00:00');
+
+        $this->assertSame(1, AttendanceRuleService::markMissingCheckOut());
+        $this->assertArrayHasKey('missing_check_out', $lama->fresh()->violations);
+        // Tanpa jendela, acuannya jam absen masuk: 10:00 21 Sep ke 09:00 21 Okt.
+        $this->assertSame(43140, $lama->fresh()->violations['missing_check_out']);
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+        $this->get(route('schedules.attendances.index', ['date' => '2026-09-21']))
+            ->assertOk()
+            ->assertSee('Lupa absen keluar');
+
+        Carbon::setTestNow();
+    }
+
     public function test_isi_otomatis_dapat_diminta_menutup_sesi_yang_lupa_absen_keluar(): void
     {
         $shift = $this->makeShift([

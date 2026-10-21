@@ -45,23 +45,26 @@ class AttendanceRuleService
     {
         $next = Attendance::where('user_id', $in->user_id)
             ->where('schedule_location_id', $in->schedule_location_id)
-            ->where('created_at', '>', $in->created_at)
+            ->whereRaw('(created_at > ? or (created_at = ? and id > ?))', [$in->created_at, $in->created_at, $in->id])
             ->orderBy('created_at')
+            ->orderBy('id')
             ->first();
 
         return $next && $next->type === 'out' ? $next : null;
     }
 
     /**
-     * Absen masuk yang menutup sebuah absen keluar. Dipakai untuk menemukan sesi
-     * yang absen keluarnya tercatat tanpa absen masuk sama sekali.
+     * Absen masuk yang melahirkan sebuah absen keluar. Dipakai untuk menemukan sesi
+     * yang absen keluarnya tercatat tanpa absen masuk sama sekali. Baris yang diisi
+     * manual bisa tercatat pada detik yang sama, jadi id jadi pemecah seri.
      */
     public static function openingIn(Attendance $out): ?Attendance
     {
         $prev = Attendance::where('user_id', $out->user_id)
             ->where('schedule_location_id', $out->schedule_location_id)
-            ->where('created_at', '<', $out->created_at)
+            ->whereRaw('(created_at < ? or (created_at = ? and id < ?))', [$out->created_at, $out->created_at, $out->id])
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->first();
 
         return $prev && $prev->type === 'in' ? $prev : null;
@@ -230,7 +233,11 @@ class AttendanceRuleService
                 continue;
             }
 
-            $violations[self::MISSING_CHECK_OUT] = (int) $window['out'][1]->diffInMinutes($now, false);
+            // Jendela keluar bisa saja belum diatur untuk sesi lama; yang penting
+            // tetap tercatat berapa lama sesi itu menggantung tanpa absen keluar.
+            $acuan = $window['out'][1] ?? $in->created_at;
+
+            $violations[self::MISSING_CHECK_OUT] = (int) $acuan->diffInMinutes($now, false);
             $in->update(['violations' => $violations]);
             $marked++;
         }
@@ -306,6 +313,7 @@ class AttendanceRuleService
         $rows = Attendance::with(['user', 'location'])
             ->whereBetween('created_at', [$from, $until])
             ->orderBy('created_at')
+            ->orderBy('id')
             ->get();
 
         $sessions = [];
