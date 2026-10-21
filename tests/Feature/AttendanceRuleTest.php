@@ -485,10 +485,15 @@ class AttendanceRuleTest extends TestCase
         $this->assertSame('2026-10-10 09:30:00', Attendance::where('date', '2026-10-10')->where('type', 'in')->sole()->created_at->format('Y-m-d H:i:s'));
         $this->assertSame(Attendance::SOURCE_AUTO, Attendance::where('date', '2026-10-10')->where('type', 'out')->sole()->source);
 
-        // Sisi yang hilang saja: absen masuk dilengkapi, absen keluar asli dibiarkan.
-        $this->assertSame(1, Attendance::where('date', '2026-10-05')->where('type', 'in')->count());
+        // Absen masuk yang lupa tidak diisi otomatis: sistem tidak tahu crew datang
+        // jam berapa, dan mengisi di batas jendela berarti menyatakan dia tepat waktu.
+        $this->assertSame(0, Attendance::where('date', '2026-10-05')->where('type', 'in')->count());
         $this->assertSame(1, Attendance::where('date', '2026-10-05')->where('type', 'out')->count());
         $this->assertSame('2026-10-05 22:10:00', Attendance::where('date', '2026-10-05')->where('type', 'out')->sole()->created_at->format('Y-m-d H:i:s'));
+        $this->assertStringContainsString(
+            '1 sesi dilewati karena absen masuknya lupa dicatat',
+            session()->get('success')
+        );
 
         // Shift hari ini belum selesai operasinya, jadi tidak boleh dikarang.
         $this->assertSame(0, Attendance::where('date', '2026-10-13')->count());
@@ -1033,6 +1038,127 @@ class AttendanceRuleTest extends TestCase
         $this->assertSame(20000, $tetap->amount);
         $this->assertSame(OvertimeRequest::SOURCE_MANUAL, $tetap->source);
         $this->assertSame(1, OvertimeRequest::count());
+
+        Carbon::setTestNow();
+    }
+
+    public function test_absen_keluar_tanpa_absen_masuk_tidak_lagi_diblokir(): void
+    {
+        $shift = $this->makeShift([
+            'check_in_start' => '09:20:00',
+            'check_in_end' => '09:40:00',
+            'check_out_start' => '22:00:00',
+            'check_out_end' => '22:20:00',
+        ]);
+        $this->assign($shift, '2026-10-20');
+
+        $this->actingAs($this->crew);
+        Carbon::setTestNow('2026-10-20 13:00:00');
+
+        // Crew langsung absen keluar karena lupa motret saat datang.
+        $this->clockOut('langsung pegang customer dari pagi')
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('schedules.attendances.index'));
+
+        $keluar = Attendance::where('type', 'out')->sole();
+        $this->assertSame('2026-10-20', $keluar->date->toDateString());
+        $this->assertArrayHasKey('missing_check_in', $keluar->violations);
+        // 09:40 (batas jendela masuk) ke 13:00 = 200 menit tanpa catatan masuk.
+        $this->assertSame(200, $keluar->violations['missing_check_in']);
+        $this->assertSame(0, Attendance::where('type', 'in')->count());
+    }
+
+    public function test_owner_dapat_mengisi_absen_masuk_yang_lupa_dicatat(): void
+    {
+        $shift = $this->makeShift([
+            'check_in_start' => '09:20:00',
+            'check_in_end' => '09:40:00',
+            'check_out_start' => '22:00:00',
+            'check_out_end' => '22:20:00',
+        ]);
+        $this->assign($shift, '2026-10-20');
+
+        $this->actingAs($this->crew);
+        Carbon::setTestNow('2026-10-20 13:00:00');
+        $this->clockOut();
+
+        $keluar = Attendance::where('type', 'out')->sole();
+        $this->assertArrayHasKey('missing_check_in', $keluar->violations);
+
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+        $this->post(route('schedules.attendances.close-check-in', $keluar), [
+            'check_in_date' => '2026-10-20',
+            'check_in_time' => '10:10',
+            'note' => 'datang telat, langsung kerja',
+        ])->assertSessionHas('success');
+
+        $masuk = Attendance::where('type', 'in')->sole();
+        $this->assertSame('2026-10-20 10:10:00', $masuk->created_at->format('Y-m-d H:i:s'));
+        $this->assertSame(Attendance::SOURCE_MANUAL, $masuk->source);
+        // 09:40 ke 10:10 = 30 menit terlambat, dan flag lupa absen masuk hilang.
+        $this->assertSame(['late_check_in' => 30], $masuk->violations);
+        $this->assertArrayNotHasKey('missing_check_in', $keluar->fresh()->violations);
+        $this->assertNotNull(AttendanceRuleService::closingOut($masuk));
+
+        // Jam masuk tidak boleh datang setelah absen keluarnya.
+        $this->post(route('schedules.attendances.close-check-in', $keluar), [
+            'check_in_date' => '2026-10-20',
+            'check_in_time' => '14:00',
+        ])->assertSessionHas('error');
+        $this->assertSame(1, Attendance::where('type', 'in')->count());
+
+        Carbon::setTestNow();
+    }
+
+    public function test_batas_absen_keluar_per_lokasi_mengunci_crew_lewat_jam_itu(): void
+    {
+        $this->location->update(['check_out_cutoff' => '00:00:00']);
+
+        $shift = $this->makeShift([
+            'check_in_start' => '18:40:00',
+            'check_in_end' => '19:00:00',
+            'check_out_start' => '23:00:00',
+            'check_out_end' => '23:10:00',
+        ]);
+        $this->assign($shift, '2026-10-20');
+        $this->assign($shift, '2026-10-21');
+
+        $this->actingAs($this->crew);
+        Carbon::setTestNow('2026-10-20 18:45:00');
+        $this->clockIn();
+
+        // Sebelum jam malam masih boleh absen keluar, walau lewat jendela 23:10.
+        Carbon::setTestNow('2026-10-20 23:50:00');
+        $this->get(route('schedules.attendances.index'));
+        $this->assertArrayNotHasKey('missing_check_out', Attendance::where('type', 'in')->sole()->violations);
+
+        // Lewat 00:00 sesi dianggap lupa absen keluar dan absensi berikutnya dikunci.
+        Carbon::setTestNow('2026-10-21 00:30:00');
+        $this->get(route('schedules.attendances.index'));
+        $this->assertArrayHasKey('missing_check_out', Attendance::where('type', 'in')->sole()->violations);
+
+        $this->clockIn()->assertSessionHas('error');
+        $this->assertStringContainsString(
+            'batas absen keluar (21 Okt 2026 00:00)',
+            session()->get('error')
+        );
+        $this->assertSame(1, Attendance::where('type', 'in')->count());
+
+        // Setelah owner menutup sesi kemarin, crew langsung bisa absen masuk hari ini.
+        $this->actingAs(User::factory()->create(['role' => 'owner']));
+        $this->post(route('schedules.attendances.close-session', Attendance::where('type', 'in')->sole()), [
+            'action' => 'missing',
+            'check_out_date' => '2026-10-20',
+            'check_out_time' => '23:50',
+        ])->assertSessionHas('success');
+
+        $this->actingAs($this->crew);
+        Carbon::setTestNow('2026-10-21 18:44:00');
+        $this->clockIn()->assertSessionHas('success');
+
+        $hariIni = Attendance::where('type', 'in')->whereDate('date', '2026-10-21')->sole();
+        $this->assertSame('2026-10-21 18:44:00', $hariIni->created_at->format('Y-m-d H:i:s'));
+        $this->assertSame([], $hariIni->violations);
 
         Carbon::setTestNow();
     }

@@ -364,9 +364,10 @@ class ScheduleController extends Controller
             'shift_rate' => 'required|integer|min:0',
             'maps_url' => 'nullable|url',
             'radius' => 'nullable|integer|min:10',
+            'check_out_cutoff' => 'nullable|date_format:H:i',
         ]);
 
-        $data = $request->only('name', 'description', 'shift_rate', 'radius');
+        $data = $request->only('name', 'description', 'shift_rate', 'radius', 'check_out_cutoff');
         
         $lat = $request->input('latitude');
         $lng = $request->input('longitude');
@@ -390,9 +391,10 @@ class ScheduleController extends Controller
             'shift_rate' => 'required|integer|min:0',
             'maps_url' => 'nullable|url',
             'radius' => 'nullable|integer|min:10',
+            'check_out_cutoff' => 'nullable|date_format:H:i',
         ]);
 
-        $data = $request->only('name', 'description', 'shift_rate', 'radius');
+        $data = $request->only('name', 'description', 'shift_rate', 'radius', 'check_out_cutoff');
         
         $lat = $request->input('latitude');
         $lng = $request->input('longitude');

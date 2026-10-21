@@ -58,6 +58,11 @@
                         <p class="font-mono font-bold" :class="session?.out_window ? 'text-amber-400' : 'text-slate-500'" x-text="session?.out_window || 'Tidak dibatasi'"></p>
                     </div>
                 </div>
+                <p class="text-[10px] text-slate-400 leading-relaxed" x-show="session?.out_cutoff">
+                    <i class="fas fa-moon mr-1 text-purple-300"></i>Maksimal absen keluar
+                    <b class="text-slate-200 font-mono" x-text="session?.out_cutoff"></b>.
+                    Lewat jam itu absensi dikunci dan hanya owner yang bisa melengkapinya.
+                </p>
             </div>
 
             {{-- SESI TERKUNCI: LUPA ABSEN KELUAR --}}

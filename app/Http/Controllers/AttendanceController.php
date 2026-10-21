@@ -52,13 +52,19 @@ class AttendanceController extends Controller
             ->pluck('id')
             ->all();
 
+        // Absen keluar yang terjadi tanpa absen masuk: owner yang mengisi jam masuknya.
+        $orphanOutIds = $attendances->filter(fn (Attendance $row) => $row->type === 'out')
+            ->filter(fn (Attendance $row) => !AttendanceRuleService::openingIn($row))
+            ->pluck('id')
+            ->all();
+
         $locations = ScheduleLocation::active()->get();
         $users = User::where('is_active', true)->orderBy('name')->get();
         $overtimeRate = AttendanceRuleService::overtimeRate();
         $canManage = $this->isOwner();
 
         return view('schedules.attendances.index', compact(
-            'attendances', 'locations', 'openIds', 'users', 'overtimeRate', 'canManage', 'perPage'
+            'attendances', 'locations', 'openIds', 'orphanOutIds', 'users', 'overtimeRate', 'canManage', 'perPage'
         ));
     }
 
@@ -113,6 +119,7 @@ class AttendanceController extends Controller
 
             $window = AttendanceRuleService::sessionWindow($assignments, $date);
             $stale = AttendanceRuleService::staleOpenSession($user, $location);
+            $batas = AttendanceRuleService::missingDeadline($window, $location, $date);
 
             return [$location->id => [
                 'date' => $date,
@@ -123,6 +130,7 @@ class AttendanceController extends Controller
                 'blocked_note' => $stale?->notes,
                 'in_window' => AttendanceRuleService::windowLabel($window, 'in', $date),
                 'out_window' => AttendanceRuleService::windowLabel($window, 'out', $date),
+                'out_cutoff' => $batas?->format('d/m Y H:i'),
                 'in_from' => $window['in'][0]?->toIso8601String(),
                 'in_to' => $window['in'][1]?->toIso8601String(),
                 'out_from' => $window['out'][0]?->toIso8601String(),
@@ -182,9 +190,20 @@ class AttendanceController extends Controller
         $stale = AttendanceRuleService::staleOpenSession($user, $location, $now);
 
         if ($stale) {
+            $tanggalSesi = $stale->date->toDateString();
+            $batas = AttendanceRuleService::missingDeadline(
+                AttendanceRuleService::sessionWindow(
+                    AttendanceRuleService::assignmentsFor($user, $location, $tanggalSesi),
+                    $tanggalSesi
+                ),
+                $location,
+                $tanggalSesi
+            );
+
             return back()->with('error', 'Absensi Anda di ' . $location->name . ' untuk tanggal '
-                . $stale->date->translatedFormat('d M Y') . ' belum absen keluar dan sudah lewat batas toleransi, '
-                . 'sehingga tercatat sebagai lupa absen keluar. Absensi berikutnya dikunci sampai owner menutup sesi itu.');
+                . $stale->date->translatedFormat('d M Y') . ' belum absen keluar'
+                . ($batas ? ' dan sudah lewat batas absen keluar (' . $batas->translatedFormat('d M Y H:i') . ')' : '')
+                . ', sehingga tercatat sebagai lupa absen keluar. Absensi berikutnya dikunci sampai owner menutup sesi itu.');
         }
 
         if ($request->type === 'in') {
@@ -200,13 +219,18 @@ class AttendanceController extends Controller
 
             $date = $now->toDateString();
         } else {
-            if (!$open) {
-                return back()->with('error', 'Belum ada absensi masuk yang aktif di ' . $location->name . '. Absen masuk terlebih dahulu.');
-            }
+            $date = $open ? $open->date->toDateString() : $now->toDateString();
 
-            // Absen keluar tercatat pada tanggal operasional shift asalnya, walaupun
-            // jam dinding sudah menunjukkan hari berikutnya.
-            $date = $open->date->toDateString();
+            // Absen keluar tanpa absen masuk dibiarkan (crew hanya lupa memotret saat
+            // datang), asalkan sesi hari itu belum pernah ditutup.
+            if (!$open && Attendance::where('user_id', $user->id)
+                ->where('schedule_location_id', $location->id)
+                ->where('type', 'out')
+                ->whereDate('date', $date)
+                ->exists()) {
+                return back()->with('error', 'Absensi Anda di ' . $location->name . ' untuk tanggal '
+                    . Carbon::parse($date)->translatedFormat('d M Y') . ' sudah lengkap.');
+            }
         }
 
         $assignments = AttendanceRuleService::assignmentsFor($user, $location, $date);
@@ -226,10 +250,19 @@ class AttendanceController extends Controller
             $violations[AttendanceRuleService::OUT_OF_RADIUS] = $distance;
         }
 
+        $tanpaMasuk = $request->type === 'out' && !$open;
+
+        if ($tanpaMasuk) {
+            $violations[AttendanceRuleService::MISSING_CHECK_IN] = $window['in'][1]
+                ? max(0, (int) $window['in'][1]->diffInMinutes($now, false))
+                : 0;
+        }
+
         // null = absensi ini tidak dinilai (jendela belum diatur / penegakan dimatikan),
         // array kosong = dinilai dan bersih.
         [$windowFrom, $windowTo] = $window[$request->type];
-        $dinilai = ($windowFrom && $windowTo && AttendanceRuleService::enforcementEnabled()) || $status === 'out_of_radius';
+        $dinilai = ($windowFrom && $windowTo && AttendanceRuleService::enforcementEnabled())
+            || $status === 'out_of_radius' || $tanpaMasuk;
 
         Attendance::create([
             'user_id' => $user->id,            'schedule_location_id' => $location->id,
@@ -455,7 +488,10 @@ class AttendanceController extends Controller
                 : AttendanceRuleService::overtimeMinutes($moment, $window['out'][1]);
 
             if ($minutes <= 0) {
-                return back()->with('error', 'Isi durasi lembur lebih dari 0 menit.');
+                return back()->with('error', $window['out'][1]
+                    ? 'Jam keluar ' . $moment->format('H:i') . ' tidak lewat batas jendela absen keluar ('
+                        . $window['out'][1]->format('H:i') . '), jadi tidak ada durasi lembur. Isi durasinya manual bila tetap mau dihitung.'
+                    : 'Jendela absen keluar sesi ini belum diatur di Master Shift, jadi durasi lemburnya harus diisi manual.');
             }
 
             $rate = AttendanceRuleService::overtimeRate();
@@ -491,6 +527,80 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Melengkapi absen masuk yang tidak pernah diabsen. Jamnya diisi owner, jadi
+     * statusnya otomatis "terlambat absen masuk" dengan durasi sesuai jendela shift,
+     * dan flag lupa absen masuk pada absen keluarnya hilang.
+     */
+    public function closeCheckIn(Request $request, Attendance $attendance)
+    {
+        if (!$this->isOwner()) {
+            return back()->with('error', 'Anda tidak memiliki akses untuk mengubah data absensi.');
+        }
+
+        if ($attendance->type !== 'out') {
+            return back()->with('error', 'Absen masuk hanya bisa dilengkapi pada baris absen keluar.');
+        }
+
+        $data = $request->validate([
+            'check_in_date' => 'required|date',
+            'check_in_time' => 'required|date_format:H:i',
+            'note' => 'nullable|string|max:500',
+        ], [], ['check_in_date' => 'tanggal masuk', 'check_in_time' => 'jam masuk']);
+
+        if (AttendanceRuleService::openingIn($attendance)) {
+            return back()->with('error', 'Sesi ini sudah punya absen masuk.');
+        }
+
+        $moment = Carbon::parse($data['check_in_date'] . ' ' . $data['check_in_time']);
+
+        if ($moment->greaterThanOrEqualTo($attendance->created_at)) {
+            return back()->with('error', 'Jam masuk ' . $moment->format('H:i')
+                . ' tidak boleh sama atau lebih akhir dari absen keluarnya ('
+                . $attendance->created_at->format('H:i') . ').');
+        }
+
+        $date = $attendance->date->toDateString();
+        $window = AttendanceRuleService::sessionWindow(
+            AttendanceRuleService::assignmentsFor($attendance->user, $attendance->location, $date),
+            $date
+        );
+
+        $violations = AttendanceRuleService::timeViolations('in', $moment, $window);
+
+        if ($attendance->violations && array_key_exists(AttendanceRuleService::OUT_OF_RADIUS, (array) $attendance->violations)) {
+            $violations[AttendanceRuleService::OUT_OF_RADIUS] = $attendance->violations[AttendanceRuleService::OUT_OF_RADIUS];
+        }
+
+        $in = new Attendance([
+            'user_id' => $attendance->user_id,
+            'schedule_location_id' => $attendance->schedule_location_id,
+            'schedule_shift_id' => $window['shifts']['in']?->id ?? $attendance->schedule_shift_id,
+            'type' => 'in',
+            'date' => $date,
+            'latitude' => $attendance->latitude,
+            'longitude' => $attendance->longitude,
+            'distance' => $attendance->distance,
+            'status' => $attendance->status,
+            'source' => Attendance::SOURCE_MANUAL,
+            'corrected_by' => auth()->user()->name,
+            'violations' => $violations,
+            'notes' => $request->input('note') ?: 'Absen masuk dilengkapi owner (crew lupa absen masuk).',
+        ]);
+        $in->created_at = $moment;
+        $in->save();
+
+        $keluar = (array) ($attendance->violations ?? []);
+        unset($keluar[AttendanceRuleService::MISSING_CHECK_IN]);
+        $attendance->update(['violations' => $keluar]);
+
+        $terlambat = $violations[AttendanceRuleService::LATE_CHECK_IN] ?? 0;
+
+        return back()->with('success', 'Absen masuk ' . ($attendance->user->name ?? 'crew') . ' pada '
+            . $moment->translatedFormat('d M Y') . ' ' . $moment->format('H:i') . ' dilengkapi'
+            . ($terlambat ? ', tercatat terlambat ' . $terlambat . ' menit.' : '.'));
+    }
+
+    /**
      * Mengisi absensi otomatis dari jadwal untuk periode yang dipilih, misalnya
      * sejak tanggal 1 bulan ini. Baris yang sudah ada tidak pernah ditimpa.
      */
@@ -513,7 +623,7 @@ class AttendanceController extends Controller
             ->when($data['user_id'] ?? null, fn ($q) => $q->where('user_id', $data['user_id']))
             ->get();
 
-        $created = $skipped = $noWindow = $belumSelesai = $menunggu = 0;
+        $created = $skipped = $noWindow = $belumSelesai = $menunggu = $tanpaMasuk = 0;
 
         foreach ($assignments->groupBy(fn ($a) => $a->user_id . '-' . $a->shift?->schedule_location_id . '-' . $a->date->toDateString()) as $group) {
             $first = $group->first();
@@ -543,6 +653,13 @@ class AttendanceController extends Controller
                 AttendanceRuleService::MISSING_CHECK_OUT, (array) ($row->violations ?? [])
             ))) {
                 $menunggu++;
+                continue;
+            }
+
+            // Absen keluar tanpa absen masuk: hanya owner yang tahu crew datang
+            // jam berapa, jadi tidak diisi otomatis (pakai aksi Isi Absen Masuk).
+            if ($masuk->isEmpty() && $sudahKeluar) {
+                $tanpaMasuk++;
                 continue;
             }
 
@@ -596,6 +713,9 @@ class AttendanceController extends Controller
         $messages[] = $skipped . ' sesi dilewati karena sudah ada data';
         if ($menunggu > 0) {
             $messages[] = $menunggu . ' sesi dilewati karena masih menunggu keputusan Anda (lupa absen keluar)';
+        }
+        if ($tanpaMasuk > 0) {
+            $messages[] = $tanpaMasuk . ' sesi dilewati karena absen masuknya lupa dicatat (isi lewat aksi Isi Absen Masuk)';
         }
         if ($belumSelesai > 0) {
             $messages[] = $belumSelesai . ' sesi dilewati karena jam operasionalnya belum lewat';
@@ -795,6 +915,7 @@ class AttendanceController extends Controller
             AttendanceRuleService::LATE_CHECK_IN => $window['in'][1] ? max(0, (int) $window['in'][1]->diffInMinutes($moment, false)) : 0,
             AttendanceRuleService::EARLY_CHECK_OUT => $window['out'][0] ? max(0, (int) $moment->diffInMinutes($window['out'][0], false)) : 0,
             AttendanceRuleService::MISSING_CHECK_OUT => $window['out'][1] ? max(0, (int) $window['out'][1]->diffInMinutes($moment, false)) : 0,
+            AttendanceRuleService::MISSING_CHECK_IN => $window['in'][1] ? max(0, (int) $window['in'][1]->diffInMinutes($moment, false)) : 0,
             AttendanceRuleService::OUT_OF_RADIUS => (int) ($existing[AttendanceRuleService::OUT_OF_RADIUS] ?? $attendance->distance ?? 0),
             default => 0,
         };
@@ -883,6 +1004,7 @@ class AttendanceController extends Controller
             AttendanceRuleService::LATE_CHECK_IN => 'Pelanggaran: terlambat ' . $value . ' menit dari jendela absen masuk (' . AttendanceRuleService::windowLabel($window, 'in') . ').',
             AttendanceRuleService::EARLY_CHECK_OUT => 'Pelanggaran: absen keluar ' . $value . ' menit lebih cepat dari jendela absen keluar (' . AttendanceRuleService::windowLabel($window, 'out') . ').',
             AttendanceRuleService::OUT_OF_RADIUS => 'Pelanggaran: absen ' . $value . ' meter di luar radius lokasi.',
+            AttendanceRuleService::MISSING_CHECK_IN => 'Absen masuk hari ini tidak tercatat, jadi dilaporkan ke owner agar jam masuknya dilengkapi.',
             default => 'Pelanggaran: ' . (AttendanceRuleService::labels()[$code] ?? $code) . '.',
         };
     }

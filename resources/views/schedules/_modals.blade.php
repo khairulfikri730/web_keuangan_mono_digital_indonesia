@@ -41,6 +41,11 @@
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Radius Absen (Meter)</label>
                     <input type="number" name="radius" value="100" min="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="Contoh: 100">
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Batas Absen Keluar <span class="text-slate-500 font-normal ml-1">Jam malam</span></label>
+                    <input type="time" name="check_out_cutoff" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500">
+                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Jam dinding terakhir crew masih boleh absen keluar untuk shift hari itu, misalnya 00:00 atau 02:00. Lewat jam ini hanya owner yang bisa melengkapi.</p>
+                </div>
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">
                 <button type="button" @click="show = false" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-700">Batal</button>
@@ -91,6 +96,11 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Radius Absen (Meter)</label>
                     <input type="number" name="radius" value="{{ $loc->radius ?? 100 }}" min="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="Contoh: 100">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Batas Absen Keluar <span class="text-slate-500 font-normal ml-1">Jam malam</span></label>
+                    <input type="time" name="check_out_cutoff" value="{{ $loc->check_out_cutoff ? substr($loc->check_out_cutoff, 0, 5) : '' }}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500">
+                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Jam dinding terakhir crew masih boleh absen keluar untuk shift hari itu, misalnya 00:00 atau 02:00. Lewat jam ini hanya owner yang bisa melengkapi.</p>
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-800/50">

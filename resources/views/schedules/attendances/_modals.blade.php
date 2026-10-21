@@ -1,5 +1,6 @@
 @php
     $isOpen = in_array($row->id, $openIds);
+    $isOrphan = in_array($row->id, $orphanOutIds ?? []);
     $window = \App\Services\AttendanceRuleService::sessionWindow(
         \App\Services\AttendanceRuleService::assignmentsFor($row->user, $row->location, $row->date->toDateString()),
         $row->date->toDateString()
@@ -153,6 +154,56 @@
                     <div class="flex gap-2 justify-end pt-2">
                         <button type="button" @click="show = false" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold">Batal</button>
                         <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-black uppercase tracking-wider">Tutup Sesi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+</div>
+@endif
+
+{{-- Isi absen masuk yang tidak pernah diabsen --}}
+@if($isOrphan)
+@php
+    $jamMasuk = $window['in'][1] ? $window['in'][1]->format('H:i') : $row->created_at->copy()->subHours(8)->format('H:i');
+@endphp
+<div x-data="{ show: false }" @open-modal.window="if ($event.detail === 'close-check-in-{{ $row->id }}') show = true" @close-modal.window="show = false">
+    <template x-teleport="body">
+        <div x-show="show" x-cloak class="fixed inset-0 z-[160] flex items-center justify-center p-4">
+            <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" @click="show = false"></div>
+            <div class="relative bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-lg z-10 max-h-[calc(100vh-2.5rem)] overflow-y-auto">
+                <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center sticky top-0 bg-slate-800">
+                    <h3 class="text-lg font-black text-white"><i class="fas fa-sign-in-alt text-blue-400 mr-2"></i>Isi Absen Masuk: {{ $row->user->name ?? '-' }}</h3>
+                    <button @click="show = false" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+                </div>
+
+                <form action="{{ route('schedules.attendances.close-check-in', $row) }}" method="POST" class="p-6 space-y-4">
+                    @csrf
+                    <p class="text-xs text-slate-400">
+                        Absen keluar {{ $row->created_at->format('H:i') }} pada {{ $row->date->translatedFormat('d M Y') }} tercatat tanpa absen masuk.
+                        Isi jam masuk sebenarnya; kalau lewat jendela <b class="text-slate-200">{{ \App\Services\AttendanceRuleService::windowLabel($window, 'in', $row->date->toDateString()) ?? 'belum diatur' }}</b>,
+                        statusnya otomatis menjadi terlambat absen masuk lengkap dengan durasinya.
+                    </p>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Tanggal Masuk</label>
+                            <input type="date" name="check_in_date" value="{{ $row->date->toDateString() }}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Jam Masuk</label>
+                            <input type="time" name="check_in_time" value="{{ $jamMasuk }}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Catatan</label>
+                        <textarea name="note" rows="2" placeholder="Contoh: langsung pegang customer begitu sampai, baru sempat motret pas pulang" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 text-xs italic focus:outline-none focus:border-blue-500"></textarea>
+                    </div>
+
+                    <div class="flex gap-2 justify-end pt-2">
+                        <button type="button" @click="show = false" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold">Batal</button>
+                        <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-black uppercase tracking-wider">Simpan Absen Masuk</button>
                     </div>
                 </form>
             </div>

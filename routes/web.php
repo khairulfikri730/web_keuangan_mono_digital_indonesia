@@ -299,6 +299,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'update'])->middleware('permission:schedules.manage')->name('attendances.update');
         Route::post('/attendances/{attendance}/note', [\App\Http\Controllers\AttendanceController::class, 'saveNote'])->name('attendances.note');
         Route::post('/attendances/{attendance}/close-session', [\App\Http\Controllers\AttendanceController::class, 'closeSession'])->middleware('permission:schedules.manage')->name('attendances.close-session');
+        Route::post('/attendances/{attendance}/close-check-in', [\App\Http\Controllers\AttendanceController::class, 'closeCheckIn'])->middleware('permission:schedules.manage')->name('attendances.close-check-in');
         Route::delete('/attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'destroy'])->name('attendances.destroy');
 
         // Rekap Lembur

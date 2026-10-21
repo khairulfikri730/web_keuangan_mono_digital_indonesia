@@ -18,6 +18,7 @@ class AttendanceRuleService
     public const EARLY_CHECK_OUT = 'early_check_out';
     public const OUT_OF_RADIUS = 'out_of_radius';
     public const MISSING_CHECK_OUT = 'missing_check_out';
+    public const MISSING_CHECK_IN = 'missing_check_in';
 
     public static function labels(): array
     {
@@ -26,6 +27,7 @@ class AttendanceRuleService
             self::EARLY_CHECK_OUT => 'Absen keluar terlalu cepat',
             self::OUT_OF_RADIUS => 'Absen di luar radius lokasi',
             self::MISSING_CHECK_OUT => 'Lupa absen keluar',
+            self::MISSING_CHECK_IN => 'Lupa absen masuk',
         ];
     }
 
@@ -48,6 +50,21 @@ class AttendanceRuleService
             ->first();
 
         return $next && $next->type === 'out' ? $next : null;
+    }
+
+    /**
+     * Absen masuk yang menutup sebuah absen keluar. Dipakai untuk menemukan sesi
+     * yang absen keluarnya tercatat tanpa absen masuk sama sekali.
+     */
+    public static function openingIn(Attendance $out): ?Attendance
+    {
+        $prev = Attendance::where('user_id', $out->user_id)
+            ->where('schedule_location_id', $out->schedule_location_id)
+            ->where('created_at', '<', $out->created_at)
+            ->orderByDesc('created_at')
+            ->first();
+
+        return $prev && $prev->type === 'in' ? $prev : null;
     }
 
     /**
@@ -201,7 +218,7 @@ class AttendanceRuleService
                 self::assignmentsFor($in->user, $in->location, $session['date']),
                 $session['date']
             );
-            $deadline = self::missingDeadline($window);
+            $deadline = self::missingDeadline($window, $in->location, $session['date']);
 
             if (!$deadline || !$deadline->lessThan($now)) {
                 continue;
@@ -232,12 +249,22 @@ class AttendanceRuleService
     }
 
     /**
-     * Batas akhir sesi masih wajar belum absen keluar.
+     * Batas akhir sesi masih wajar belum absen keluar. Tiap lokasi boleh punya jam
+     * malam sendiri (mis. Studio 00:00, Jamsit 02:00) yang dihitung dari tanggal
+     * operasional shift-nya; tanpa itu pakai toleransi jam di Settings.
      *
      * @param array{in: array{0: ?Carbon, 1: ?Carbon}, out: array{0: ?Carbon, 1: ?Carbon}} $window
      */
-    public static function missingDeadline(array $window): ?Carbon
+    public static function missingDeadline(array $window, ?ScheduleLocation $location = null, ?string $date = null): ?Carbon
     {
+        if ($location?->check_out_cutoff && $date) {
+            $jamMalam = Carbon::parse($date)->addDay()->setTimeFromTimeString(substr($location->check_out_cutoff, 0, 5));
+
+            if (!$window['out'][1] || $jamMalam->greaterThan($window['out'][1])) {
+                return $jamMalam;
+            }
+        }
+
         return $window['out'][1]?->copy()->addHours(self::missingGraceHours());
     }
 
@@ -257,7 +284,9 @@ class AttendanceRuleService
 
         $date = $open->date->toDateString();
         $deadline = self::missingDeadline(
-            self::sessionWindow(self::assignmentsFor($user, $location, $date), $date)
+            self::sessionWindow(self::assignmentsFor($user, $location, $date), $date),
+            $location,
+            $date
         );
 
         return $deadline && $deadline->lessThan($now) ? $open : null;
@@ -371,6 +400,17 @@ class AttendanceRuleService
                     if (isset($existing[$keep])) {
                         $violations[$keep] = $existing[$keep];
                     }
+                }
+
+                // Crew yang pulang tanpa pernah absen masuk tetap tercatat: tidak
+                // diblokir, hanya ditandai lupa absen masuk sampai owner mengisi
+                // jam masuknya (setelah itu nilainya jadi terlambat absen masuk).
+                if ($type === 'out' && !$session['in']) {
+                    $telat = $window['in'][1]
+                        ? max(0, (int) $window['in'][1]->diffInMinutes($row->created_at, false))
+                        : 0;
+
+                    $violations[self::MISSING_CHECK_IN] = $existing[self::MISSING_CHECK_IN] ?? $telat;
                 }
 
                 // Absen keluar setelah tengah malam tercatat pada tanggal shift asalnya.

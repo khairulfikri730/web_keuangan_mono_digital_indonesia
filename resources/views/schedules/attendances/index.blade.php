@@ -250,6 +250,11 @@
                                     <i class="fas fa-door-closed"></i>
                                 </button>
                                 @endif
+                                @if(in_array($row->id, $orphanOutIds ?? []))
+                                <button type="button" @click="$dispatch('open-modal', 'close-check-in-{{ $row->id }}')" class="text-blue-400 hover:text-blue-300 transition-colors" title="Isi absen masuk yang lupa dicatat">
+                                    <i class="fas fa-sign-in-alt"></i>
+                                </button>
+                                @endif
                                 <form action="{{ route('schedules.attendances.destroy', $row) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data absensi ini?');">
                                     @csrf
                                     @method('DELETE')
